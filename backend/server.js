@@ -9,7 +9,11 @@ connectDB();
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' })); // Puerto de Vite
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+})); // Puerto de Vite
+
 app.use(express.json());
 
 // Rutas
