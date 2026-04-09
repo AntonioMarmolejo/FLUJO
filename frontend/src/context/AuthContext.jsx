@@ -33,12 +33,22 @@ export const AuthProvider = ({ children }) => {
         verifyToken();
     }, []);
 
+    const updateUser = (newUserData) => {
+        localStorage.setItem('user', JSON.stringify(newUserData));
+        setUser(newUserData);
+    };
+
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
-        navigate('/workspace');
+        // ← Redirección inteligente
+        if (data.user.onboardingCompleto) {
+            navigate('/workspace');
+        } else {
+            navigate('/onboarding');
+        }
     };
 
     const register = async (name, email, password) => {
@@ -46,7 +56,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
-        navigate('/workspace');
+        navigate('/onboarding'); // Siempre va a onboarding al registrarse
     };
 
     const logout = () => {
@@ -57,7 +67,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

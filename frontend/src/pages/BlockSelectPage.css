@@ -1,0 +1,202 @@
+.block-wrapper {    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.block-card {
+    width: 100%;
+    max-width: 480px;
+    background: #1c1c1c;
+    border-radius: 20px;
+    padding: 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Avatar */
+.block-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #e8e6f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.block-avatar span {
+    font-size: 28px;
+    font-weight: 700;
+    color: #3730a3;
+}
+
+/* Greeting */
+.block-greeting {
+    text-align: center;
+}
+
+.block-greeting p {
+    color: #888;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.block-greeting h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.block-divider {
+    width: 100%;
+    height: 1px;
+    background: #2e2e2e;
+}
+
+/* Question */
+.block-question {
+    width: 100%;
+}
+
+.block-question h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.block-question p {
+    font-size: 14px;
+    color: #888;
+}
+
+/* List */
+.block-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.block-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: #252525;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.block-item:hover {
+    border-color: #444;
+    background: #2a2a2a;
+}
+
+.block-item.selected {
+    border-color: #6c63ff;
+    background: rgba(108, 99, 255, 0.08);
+}
+
+.block-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.block-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.block-nombre {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.block-codigo {
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 1px;
+}
+
+/* Radio */
+.block-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+}
+
+.block-radio.checked {
+    border-color: #6c63ff;
+}
+
+.block-radio-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6c63ff;
+}
+
+/* Error */
+.block-error {
+    width: 100%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Button */
+.block-btn {
+    width: 100%;
+    padding: 15px;
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    color: #666;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: not-allowed;
+    transition: all 0.2s;
+}
+
+.block-btn.active {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
+    cursor: pointer;
+}
+
+.block-btn.active:hover {
+    opacity: 0.9;
+}
+
+.block-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
