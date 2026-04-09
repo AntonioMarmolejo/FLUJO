@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import './WorkspacePage.css';
+import '../styles/WorkspacePage.css';
 
 const WorkspacePage = () => {
     const { user, logout } = useAuth();

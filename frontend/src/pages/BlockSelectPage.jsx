@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
-import './BlockSelectPage.css';
+import '../styles/BlockSelectPage.css';
 
 const BLOQUES = [
     { id: '12', nombre: 'Bloque 12', codigo: 'EDY', color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },

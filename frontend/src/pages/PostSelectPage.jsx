@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
-import './PostSelectPage.css';
+import '../styles/PostSelectPage.css';
 
 const PostSelectPage = () => {
     const { user, updateUser } = useAuth();
