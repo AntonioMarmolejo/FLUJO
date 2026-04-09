@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import authRoutes from './src/routes/auth.routes.js';
 import userRoutes from './src/routes/user.routes.js';
+import turnoRoutes from './src/routes/turno.routes.js';
 
 dotenv.config();
 connectDB();
@@ -20,6 +21,7 @@ app.use(express.json());
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/turnos', turnoRoutes);
 
 // Health check
 app.get('/', (req, res) => res.json({ message: '🚀 Flujo API corriendo' }));

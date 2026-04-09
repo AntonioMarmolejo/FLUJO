@@ -1,0 +1,240 @@
+.turno-wrapper {    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.turno-card {
+    width: 100%;
+    max-width: 520px;
+    background: #1c1c1c;
+    border-radius: 20px;
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Avatar */
+.turno-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Title */
+.turno-title {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.turno-title span {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.turno-title h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.turno-title p {
+    font-size: 14px;
+    color: #888;
+}
+
+.turno-progress {
+    font-size: 12px;
+    color: #666;
+    background: #2a2a2a;
+    padding: 4px 14px;
+    border-radius: 20px;
+}
+
+.turno-divider {
+    width: 100%;
+    height: 1px;
+    background: #2e2e2e;
+}
+
+/* Form */
+.turno-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.turno-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.turno-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.turno-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #cccccc;
+}
+
+.turno-field input {
+    background: #252525;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+    padding: 13px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+.turno-field input:focus {
+    border-color: #6c63ff;
+}
+
+.turno-field input::placeholder {
+    color: #444;
+}
+
+/* Turno options */
+.turno-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.turno-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px;
+    background: #252525;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.turno-option:hover {
+    border-color: #444;
+    background: #2a2a2a;
+}
+
+.turno-option.selected.diurno-selected {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.turno-option.selected {
+    border-color: #6c63ff;
+    background: rgba(108, 99, 255, 0.08);
+}
+
+.turno-option-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.turno-option-icon.diurno {
+    background: rgba(245, 158, 11, 0.15);
+}
+
+.turno-option-icon.nocturno {
+    background: rgba(129, 140, 248, 0.15);
+}
+
+.turno-option-nombre {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.turno-option-hora {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Error */
+.turno-error {
+    width: 100%;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Actions */
+.turno-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+}
+
+.turno-btn-back {
+    padding: 14px 20px;
+    background: transparent;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.turno-btn-back:hover {
+    border-color: #444;
+    color: #fff;
+}
+
+.turno-btn-submit {
+    padding: 14px;
+    background: #3730a3;
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0.4;
+    cursor: not-allowed;
+    transition: all 0.2s;
+}
+
+.turno-btn-submit.active {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.turno-btn-submit.active:hover {
+    background: #4338ca;
+}
+
+.turno-btn-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

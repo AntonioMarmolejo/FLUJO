@@ -5,6 +5,7 @@ import BlockSelectPage from './pages/BlockSelectPage';
 import PostSelectPage from './pages/PostSelectPage';   // ← nuevo
 import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
+import TurnoPage from './pages/TurnoPage';
 
 function App() {
     return (
@@ -20,6 +21,9 @@ function App() {
                     } />
                     <Route path="/workspace" element={
                         <ProtectedRoute><WorkspacePage /></ProtectedRoute>
+                    } />
+                    <Route path="/turno" element={
+                        <ProtectedRoute><TurnoPage /></ProtectedRoute>
                     } />
                 </Routes>
             </AuthProvider>

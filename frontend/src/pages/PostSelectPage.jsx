@@ -27,6 +27,7 @@ const PostSelectPage = () => {
         setError('');
     };
 
+
     const handleContinuar = async () => {
         if (selectedPuestos.length === 0) {
             setError('Selecciona al menos un puesto para continuar');
@@ -35,21 +36,37 @@ const PostSelectPage = () => {
 
         setLoading(true);
         try {
-            // Guardar puestos del bloque actual
             const { data } = await api.post('/user/puestos', {
                 bloqueId: bloqueActualId,
                 puestos: selectedPuestos,
             });
             updateUser(data.user);
 
-            const esUltimoBloque = bloqueIndex === totalBloques - 1;
+            // Construir lista plana de { bloqueId, puesto } para todos los puestos
+            const puestosGuardados = {
+                ...data.user.puestos,
+                [bloqueActualId]: selectedPuestos,
+            };
 
-            if (esUltimoBloque) {
-                // Completar onboarding y ir al workspace
-                await api.post('/user/bloques', { bloques: user.bloques });
-                navigate('/workspace');
+            const bloquesConPuestos = [];
+            for (const [bId, puestosList] of Object.entries(puestosGuardados)) {
+                for (const p of puestosList) {
+                    bloquesConPuestos.push({ bloqueId: bId, puesto: p });
+                }
+            }
+
+            // Si es el último bloque, ir al primer turno
+            if (bloqueIndex === totalBloques - 1) {
+                navigate('/turno', {
+                    state: {
+                        bloqueId: bloquesConPuestos[0].bloqueId,
+                        puesto: bloquesConPuestos[0].puesto,
+                        bloqueIndex: 0,
+                        totalBloques: bloquesConPuestos.length,
+                        bloquesConPuestos,
+                    },
+                });
             } else {
-                // Siguiente bloque
                 setBloqueIndex((prev) => prev + 1);
                 setSelectedPuestos([]);
                 setError('');
