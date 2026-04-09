@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
             required: [true, 'La contraseña es obligatoria'],
             minlength: [6, 'Mínimo 6 caracteres'],
             select: false, // No se devuelve en consultas por defecto
+        }, puestos: {
+            type: Map,
+            of: [String],
+            default: {},
         }, bloques: {
             type: [String],
             default: [],

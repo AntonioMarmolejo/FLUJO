@@ -37,7 +37,7 @@ const BlockSelectPage = () => {
         try {
             const { data } = await api.post('/user/bloques', { bloques: selected });
             updateUser(data.user);
-            navigate('/workspace');
+            navigate('/onboarding/puestos');
         } catch (err) {
             setError(err.response?.data?.message || 'Error al guardar');
         } finally {

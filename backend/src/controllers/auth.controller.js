@@ -30,6 +30,7 @@ export const register = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 bloques: user.bloques,
+                puestos: Object.fromEntries(user.puestos || new Map()),
                 onboardingCompleto: user.onboardingCompleto,
             },
         });
@@ -65,6 +66,7 @@ export const login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 bloques: user.bloques,
+                puestos: Object.fromEntries(user.puestos || new Map()),
                 onboardingCompleto: user.onboardingCompleto,
             },
         });
