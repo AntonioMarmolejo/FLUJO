@@ -37,7 +37,7 @@ const TurnoPage = () => {
 
         setLoading(true);
         try {
-            await api.post('/turnos/iniciar', {
+            const { data } = await api.post('/turnos/iniciar', {
                 ...form,
                 bloque: bloqueId,
                 puesto,
@@ -47,7 +47,20 @@ const TurnoPage = () => {
             const esUltimoPuesto = bloqueIndex + 1 === totalBloques;
 
             if (esUltimoPuesto) {
-                navigate('/workspace');
+                navigate('/turno/confirmacion', {
+                    state: {
+                        turno: {
+                            ...data.turno,
+                            nombre: form.nombre,
+                            apellidos: form.apellidos,
+                            empresa: form.empresa,
+                            cedula: form.cedula,
+                        },
+                        bloqueIndex,
+                        totalBloques,
+                        bloquesConPuestos: location.state.bloquesConPuestos,
+                    },
+                });
             } else {
                 // Ir al siguiente puesto
                 navigate('/turno', {

@@ -6,6 +6,7 @@ import PostSelectPage from './pages/PostSelectPage';   // ← nuevo
 import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TurnoPage from './pages/TurnoPage';
+import ConfirmacionTurnoPage from './pages/ConfirmacionTurnoPage';
 
 function App() {
     return (
@@ -24,6 +25,9 @@ function App() {
                     } />
                     <Route path="/turno" element={
                         <ProtectedRoute><TurnoPage /></ProtectedRoute>
+                    } />
+                    <Route path="/turno/confirmacion" element={
+                        <ProtectedRoute><ConfirmacionTurnoPage /></ProtectedRoute>
                     } />
                 </Routes>
             </AuthProvider>
