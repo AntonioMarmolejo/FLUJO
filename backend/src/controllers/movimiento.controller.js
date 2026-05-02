@@ -1,5 +1,5 @@
 import Movimiento from '../models/Movimiento.model.js';
-import Turno from '../models/Turno.model.js';
+import Vehiculo from '../models/Vehiculo.model.js';
 
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false });
 const getFecha = () => new Date().toISOString().split('T')[0];
@@ -7,10 +7,10 @@ const getFecha = () => new Date().toISOString().split('T')[0];
 // POST /api/movimientos
 export const crearMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, conductor, cedula, puesto, bloque } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, puesto, bloque } = req.body;
 
-        if (!tipo || !placa || !conductor || !cedula || !puesto || !bloque) {
-            return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+        if (!tipo || !placa || !puesto || !bloque) {
+            return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
         }
 
         const movimiento = await Movimiento.create({
@@ -18,12 +18,25 @@ export const crearMovimiento = async (req, res) => {
             puesto,
             bloque,
             tipo,
-            placa,
-            conductor,
-            cedula,
+            placa: placa.trim().toUpperCase(),
+            marca: marca || '',
+            color: color || '',
+            tipoVehiculo: tipoVehiculo || '',
+            empresa: empresa || '',
+            conductor: conductor || '',
+            cedula: cedula || '',
+            destino: destino || '',
+            actividad: actividad || '',
             hora: getHora(),
             fecha: getFecha(),
         });
+
+        // Guarda o actualiza los datos del vehículo en la base de datos
+        await Vehiculo.findOneAndUpdate(
+            { placa: movimiento.placa },
+            { marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '' },
+            { upsert: true, new: true }
+        );
 
         res.status(201).json({ message: 'Movimiento registrado', movimiento });
     } catch (error) {
@@ -56,22 +69,18 @@ export const getStats = async (req, res) => {
         const { puesto, bloque } = req.query;
         const fecha = getFecha();
 
-        // Total vehículos hoy (ingresos)
         const totalVehiculos = await Movimiento.countDocuments({
             usuario: req.user._id, puesto, bloque, fecha, tipo: 'ingreso',
         });
 
-        // Total flujos hoy (todos los movimientos)
         const totalFlujos = await Movimiento.countDocuments({
             usuario: req.user._id, puesto, bloque, fecha,
         });
 
-        // Días activos del guardia en este puesto
         const diasActivos = await Movimiento.distinct('fecha', {
             usuario: req.user._id, puesto, bloque,
         });
 
-        // Datos por hora para el gráfico (hoy)
         const movimientosHoy = await Movimiento.find({
             usuario: req.user._id, puesto, bloque, fecha,
         });

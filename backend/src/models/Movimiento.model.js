@@ -15,10 +15,16 @@ const movimientoSchema = new mongoose.Schema(
             required: true,
         },
         placa: { type: String, required: true, trim: true, uppercase: true },
-        conductor: { type: String, required: true, trim: true },
-        cedula: { type: String, required: true, trim: true },
-        hora: { type: String, required: true },   // "07:14"
-        fecha: { type: String, required: true },  // "2026-04-09"
+        marca: { type: String, trim: true, default: '' },
+        color: { type: String, trim: true, default: '' },
+        tipoVehiculo: { type: String, trim: true, default: '' },
+        empresa: { type: String, trim: true, default: '' },
+        conductor: { type: String, trim: true, default: '' },
+        cedula: { type: String, trim: true, default: '' },
+        destino: { type: String, trim: true, default: '' },
+        actividad: { type: String, trim: true, default: '' },
+        hora: { type: String, required: true },
+        fecha: { type: String, required: true },
     },
     { timestamps: true }
 );

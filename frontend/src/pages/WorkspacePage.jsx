@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
@@ -19,21 +19,82 @@ const TruckIcon = ({ color }) => (
 );
 
 // ── Modal agregar movimiento ──────────────────────────────
-const ModalAgregar = ({ puesto, bloque, onClose, onGuardado }) => {
-    const [form, setForm] = useState({ tipo: 'ingreso', placa: '', conductor: '', cedula: '' });
+const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
+
+const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
+
+const ModalField = ({ name, label, placeholder, required, value, onChange, autoFilled }) => (
+    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}</label>
+        <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} />
+    </div>
+);
+
+const ModalSelect = ({ name, label, options, value, onChange, autoFilled }) => (
+    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+        <label>{label}</label>
+        <select name={name} value={value} onChange={onChange}>
+            <option value="">— Seleccionar —</option>
+            {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+    </div>
+);
+
+const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
+    const [form, setForm] = useState(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [autoFilled, setAutoFilled] = useState(false);
+    const searchTimer = useRef(null);
 
     const handleChange = e => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        setForm(f => ({ ...f, [e.target.name]: e.target.value }));
         setError('');
     };
 
+    const handlePlacaChange = e => {
+        const val = e.target.value.toUpperCase();
+        setForm(f => ({ ...f, placa: val }));
+        setAutoFilled(false);
+        setError('');
+
+        if (val.length < 2) { setSuggestions([]); return; }
+
+        const seen = new Set();
+        const todayHits = movimientos
+            .filter(m => m.placa.includes(val) && !seen.has(m.placa) && seen.add(m.placa))
+            .slice(0, 4)
+            .map(m => ({ ...m, _source: 'hoy' }));
+
+        if (todayHits.length > 0) { setSuggestions(todayHits); return; }
+
+        clearTimeout(searchTimer.current);
+        searchTimer.current = setTimeout(async () => {
+            try {
+                const { data } = await api.get(`/vehiculos/search?placa=${val}`);
+                setSuggestions(data.vehiculos.map(v => ({ ...v, _source: 'db' })));
+            } catch { setSuggestions([]); }
+        }, 300);
+    };
+
+    const selectSuggestion = v => {
+        setForm(f => ({
+            ...f,
+            placa: v.placa,
+            marca: v.marca || '',
+            color: v.color || '',
+            tipoVehiculo: v.tipoVehiculo || '',
+            empresa: v.empresa || '',
+            conductor: v.conductor || '',
+            cedula: v.cedula || '',
+        }));
+        setSuggestions([]);
+        setAutoFilled(true);
+    };
+
     const handleSubmit = async () => {
-        if (!form.placa || !form.conductor || !form.cedula) {
-            setError('Todos los campos son obligatorios');
-            return;
-        }
+        if (!form.placa) { setError('La placa es obligatoria'); return; }
         setLoading(true);
         try {
             await api.post('/movimientos', { ...form, puesto, bloque });
@@ -46,6 +107,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado }) => {
         }
     };
 
+    const fp = { onChange: handleChange, autoFilled };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -55,43 +118,60 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado }) => {
                 </div>
 
                 <div className="modal-tipo">
-                    {['ingreso', 'salida'].map(t => (
-                        <button
-                            key={t}
-                            className={`modal-tipo-btn ${form.tipo === t ? 'active-' + t : ''}`}
-                            onClick={() => setForm({ ...form, tipo: t })}
-                        >
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                    {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
+                        <button key={val} className={`modal-tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
+                            onClick={() => setForm(f => ({ ...f, tipo: val }))}>
+                            {label}
                         </button>
                     ))}
                 </div>
 
                 <div className="modal-fields">
-                    {[
-                        { name: 'placa', label: 'Placa', placeholder: 'Ej: ABC-1234' },
-                        { name: 'conductor', label: 'Conductor', placeholder: 'Ej: Carlos Ruiz' },
-                        { name: 'cedula', label: 'Cédula', placeholder: 'Ej: 1023456789' },
-                    ].map(f => (
-                        <div key={f.name} className="modal-field">
-                            <label>{f.label}</label>
-                            <input
-                                type="text"
-                                name={f.name}
-                                placeholder={f.placeholder}
-                                value={form[f.name]}
-                                onChange={handleChange}
-                            />
+                    {/* Placa con autocomplete */}
+                    <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
+                        <label>PLACAS <span style={{ color: '#f87171' }}>*</span></label>
+                        <div className="placa-wrapper">
+                            <input type="text" name="placa" placeholder="Ej: ABC-1234"
+                                value={form.placa} onChange={handlePlacaChange} autoComplete="off" />
+                            {suggestions.length > 0 && (
+                                <div className="placa-suggestions">
+                                    {suggestions.map((v, i) => (
+                                        <div key={i} className="placa-suggestion-item" onClick={() => selectSuggestion(v)}>
+                                            <div>
+                                                <div className="placa-suggestion-placa">{v.placa}</div>
+                                                <div className="placa-suggestion-info">
+                                                    {[v.marca, v.color, v.conductor].filter(Boolean).join(' · ') || 'Sin datos'}
+                                                </div>
+                                            </div>
+                                            <span className={`placa-suggestion-badge ${v._source}`}>
+                                                {v._source === 'hoy' ? 'Hoy' : 'BD'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    ))}
+                    </div>
+
+                    <div className="modal-fields-row">
+                        <ModalField name="marca" label="MARCA" placeholder="Toyota" value={form.marca} {...fp} />
+                        <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
+                    </div>
+
+                    <div className="modal-fields-row">
+                        <ModalSelect name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} value={form.tipoVehiculo} {...fp} />
+                        <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
+                    </div>
+
+                    <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
+                    <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
+                    <ModalField name="destino" label="DESTINO" placeholder="Área o lugar" value={form.destino} {...fp} />
+                    <ModalField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..." value={form.actividad} {...fp} />
                 </div>
 
                 {error && <p className="modal-error">{error}</p>}
 
-                <button
-                    className={`modal-btn ${form.placa && form.conductor && form.cedula ? 'active' : ''}`}
-                    onClick={handleSubmit}
-                    disabled={loading}
-                >
+                <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
                     {loading ? 'Guardando...' : 'Registrar movimiento'}
                 </button>
             </div>
@@ -185,8 +265,6 @@ const WorkspacePage = () => {
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
-
-    const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
 
     return (
         <div className="ws-wrapper">
@@ -331,6 +409,7 @@ const WorkspacePage = () => {
                     bloque={turnoActivo.bloque}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
+                    movimientos={movimientos}
                 />
             )}
 
