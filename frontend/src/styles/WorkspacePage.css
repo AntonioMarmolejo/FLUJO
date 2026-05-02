@@ -1,6 +1,8 @@
-.ws-wrapper {    display: flex;
+.ws-wrapper {
+    display: flex;
     flex-direction: column;
     min-height: 100vh;
+    width: 100%;
     max-width: 430px;
     margin: 0 auto;
     background: #0d0d0d;
@@ -986,6 +988,86 @@
     color: #444;
 }
 
+/* ── Tabla de placas ── */
+.placas-scroll {
+    overflow-x: auto;
+    padding: 0 16px;
+}
+
+.placas-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 520px;
+}
+
+.placas-table th {
+    background: #161616;
+    color: #555;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 10px 10px;
+    text-align: left;
+    border-bottom: 1px solid #222;
+    white-space: nowrap;
+}
+
+.placas-table td {
+    padding: 10px 10px;
+    color: #bbb;
+    border-bottom: 1px solid #1a1a1a;
+    white-space: nowrap;
+}
+
+.placas-table tr:hover td {
+    background: #161616;
+}
+
+.placas-td-placa {
+    font-weight: 700;
+    color: #818cf8 !important;
+    letter-spacing: 0.5px;
+}
+
+.placas-qr {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    transition: transform 0.15s;
+}
+.placas-qr:hover { transform: scale(1.1); }
+
+.placas-actions {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.placas-fab {
+    position: fixed;
+    bottom: 76px;
+    right: calc(50% - 215px + 16px);
+    width: 52px;
+    height: 52px;
+    background: #818cf8;
+    border: none;
+    border-radius: 16px;
+    color: #fff;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    box-shadow: 0 4px 20px rgba(129, 140, 248, 0.4);
+    transition: background 0.2s;
+}
+.placas-fab:hover { background: #6d63e8; }
+
 .ws-search-clear {
     background: #1e1e1e;
     border: none;
@@ -999,4 +1081,58 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet >= 640px
+══════════════════════════════════════════════════════════ */
+@media (min-width: 640px) {
+    .ws-wrapper {
+        max-width: 768px;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+    }
+    .ws-body { padding: 16px 24px 100px; }
+
+    .modal-overlay { align-items: center; }
+    .modal-card { border-radius: 20px; max-width: 540px; }
+
+    .ws-navbar { max-width: 768px; }
+
+    .ws-fab        { right: max(16px, calc(50% - 384px + 16px)); }
+    .ws-fab-export { right: max(16px, calc(50% - 384px + 16px)); }
+    .placas-fab    { right: max(16px, calc(50% - 384px + 16px)); }
+    .export-menu   { right: max(12px, calc(50% - 384px + 12px)); }
+
+    .drawer-panel { width: 300px; }
+
+    .placas-scroll { overflow-x: visible; }
+    .placas-table  { min-width: unset; width: 100%; }
+
+    .ws-topbar { padding: 14px 24px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — Desktop >= 1024px
+══════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+    .ws-wrapper { max-width: 1080px; }
+    .ws-body    { padding: 20px 32px 100px; }
+    .ws-navbar  { max-width: 1080px; }
+
+    .ws-fab        { right: max(16px, calc(50% - 540px + 16px)); }
+    .ws-fab-export { right: max(16px, calc(50% - 540px + 16px)); }
+    .placas-fab    { right: max(16px, calc(50% - 540px + 16px)); }
+    .export-menu   { right: max(12px, calc(50% - 540px + 12px)); }
+
+    .modal-card    { max-width: 620px; }
+    .drawer-panel  { width: 340px; }
+
+    .placas-table     { font-size: 13px; }
+    .placas-table th  { font-size: 11px; padding: 12px 14px; }
+    .placas-table td  { padding: 12px 14px; }
+    .placas-qr        { width: 56px; height: 56px; }
+
+    .ws-topbar       { padding: 16px 32px; }
+    .ws-topbar-title { font-size: 18px; }
+    .ws-counter-val  { font-size: 36px; }
 }

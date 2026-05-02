@@ -472,42 +472,221 @@ const PantallaAvance = ({ turnoActivo, user }) => {
     );
 };
 
+// ── Modal formulario vehículo ─────────────────────────────
+const EMPTY_VEHICULO = { placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '' };
+
+const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
+    const [form, setForm] = useState(editData
+        ? { placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '' }
+        : EMPTY_VEHICULO
+    );
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleChange = e => {
+        const { name, value } = e.target;
+        setForm(f => ({ ...f, [name]: name === 'placa' ? value.toUpperCase() : value }));
+        setError('');
+    };
+
+    const handleSubmit = async () => {
+        if (!form.placa) { setError('La placa es obligatoria'); return; }
+        setLoading(true);
+        try {
+            if (editData?._id) {
+                await api.put(`/vehiculos/${editData._id}`, form);
+            } else {
+                await api.post('/vehiculos', form);
+            }
+            onGuardado();
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al guardar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fp = { onChange: handleChange, autoFilled: false };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>{editData ? 'Editar vehículo' : 'Nuevo vehículo'}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <div className="modal-fields">
+                    <ModalField name="placa" label="PLACA *" placeholder="Ej: ABC-1234" value={form.placa} {...fp} />
+                    <div className="modal-fields-row">
+                        <ModalField name="marca" label="MARCA" placeholder="Toyota" value={form.marca} {...fp} />
+                        <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
+                    </div>
+                    <div className="modal-fields-row">
+                        <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV..." value={form.tipoVehiculo} {...fp} />
+                        <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
+                    </div>
+                    <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
+                    <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
+                </div>
+                {error && <p className="modal-error">{error}</p>}
+                <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
+                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar vehículo'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ── Modal QR ──────────────────────────────────────────────
+const ModalQR = ({ vehiculo, onClose }) => {
+    const data = [
+        `PLACA: ${vehiculo.placa}`,
+        vehiculo.marca ? `MARCA: ${vehiculo.marca}` : '',
+        vehiculo.color ? `COLOR: ${vehiculo.color}` : '',
+        vehiculo.tipoVehiculo ? `TIPO: ${vehiculo.tipoVehiculo}` : '',
+        vehiculo.empresa ? `EMPRESA: ${vehiculo.empresa}` : '',
+        vehiculo.conductor ? `CONDUCTOR: ${vehiculo.conductor}` : '',
+    ].filter(Boolean).join('\n');
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" style={{ alignItems: 'center', gap: 20 }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header" style={{ width: '100%' }}>
+                    <h3>{vehiculo.placa}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <img src={qrUrl} alt="QR" style={{ width: 200, height: 200, borderRadius: 8, background: '#fff', padding: 8 }} />
+                <p style={{ fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 1.8 }}>
+                    {data.split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
+                </p>
+            </div>
+        </div>
+    );
+};
+
 // ── Pantalla Placas DB ────────────────────────────────────
 const PantallaPlacasDB = () => {
     const [vehiculos, setVehiculos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [editVehiculo, setEditVehiculo] = useState(null);
+    const [qrVehiculo, setQrVehiculo] = useState(null);
 
-    useEffect(() => {
+    const cargar = () => {
         api.get('/vehiculos')
             .then(res => { setVehiculos(res.data.vehiculos); setLoading(false); })
             .catch(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { cargar(); }, []);
+
+    const sq = search.toLowerCase();
+    const filtrados = sq
+        ? vehiculos.filter(v =>
+            v.placa.toLowerCase().includes(sq) ||
+            (v.empresa || '').toLowerCase().includes(sq))
+        : vehiculos;
+
+    const handleDelete = async id => {
+        try { await api.delete(`/vehiculos/${id}`); cargar(); } catch { }
+    };
+
+    const qrData = v => [
+        `PLACA: ${v.placa}`,
+        v.marca ? `MARCA: ${v.marca}` : '',
+        v.color ? `COLOR: ${v.color}` : '',
+        v.tipoVehiculo ? `TIPO: ${v.tipoVehiculo}` : '',
+        v.empresa ? `EMPRESA: ${v.empresa}` : '',
+    ].filter(Boolean).join('\n');
 
     return (
-        <div className="ws-section-content" style={{ padding: 16 }}>
-            <h3 className="ws-sub-title">Placas Vehículos</h3>
-            <p style={{ color: '#555', fontSize: 12, marginTop: -8, marginBottom: 8 }}>
-                {loading ? 'Cargando...' : `${vehiculos.length} registros en base de datos`}
-            </p>
-            {!loading && vehiculos.length === 0
-                ? <p className="ws-empty">No hay vehículos registrados</p>
-                : vehiculos.map(v => (
-                    <div key={v._id} className="mov-item">
-                        <div className="mov-icon ingreso"><TruckIcon color="#818cf8" /></div>
-                        <div className="mov-info">
-                            <span className="mov-tipo ingreso">{v.placa}</span>
-                            <span className="mov-detalle">
-                                {[v.marca, v.color, v.tipoVehiculo].filter(Boolean).join(' · ') || 'Sin datos'}
-                            </span>
-                            {(v.conductor || v.empresa) && (
-                                <span className="mov-detalle" style={{ fontSize: 11 }}>
-                                    {[v.conductor, v.empresa].filter(Boolean).join(' · ')}
-                                </span>
-                            )}
+        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+
+            {/* Barra búsqueda */}
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text"
+                        placeholder="Filtrar por placa o empresa..."
+                        value={search} onChange={e => setSearch(e.target.value)} />
+                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                </div>
+                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {filtrados.length} reg.
+                </span>
+            </div>
+
+            {/* Tabla */}
+            {loading
+                ? <p className="ws-empty">Cargando...</p>
+                : filtrados.length === 0
+                    ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay vehículos registrados'}</p>
+                    : (
+                        <div className="placas-scroll">
+                            <table className="placas-table">
+                                <thead>
+                                    <tr>
+                                        <th>PLACA</th>
+                                        <th>MARCA</th>
+                                        <th>COLOR</th>
+                                        <th>TIPO</th>
+                                        <th>EMPRESA</th>
+                                        <th>QR</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtrados.map(v => (
+                                        <tr key={v._id}>
+                                            <td className="placas-td-placa">{v.placa}</td>
+                                            <td>{(v.marca || '—').toUpperCase()}</td>
+                                            <td>{(v.color || '—').toUpperCase()}</td>
+                                            <td>{(v.tipoVehiculo || '—').toUpperCase()}</td>
+                                            <td>{(v.empresa || '—').toUpperCase()}</td>
+                                            <td>
+                                                <img
+                                                    className="placas-qr"
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(qrData(v))}`}
+                                                    alt="QR"
+                                                    onClick={() => setQrVehiculo(v)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="placas-actions">
+                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditVehiculo(v)}>
+                                                        <IconPencil />
+                                                    </button>
+                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(v._id)}>
+                                                        <IconMinus />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                ))
+                    )
             }
+
+            {/* FAB agregar */}
+            <button className="placas-fab" onClick={() => setShowForm(true)}>+</button>
+
+            {(showForm || editVehiculo) && (
+                <ModalVehiculo
+                    onClose={() => { setShowForm(false); setEditVehiculo(null); }}
+                    onGuardado={cargar}
+                    editData={editVehiculo}
+                />
+            )}
+            {qrVehiculo && <ModalQR vehiculo={qrVehiculo} onClose={() => setQrVehiculo(null)} />}
         </div>
     );
 };
@@ -726,7 +905,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
 
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
-                    <>
+                    <div className="ws-desktop-grid">
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setDashCollapsed(p => !p)}>
                                 <span>DASHBOARD</span>
@@ -826,7 +1005,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                                 </>
                             )}
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {tabActiva === 'avance' && (
