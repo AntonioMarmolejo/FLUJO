@@ -77,14 +77,37 @@ const IconChevronRight = () => (
     </svg>
 );
 
+const IconArrowLeft = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M19 12H5M12 19l-7-7 7-7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+const IconUserCircle = ({ active }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="7" r="4" stroke={active ? '#818cf8' : '#fff'} strokeWidth="2" />
+        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke={active ? '#818cf8' : '#fff'} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+const IconClock = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────
 const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
-
 const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}\nHora: ${m.hora} — ${m.fecha}`;
+
+// Tabs que vienen del cajón (tienen botón de regreso)
+const DRAWER_TABS = new Set(['avance', 'placas-db', 'extensiones', 'personas', 'jefes']);
+const DRAWER_TITLES = { avance: 'AVANCE DEL DÍA', 'placas-db': 'PLACAS', extensiones: 'EXTENSIONES', personas: 'PERSONAS', jefes: 'JEFES' };
 
 // ── Campos del formulario ────────────────────────────────
 const ModalField = ({ name, label, placeholder, required, value, onChange, autoFilled }) => (
@@ -97,22 +120,16 @@ const ModalField = ({ name, label, placeholder, required, value, onChange, autoF
 const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFilled }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
         <label>{label}</label>
-        <input
-            type="text"
-            name={name}
-            list={`combo-${name}`}
-            placeholder={placeholder || ''}
-            value={value}
-            onChange={onChange}
-        />
+        <input type="text" name={name} list={`combo-${name}`} placeholder={placeholder || ''} value={value} onChange={onChange} />
         <datalist id={`combo-${name}`}>
             {options.map(o => <option key={o} value={o} />)}
         </datalist>
     </div>
 );
 
-// ── Menú cajón (hamburguesa) ──────────────────────────────
+// ── Menú cajón ────────────────────────────────────────────
 const DRAWER_ITEMS = [
+    { label: 'Avance del día', tab: 'avance', icon: <IconClock /> },
     { label: 'Placas Vehículos', tab: 'placas-db', icon: <TruckIcon color="currentColor" /> },
     { label: 'Extensiones', tab: 'extensiones', icon: <IconPhone /> },
     { label: 'Personas', tab: 'personas', icon: <IconPerson /> },
@@ -166,14 +183,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setForm(f => ({ ...f, placa: val }));
         setAutoFilled(false);
         setError('');
-
         if (val.length < 2) { setSuggestions([]); return; }
 
         const seen = new Set();
         const todayHits = movimientos
             .filter(m => m.placa.includes(val) && !seen.has(m.placa) && seen.add(m.placa))
-            .slice(0, 4)
-            .map(m => ({ ...m, _source: 'hoy' }));
+            .slice(0, 4).map(m => ({ ...m, _source: 'hoy' }));
 
         if (todayHits.length > 0) { setSuggestions(todayHits); return; }
 
@@ -219,7 +234,6 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-
                 <div className="modal-tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
                         <button key={val} className={`modal-tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
@@ -228,7 +242,6 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         </button>
                     ))}
                 </div>
-
                 <div className="modal-fields">
                     <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
                         <label>PLACAS <span style={{ color: '#f87171' }}>*</span></label>
@@ -252,25 +265,20 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                             )}
                         </div>
                     </div>
-
                     <div className="modal-fields-row">
                         <ModalField name="marca" label="MARCA" placeholder="Toyota" value={form.marca} {...fp} />
                         <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
                     </div>
-
                     <div className="modal-fields-row">
                         <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV, Sedán..." value={form.tipoVehiculo} {...fp} />
                         <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
                     </div>
-
                     <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
                     <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
                     <ModalField name="destino" label="DESTINO" placeholder="Área o lugar" value={form.destino} {...fp} />
                     <ModalField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..." value={form.actividad} {...fp} />
                 </div>
-
                 {error && <p className="modal-error">{error}</p>}
-
                 <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
                     {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar movimiento'}
                 </button>
@@ -291,17 +299,13 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => {
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <span className={`detalle-badge ${mov.tipo}`}>
-                        {mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}
-                    </span>
+                    <span className={`detalle-badge ${mov.tipo}`}>{mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-
                 <div>
                     <div className="detalle-placa">{mov.placa}</div>
                     <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
                 </div>
-
                 {campos.length > 0 && (
                     <div className="detalle-fields">
                         {campos.map(([label, value]) => (
@@ -312,20 +316,11 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => {
                         ))}
                     </div>
                 )}
-
                 <div className="detalle-actions">
-                    <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}>
-                        <IconPencil /> Editar
-                    </button>
-                    <button className="detalle-act-btn" onClick={() => onCopy(mov)}>
-                        <IconCopy /> Copiar
-                    </button>
-                    <button className="detalle-act-btn" onClick={() => onShare(mov)}>
-                        <IconShare /> Compartir
-                    </button>
-                    <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}>
-                        <IconMinus /> Eliminar
-                    </button>
+                    <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
+                    <button className="detalle-act-btn" onClick={() => onCopy(mov)}><IconCopy /> Copiar</button>
+                    <button className="detalle-act-btn" onClick={() => onShare(mov)}><IconShare /> Compartir</button>
+                    <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /> Eliminar</button>
                 </div>
             </div>
         </div>
@@ -334,27 +329,19 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => {
 
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
-    <div
-        className={`mov-item ${selected ? 'mov-selected' : ''}`}
-        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}
-    >
+    <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
+        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
         {selectMode && (
-            <input type="checkbox" className="mov-check"
-                checked={selected}
-                onChange={() => onToggleSelect(m._id)}
-                onClick={e => e.stopPropagation()} />
+            <input type="checkbox" className="mov-check" checked={selected}
+                onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
         )}
         <div className={`mov-icon ${m.tipo}`}>
             <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
             <span className="mov-hora-small">{m.hora}</span>
         </div>
         <div className="mov-info">
-            <span className={`mov-tipo ${m.tipo}`}>
-                {m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}
-            </span>
-            <span className="mov-detalle">
-                {m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}
-            </span>
+            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
             {(m.empresa || m.destino) && (
                 <span className="mov-detalle" style={{ fontSize: 11 }}>
                     {[m.empresa, m.destino].filter(Boolean).join(' · ')}
@@ -363,22 +350,127 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
         </div>
         {!selectMode && (
             <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}>
-                    <IconMinus />
-                </button>
-                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}>
-                    <IconPencil />
-                </button>
-                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}>
-                    <IconCopy />
-                </button>
-                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}>
-                    <IconShare />
-                </button>
+                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
+                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
+                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
+                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
             </div>
         )}
     </div>
 );
+
+// ── Avance del día (timer + progreso del turno) ───────────
+const PantallaAvance = ({ turnoActivo, user }) => {
+    const [transcurrido, setTranscurrido] = useState(0);
+    const [horaActual, setHoraActual] = useState(new Date());
+
+    const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
+    const esDiurno = turnoActivo?.turnoActual === 'diurno';
+    const horaInicio = esDiurno ? 6 : 18;
+    const duracion = 12 * 60 * 60;
+
+    useEffect(() => {
+        const calcular = () => {
+            const ahora = new Date();
+            setHoraActual(ahora);
+            const inicio = new Date();
+            inicio.setHours(horaInicio, 0, 0, 0);
+            setTranscurrido(Math.max(0, Math.floor((ahora - inicio) / 1000)));
+        };
+        calcular();
+        const id = setInterval(calcular, 1000);
+        return () => clearInterval(id);
+    }, [horaInicio]);
+
+    if (!turnoActivo || !bloque) {
+        return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
+    }
+
+    const progreso = Math.min(100, (transcurrido / duracion) * 100);
+    const restante = Math.max(0, duracion - transcurrido);
+    const hh = Math.floor(transcurrido / 3600).toString().padStart(2, '0');
+    const mm = Math.floor((transcurrido % 3600) / 60).toString().padStart(2, '0');
+    const ss = (transcurrido % 60).toString().padStart(2, '0');
+    const hrRest = Math.floor(restante / 3600);
+    const minRest = Math.floor((restante % 3600) / 60);
+
+    const col = esDiurno
+        ? { bg: '#1a1200', border: '#f59e0b', text: '#fcd34d', badge: '#2d1f00', badgeText: '#fbbf24', progress: '#f59e0b', iconBg: '#2d1f00', iconColor: '#fcd34d' }
+        : { bg: '#0d0f2e', border: '#818cf8', text: '#c7d2fe', badge: '#1e1b4b', badgeText: '#a5b4fc', progress: '#818cf8', iconBg: '#1e1b4b', iconColor: '#c7d2fe' };
+
+    const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
+    const fecha = horaActual.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+
+    return (
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Card turno activo */}
+            <div style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 16, padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: col.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {esDiurno ? (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="4" stroke={col.iconColor} strokeWidth="2" />
+                                    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke={col.iconColor} strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            ) : (
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke={col.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            )}
+                        </div>
+                        <div>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: col.badge, color: col.badgeText, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.5 }}>
+                                Turno {esDiurno ? 'diurno' : 'nocturno'} activo
+                            </span>
+                            <div style={{ fontSize: 34, fontWeight: 800, color: col.text, fontVariantNumeric: 'tabular-nums', letterSpacing: 2, marginTop: 4 }}>
+                                {hh}:{mm}:{ss}
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 12, color: col.text, lineHeight: 1.7 }}>
+                        <div>{fecha}</div>
+                        <div style={{ fontWeight: 700 }}>{esDiurno ? '06:00 – 18:00' : '18:00 – 06:00'}</div>
+                    </div>
+                </div>
+                <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ height: '100%', width: `${progreso}%`, background: col.progress, borderRadius: 10, transition: 'width 1s linear' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: col.text }}>
+                    <span>{esDiurno ? '06:00' : '18:00'}</span>
+                    <span style={{ fontWeight: 600 }}>{hrRest}h {minRest}min restantes</span>
+                    <span>{esDiurno ? '18:00' : '06:00'}</span>
+                </div>
+            </div>
+
+            {/* Card guardia */}
+            <div style={{ background: '#161616', borderRadius: 16, padding: 20 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: '#555', letterSpacing: 1.5, marginBottom: 14 }}>DATOS DEL GUARDIA</p>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e0f2f1', color: '#0f766e', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {iniciales}
+                    </div>
+                    <div>
+                        <p style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{user?.name}</p>
+                        <p style={{ fontSize: 12, color: '#888' }}>{user?.email}</p>
+                    </div>
+                </div>
+                <div style={{ borderTop: '1px solid #222', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {[
+                        ['Puesto', turnoActivo.puesto],
+                        ['Bloque', `${bloque.nombre} ${bloque.codigo}`],
+                        ['Turno', esDiurno ? 'Diurno  06:00 – 18:00' : 'Nocturno  18:00 – 06:00'],
+                    ].map(([label, val]) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: '#555', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
+                            <span style={{ fontSize: 13, color: '#ddd', fontWeight: 500 }}>{val}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ── Pantalla Placas DB ────────────────────────────────────
 const PantallaPlacasDB = () => {
@@ -392,7 +484,7 @@ const PantallaPlacasDB = () => {
     }, []);
 
     return (
-        <div className="ws-section-content" style={{ padding: '16px' }}>
+        <div className="ws-section-content" style={{ padding: 16 }}>
             <h3 className="ws-sub-title">Placas Vehículos</h3>
             <p style={{ color: '#555', fontSize: 12, marginTop: -8, marginBottom: 8 }}>
                 {loading ? 'Cargando...' : `${vehiculos.length} registros en base de datos`}
@@ -422,32 +514,13 @@ const PantallaPlacasDB = () => {
 
 // ── Pantalla stub ─────────────────────────────────────────
 const PantallaStub = ({ title }) => (
-    <div className="ws-section-content" style={{ padding: '16px' }}>
+    <div className="ws-section-content" style={{ padding: 16 }}>
         <h3 className="ws-sub-title">{title}</h3>
         <p className="ws-empty">Próximamente</p>
     </div>
 );
 
-// ── Pantallas de tabs ─────────────────────────────────────
-const PantallaVehiculos = ({ movimientos }) => (
-    <div className="ws-section-content">
-        <h3 className="ws-sub-title">Todos los vehículos hoy</h3>
-        {movimientos.length === 0
-            ? <p className="ws-empty">Sin vehículos registrados hoy</p>
-            : movimientos.filter(m => m.tipo === 'ingreso').map(m => (
-                <div key={m._id} className="mov-item">
-                    <div className="mov-icon ingreso"><TruckIcon color="#818cf8" /></div>
-                    <div className="mov-info">
-                        <span className="mov-tipo ingreso">{m.placa}</span>
-                        <span className="mov-detalle">{m.conductor || '—'}{m.empresa ? ' · ' + m.empresa : ''}</span>
-                    </div>
-                    <span className="mov-hora">{m.hora}</span>
-                </div>
-            ))
-        }
-    </div>
-);
-
+// ── Perfil ────────────────────────────────────────────────
 const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
     const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
     const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
@@ -457,7 +530,6 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             <div className="perfil-avatar">{iniciales}</div>
             <h2 className="perfil-nombre">{user?.name}</h2>
             <p className="perfil-email">{user?.email}</p>
-
             {turnoActivo && bloque && (
                 <div className="perfil-turno-card" style={{ borderColor: bloque.color + '40', background: bloque.bg }}>
                     <span style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TURNO ACTIVO</span>
@@ -468,7 +540,6 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                     </p>
                 </div>
             )}
-
             <button className="perfil-logout" onClick={onLogout}>Cerrar sesión</button>
         </div>
     );
@@ -487,111 +558,81 @@ const WorkspacePage = () => {
     const [movimientos, setMovimientos] = useState([]);
     const [turnoActivo, setTurnoActivo] = useState(null);
 
-    // Modales
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [detailMov, setDetailMov] = useState(null);
     const [editMov, setEditMov] = useState(null);
 
-    // Cajón y búsqueda
     const [showDrawer, setShowDrawer] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Selección
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
 
-    // Filtro de búsqueda aplicado a la lista
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
         ? movimientos.filter(m =>
             m.placa.toLowerCase().includes(sq) ||
-            (m.conductor || '').toLowerCase().includes(sq)
-        )
+            (m.conductor || '').toLowerCase().includes(sq))
         : movimientos;
 
     useEffect(() => {
-        const fetchTurno = async () => {
-            try {
-                const { data } = await api.get('/turnos/activo');
-                if (data.turno) setTurnoActivo(data.turno);
-            } catch { }
-        };
-        fetchTurno();
+        api.get('/turnos/activo')
+            .then(({ data }) => { if (data.turno) setTurnoActivo(data.turno); })
+            .catch(() => { });
     }, []);
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
         try {
-            const [statsRes, movRes] = await Promise.all([
+            const [sRes, mRes] = await Promise.all([
                 api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
                 api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
             ]);
-            setStats(statsRes.data);
-            setMovimientos(movRes.data.movimientos);
+            setStats(sRes.data);
+            setMovimientos(mRes.data.movimientos);
         } catch { }
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
 
-    // Cerrar búsqueda al cambiar de tab
     const handleTabChange = tab => {
         setTabActiva(tab);
         setShowSearch(false);
         setSearchQuery('');
     };
 
-    // Handlers selección
-    const toggleSelectMode = () => {
-        setSelectMode(s => !s);
-        setSelectedIds(new Set());
-    };
+    const toggleSelectMode = () => { setSelectMode(s => !s); setSelectedIds(new Set()); };
 
-    const toggleSelect = id => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    };
+    const toggleSelect = id => setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
 
-    const selectAll = () => {
-        setSelectedIds(selectedIds.size === movimientos.length
-            ? new Set()
-            : new Set(movimientos.map(m => m._id))
-        );
-    };
+    const selectAll = () => setSelectedIds(
+        selectedIds.size === movimientos.length ? new Set() : new Set(movimientos.map(m => m._id))
+    );
 
-    // Handlers CRUD
     const handleDelete = async id => {
-        try {
-            await api.delete(`/movimientos/${id}`);
-            cargarDatos();
-        } catch { }
+        try { await api.delete(`/movimientos/${id}`); cargarDatos(); } catch { }
     };
 
     const handleBatchDelete = async () => {
         if (!selectedIds.size) return;
         try {
             await api.delete('/movimientos/batch', { data: { ids: [...selectedIds] } });
-            setSelectedIds(new Set());
-            setSelectMode(false);
-            cargarDatos();
+            setSelectedIds(new Set()); setSelectMode(false); cargarDatos();
         } catch { }
     };
 
-    const handleCopy = m => {
-        navigator.clipboard?.writeText(movToText(m));
-    };
+    const handleCopy = m => navigator.clipboard?.writeText(movToText(m));
 
     const handleShare = async m => {
-        const text = movToText(m);
         if (navigator.share) {
-            await navigator.share({ title: 'Movimiento FLUJO', text }).catch(() => { });
-        } else {
-            handleCopy(m);
-        }
+            await navigator.share({ title: 'Movimiento FLUJO', text: movToText(m) }).catch(() => { });
+        } else handleCopy(m);
     };
 
     const handleEdit = m => setEditMov(m);
@@ -606,8 +647,7 @@ const WorkspacePage = () => {
         ]);
 
         if (format === 'csv') {
-            const sep = ';';
-            const content = [cols, ...rows].map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(sep)).join('\r\n');
+            const content = [cols, ...rows].map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
             const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.csv` }).click();
@@ -625,20 +665,13 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
         }
     };
 
-    const cardProps = {
-        selectMode,
-        onToggleSelect: toggleSelect,
-        onOpenDetail: setDetailMov,
-        onDelete: handleDelete,
-        onEdit: handleEdit,
-        onCopy: handleCopy,
-        onShare: handleShare,
-    };
+    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: setDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
+
+    const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
     return (
         <div className="ws-wrapper">
 
-            {/* Cajón de navegación */}
             {showDrawer && (
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
@@ -649,35 +682,42 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
 
             {/* Top bar */}
             <div className="ws-topbar">
-                <button className="ws-topbar-btn" onClick={() => setShowDrawer(true)}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 6h18M3 12h18M3 18h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                <button className="ws-topbar-btn"
+                    onClick={isDrawerTab ? () => handleTabChange('inicio') : () => setShowDrawer(true)}>
+                    {isDrawerTab ? <IconArrowLeft /> : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M3 6h18M3 12h18M3 18h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                    )}
                 </button>
-                <span className="ws-topbar-title">FLUJO</span>
-                <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
-                        <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                </button>
+                <span className="ws-topbar-title">
+                    {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
+                </span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    {!isDrawerTab && (
+                        <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
+                                <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                        </button>
+                    )}
+                    <button className="ws-topbar-btn" onClick={() => handleTabChange('perfil')}>
+                        <IconUserCircle active={tabActiva === 'perfil'} />
+                    </button>
+                </div>
             </div>
 
             {/* Barra de búsqueda */}
-            {showSearch && (
+            {showSearch && !isDrawerTab && (
                 <div className="ws-search-bar">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <input
-                        className="ws-search-input"
-                        type="text"
+                    <input className="ws-search-input" type="text"
                         placeholder="Buscar por placa o conductor..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        autoFocus
-                    />
+                        value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
                     {searchQuery && (
                         <button className="ws-search-clear" onClick={() => setSearchQuery('')}>✕</button>
                     )}
@@ -687,13 +727,11 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
                     <>
-                        {/* Dashboard */}
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setDashCollapsed(p => !p)}>
                                 <span>DASHBOARD</span>
                                 <span className={`ws-chevron ${dashCollapsed ? 'collapsed' : ''}`}>∧</span>
                             </button>
-
                             {!dashCollapsed && (
                                 <div className="ws-section-content">
                                     <div className="ws-counters">
@@ -711,7 +749,6 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                                             </div>
                                         ))}
                                     </div>
-
                                     <div className="ws-chart-card">
                                         <div className="ws-chart-header">
                                             <span>Movimiento de vehículos</span>
@@ -736,7 +773,6 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                             )}
                         </div>
 
-                        {/* Movimientos */}
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setMovCollapsed(p => !p)}>
                                 <span>
@@ -757,7 +793,6 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                                     <span className={`ws-chevron ${movCollapsed ? 'collapsed' : ''}`}>∧</span>
                                 </div>
                             </button>
-
                             {!movCollapsed && (
                                 <>
                                     {selectMode && (
@@ -765,8 +800,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                                             <label className="select-bar-label" onClick={selectAll}>
                                                 <input type="checkbox"
                                                     checked={selectedIds.size === movimientos.length && movimientos.length > 0}
-                                                    onChange={selectAll}
-                                                    style={{ accentColor: '#818cf8' }}
+                                                    onChange={selectAll} style={{ accentColor: '#818cf8' }}
                                                     onClick={e => e.stopPropagation()} />
                                                 {selectedIds.size === movimientos.length ? 'Ninguno' : 'Todos'} ({selectedIds.size}/{movimientos.length})
                                             </label>
@@ -777,7 +811,6 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                                             )}
                                         </div>
                                     )}
-
                                     <div className="ws-section-content">
                                         {movimientos.length === 0
                                             ? <p className="ws-empty">Sin movimientos registrados hoy</p>
@@ -796,9 +829,11 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                     </>
                 )}
 
-                {tabActiva === 'vehiculos' && <PantallaVehiculos movimientos={movimientos} />}
+                {tabActiva === 'avance' && (
+                    <PantallaAvance turnoActivo={turnoActivo} user={user} />
+                )}
 
-                {tabActiva === 'flujos' && <PantallaStub title="Flujos del día" />}
+                {tabActiva === 'flujos' && <PantallaStub title="Flujos" />}
 
                 {tabActiva === 'perfil' && (
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
@@ -810,7 +845,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                 {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
             </div>
 
-            {/* FABs */}
+            {/* FABs — solo en inicio */}
             {tabActiva === 'inicio' && !selectMode && (
                 <>
                     {showExportMenu && (
@@ -825,9 +860,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                             </div>
                         </div>
                     )}
-                    <button className="ws-fab-export"
-                        onClick={() => setShowExportMenu(s => !s)}
-                        title="Exportar movimientos">
+                    <button className="ws-fab-export" onClick={() => setShowExportMenu(s => !s)} title="Exportar movimientos">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -836,42 +869,21 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                 </>
             )}
 
-            {/* Modal nuevo movimiento */}
+            {/* Modales */}
             {showModal && turnoActivo && (
-                <ModalAgregar
-                    puesto={turnoActivo.puesto}
-                    bloque={turnoActivo.bloque}
-                    onClose={() => setShowModal(false)}
-                    onGuardado={cargarDatos}
-                    movimientos={movimientos}
-                />
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
+                    onClose={() => setShowModal(false)} onGuardado={cargarDatos} movimientos={movimientos} />
             )}
-
-            {/* Modal editar */}
             {editMov && turnoActivo && (
-                <ModalAgregar
-                    puesto={turnoActivo.puesto}
-                    bloque={turnoActivo.bloque}
-                    onClose={() => setEditMov(null)}
-                    onGuardado={cargarDatos}
-                    movimientos={movimientos}
-                    editData={editMov}
-                />
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
+                    onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
-
-            {/* Modal detalle */}
             {detailMov && (
-                <ModalDetalle
-                    mov={detailMov}
-                    onClose={() => setDetailMov(null)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onCopy={handleCopy}
-                    onShare={handleShare}
-                />
+                <ModalDetalle mov={detailMov} onClose={() => setDetailMov(null)}
+                    onEdit={handleEdit} onDelete={handleDelete} onCopy={handleCopy} onShare={handleShare} />
             )}
 
-            {/* Bottom nav */}
+            {/* Bottom nav — solo Inicio, Avance, Flujos */}
             <nav className="ws-navbar">
                 {[
                     {
@@ -884,19 +896,10 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                             </svg>
                         )
                     },
-                    { id: 'vehiculos', label: 'Vehículos', icon: <TruckIcon color="currentColor" /> },
                     {
                         id: 'flujos', label: 'Flujos', icon: (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                 <path d="M3 6h18M3 12h12M3 18h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                        )
-                    },
-                    {
-                        id: 'perfil', label: 'Perfil', icon: (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
-                                <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         )
                     },
