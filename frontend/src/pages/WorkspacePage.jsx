@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
@@ -43,6 +44,39 @@ const IconShare = () => (
     </svg>
 );
 
+const IconPhone = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C9.61 21 3 14.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.24 1.02l-2.2 2.2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+const IconPerson = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" />
+        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+const IconBriefcase = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 12v4M10 14h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+const IconBolt = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+const IconChevronRight = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────
 const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
@@ -60,13 +94,53 @@ const ModalField = ({ name, label, placeholder, required, value, onChange, autoF
     </div>
 );
 
-const ModalSelect = ({ name, label, options, value, onChange, autoFilled }) => (
+const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFilled }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
         <label>{label}</label>
-        <select name={name} value={value} onChange={onChange}>
-            <option value="">— Seleccionar —</option>
-            {options.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
+        <input
+            type="text"
+            name={name}
+            list={`combo-${name}`}
+            placeholder={placeholder || ''}
+            value={value}
+            onChange={onChange}
+        />
+        <datalist id={`combo-${name}`}>
+            {options.map(o => <option key={o} value={o} />)}
+        </datalist>
+    </div>
+);
+
+// ── Menú cajón (hamburguesa) ──────────────────────────────
+const DRAWER_ITEMS = [
+    { label: 'Placas Vehículos', tab: 'placas-db', icon: <TruckIcon color="currentColor" /> },
+    { label: 'Extensiones', tab: 'extensiones', icon: <IconPhone /> },
+    { label: 'Personas', tab: 'personas', icon: <IconPerson /> },
+    { label: 'Jefes Inmediatos', tab: 'jefes', icon: <IconBriefcase /> },
+];
+
+const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo }) => (
+    <div className="drawer-overlay" onClick={onClose}>
+        <div className="drawer-panel" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+                <span className="drawer-brand">FLUJO</span>
+                <button className="drawer-close-btn" onClick={onClose}>✕</button>
+            </div>
+            <div className="drawer-nav">
+                {DRAWER_ITEMS.map(item => (
+                    <button key={item.tab} className="drawer-item" onClick={() => { onNavigate(item.tab); onClose(); }}>
+                        <span className="drawer-item-icon">{item.icon}</span>
+                        <span className="drawer-item-label">{item.label}</span>
+                        <IconChevronRight />
+                    </button>
+                ))}
+                <div className="drawer-divider" />
+                <button className="drawer-item drawer-item-flujo" onClick={() => { onNuevoFlujo(); onClose(); }}>
+                    <span className="drawer-item-icon"><IconBolt /></span>
+                    <span className="drawer-item-label">Crear nuevo flujo</span>
+                </button>
+            </div>
+        </div>
     </div>
 );
 
@@ -185,7 +259,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     </div>
 
                     <div className="modal-fields-row">
-                        <ModalSelect name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} value={form.tipoVehiculo} {...fp} />
+                        <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV, Sedán..." value={form.tipoVehiculo} {...fp} />
                         <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
                     </div>
 
@@ -306,6 +380,54 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
     </div>
 );
 
+// ── Pantalla Placas DB ────────────────────────────────────
+const PantallaPlacasDB = () => {
+    const [vehiculos, setVehiculos] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/vehiculos')
+            .then(res => { setVehiculos(res.data.vehiculos); setLoading(false); })
+            .catch(() => setLoading(false));
+    }, []);
+
+    return (
+        <div className="ws-section-content" style={{ padding: '16px' }}>
+            <h3 className="ws-sub-title">Placas Vehículos</h3>
+            <p style={{ color: '#555', fontSize: 12, marginTop: -8, marginBottom: 8 }}>
+                {loading ? 'Cargando...' : `${vehiculos.length} registros en base de datos`}
+            </p>
+            {!loading && vehiculos.length === 0
+                ? <p className="ws-empty">No hay vehículos registrados</p>
+                : vehiculos.map(v => (
+                    <div key={v._id} className="mov-item">
+                        <div className="mov-icon ingreso"><TruckIcon color="#818cf8" /></div>
+                        <div className="mov-info">
+                            <span className="mov-tipo ingreso">{v.placa}</span>
+                            <span className="mov-detalle">
+                                {[v.marca, v.color, v.tipoVehiculo].filter(Boolean).join(' · ') || 'Sin datos'}
+                            </span>
+                            {(v.conductor || v.empresa) && (
+                                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                                    {[v.conductor, v.empresa].filter(Boolean).join(' · ')}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))
+            }
+        </div>
+    );
+};
+
+// ── Pantalla stub ─────────────────────────────────────────
+const PantallaStub = ({ title }) => (
+    <div className="ws-section-content" style={{ padding: '16px' }}>
+        <h3 className="ws-sub-title">{title}</h3>
+        <p className="ws-empty">Próximamente</p>
+    </div>
+);
+
 // ── Pantallas de tabs ─────────────────────────────────────
 const PantallaVehiculos = ({ movimientos }) => (
     <div className="ws-section-content">
@@ -355,6 +477,7 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(false);
@@ -370,9 +493,23 @@ const WorkspacePage = () => {
     const [detailMov, setDetailMov] = useState(null);
     const [editMov, setEditMov] = useState(null);
 
+    // Cajón y búsqueda
+    const [showDrawer, setShowDrawer] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Selección
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
+
+    // Filtro de búsqueda aplicado a la lista
+    const sq = searchQuery.toLowerCase();
+    const movsFiltrados = sq
+        ? movimientos.filter(m =>
+            m.placa.toLowerCase().includes(sq) ||
+            (m.conductor || '').toLowerCase().includes(sq)
+        )
+        : movimientos;
 
     useEffect(() => {
         const fetchTurno = async () => {
@@ -397,6 +534,13 @@ const WorkspacePage = () => {
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
+
+    // Cerrar búsqueda al cambiar de tab
+    const handleTabChange = tab => {
+        setTabActiva(tab);
+        setShowSearch(false);
+        setSearchQuery('');
+    };
 
     // Handlers selección
     const toggleSelectMode = () => {
@@ -455,10 +599,10 @@ const WorkspacePage = () => {
     const exportData = format => {
         setShowExportMenu(false);
         const fecha = new Date().toISOString().split('T')[0];
-        const cols = ['Tipo', 'Placa', 'Marca', 'Color', 'Tipo Vehículo', 'Empresa', 'Conductor', 'Cédula', 'Destino', 'Actividad', 'Hora', 'Fecha', 'Puesto'];
+        const cols = ['Hora', 'Tipo', 'Placa', 'Marca', 'Color', 'Tipo Vehículo', 'Empresa', 'Conductor', 'Cédula', 'Destino', 'Actividad', 'Fecha', 'Puesto'];
         const rows = movimientos.map(m => [
-            m.tipo, m.placa, m.marca, m.color, m.tipoVehiculo, m.empresa,
-            m.conductor, m.cedula, m.destino, m.actividad, m.hora, m.fecha, m.puesto,
+            m.hora, m.tipo, m.placa, m.marca, m.color, m.tipoVehiculo, m.empresa,
+            m.conductor, m.cedula, m.destino, m.actividad, m.fecha, m.puesto,
         ]);
 
         if (format === 'csv') {
@@ -469,9 +613,12 @@ const WorkspacePage = () => {
             Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.csv` }).click();
             URL.revokeObjectURL(url);
         } else {
-            const header = cols.join('\t');
-            const body = rows.map(r => r.map(v => v || '').join('\t')).join('\r\n');
-            const blob = new Blob(['﻿' + header + '\r\n' + body], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const esc = v => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const html = `<html><head><meta charset="UTF-8"></head><body><table>
+<tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
+${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\n')}
+</table></body></html>`;
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.xls` }).click();
             URL.revokeObjectURL(url);
@@ -491,21 +638,51 @@ const WorkspacePage = () => {
     return (
         <div className="ws-wrapper">
 
+            {/* Cajón de navegación */}
+            {showDrawer && (
+                <DrawerMenu
+                    onClose={() => setShowDrawer(false)}
+                    onNavigate={handleTabChange}
+                    onNuevoFlujo={() => navigate('/turno')}
+                />
+            )}
+
             {/* Top bar */}
             <div className="ws-topbar">
-                <button className="ws-topbar-btn">
+                <button className="ws-topbar-btn" onClick={() => setShowDrawer(true)}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M3 6h18M3 12h18M3 18h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                 </button>
                 <span className="ws-topbar-title">FLUJO</span>
-                <button className="ws-topbar-btn">
+                <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <circle cx="11" cy="11" r="8" stroke="#fff" strokeWidth="2" />
-                        <path d="M21 21l-4.35-4.35" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                        <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" strokeLinecap="round" />
                     </svg>
                 </button>
             </div>
+
+            {/* Barra de búsqueda */}
+            {showSearch && (
+                <div className="ws-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input
+                        className="ws-search-input"
+                        type="text"
+                        placeholder="Buscar por placa o conductor..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        autoFocus
+                    />
+                    {searchQuery && (
+                        <button className="ws-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                    )}
+                </div>
+            )}
 
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
@@ -521,8 +698,8 @@ const WorkspacePage = () => {
                                 <div className="ws-section-content">
                                     <div className="ws-counters">
                                         {[
-                                            { valor: stats?.totalVehiculos ?? '–', label: 'VEHÍCULOS' },
-                                            { valor: stats?.totalFlujos ?? '–', label: 'FLUJOS' },
+                                            { valor: stats?.contratistas ?? '–', label: 'CONTRATISTAS' },
+                                            { valor: stats?.petroecuador ?? '–', label: 'EP PETRO.' },
                                             { valor: stats?.diasActivos ?? '–', label: 'DÍAS', suffix: 'd' },
                                         ].map(c => (
                                             <div key={c.label} className="ws-counter-card">
@@ -562,7 +739,14 @@ const WorkspacePage = () => {
                         {/* Movimientos */}
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setMovCollapsed(p => !p)}>
-                                <span>MOVIMIENTOS</span>
+                                <span>
+                                    MOVIMIENTOS
+                                    {searchQuery && (
+                                        <span style={{ color: '#818cf8', marginLeft: 6, fontWeight: 700 }}>
+                                            · {movsFiltrados.length} resultado{movsFiltrados.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     {!movCollapsed && movimientos.length > 0 && (
                                         <span className="select-toggle-btn"
@@ -597,11 +781,13 @@ const WorkspacePage = () => {
                                     <div className="ws-section-content">
                                         {movimientos.length === 0
                                             ? <p className="ws-empty">Sin movimientos registrados hoy</p>
-                                            : movimientos.map(m => (
-                                                <MovCard key={m._id} m={m}
-                                                    selected={selectedIds.has(m._id)}
-                                                    {...cardProps} />
-                                            ))
+                                            : movsFiltrados.length === 0
+                                                ? <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
+                                                : movsFiltrados.map(m => (
+                                                    <MovCard key={m._id} m={m}
+                                                        selected={selectedIds.has(m._id)}
+                                                        {...cardProps} />
+                                                ))
                                         }
                                     </div>
                                 </>
@@ -612,16 +798,16 @@ const WorkspacePage = () => {
 
                 {tabActiva === 'vehiculos' && <PantallaVehiculos movimientos={movimientos} />}
 
-                {tabActiva === 'flujos' && (
-                    <div className="ws-section-content">
-                        <h3 className="ws-sub-title">Flujos del día</h3>
-                        <p className="ws-empty">Próximamente</p>
-                    </div>
-                )}
+                {tabActiva === 'flujos' && <PantallaStub title="Flujos del día" />}
 
                 {tabActiva === 'perfil' && (
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
                 )}
+
+                {tabActiva === 'placas-db' && <PantallaPlacasDB />}
+                {tabActiva === 'extensiones' && <PantallaStub title="Extensiones" />}
+                {tabActiva === 'personas' && <PantallaStub title="Personas" />}
+                {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
             </div>
 
             {/* FABs */}
@@ -717,7 +903,7 @@ const WorkspacePage = () => {
                 ].map(tab => (
                     <button key={tab.id}
                         className={`ws-nav-btn ${tabActiva === tab.id ? 'active' : ''}`}
-                        onClick={() => setTabActiva(tab.id)}>
+                        onClick={() => handleTabChange(tab.id)}>
                         {tab.icon}
                         <span>{tab.label}</span>
                         {tabActiva === tab.id && <div className="ws-nav-dot" />}

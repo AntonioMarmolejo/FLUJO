@@ -59,14 +59,19 @@ export const getStats = async (req, res) => {
             Movimiento.find({ ...filter, fecha }),
         ]);
 
+        const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
+        const ingresos = movimientosHoy.filter(m => m.tipo === 'ingreso');
+        const petroecuador = ingresos.filter(isPetro).length;
+        const contratistas = ingresos.filter(m => !isPetro(m)).length;
+
         const grafico = Array.from({ length: 24 }, (_, hora) => {
             const label = `${hora}h`;
-            const ingresos = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'ingreso').length;
-            const salidas = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'salida').length;
-            return { label, ingresos, salidas };
+            const ing = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'ingreso').length;
+            const sal = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'salida').length;
+            return { label, ingresos: ing, salidas: sal };
         });
 
-        res.status(200).json({ totalVehiculos, totalFlujos, diasActivos: fechasActivas.length, grafico });
+        res.status(200).json({ totalVehiculos, totalFlujos, diasActivos: fechasActivas.length, petroecuador, contratistas, grafico });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }

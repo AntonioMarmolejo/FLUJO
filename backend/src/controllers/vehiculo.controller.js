@@ -1,5 +1,15 @@
 import Vehiculo from '../models/Vehiculo.model.js';
 
+// GET /api/vehiculos
+export const getVehiculos = async (req, res) => {
+    try {
+        const vehiculos = await Vehiculo.find().sort({ placa: 1 });
+        res.json({ vehiculos });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener vehículos', error: error.message });
+    }
+};
+
 // GET /api/vehiculos/search?placa=XX
 export const searchVehiculos = async (req, res) => {
     try {
