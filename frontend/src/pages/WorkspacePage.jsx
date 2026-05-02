@@ -8,21 +8,51 @@ import {
 } from 'recharts';
 import '../styles/WorkspacePage.css';
 
-// ── Icono camión ──────────────────────────────────────────
+// ── Iconos ────────────────────────────────────────────────
 const TruckIcon = ({ color }) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"
-            stroke={color} strokeWidth="2" strokeLinejoin="round" />
+        <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" stroke={color} strokeWidth="2" strokeLinejoin="round" />
         <circle cx="5.5" cy="18.5" r="2.5" stroke={color} strokeWidth="2" />
         <circle cx="18.5" cy="18.5" r="2.5" stroke={color} strokeWidth="2" />
     </svg>
 );
 
-// ── Modal agregar movimiento ──────────────────────────────
-const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
+const IconMinus = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+);
 
+const IconPencil = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M15.232 5.232l3.536 3.536M9 11l6.536-6.536a2 2 0 012.828 2.829L11.828 13.828a2 2 0 01-.707.464l-3.536 1.06 1.06-3.536A2 2 0 019 11z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M3 21h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+const IconCopy = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2" />
+    </svg>
+);
+
+const IconShare = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
+// ── Helpers ───────────────────────────────────────────────
+const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
 
+const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
+
+const movToText = m =>
+    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}\nHora: ${m.hora} — ${m.fecha}`;
+
+// ── Campos del formulario ────────────────────────────────
 const ModalField = ({ name, label, placeholder, required, value, onChange, autoFilled }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
         <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}</label>
@@ -40,12 +70,16 @@ const ModalSelect = ({ name, label, options, value, onChange, autoFilled }) => (
     </div>
 );
 
-const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
-    const [form, setForm] = useState(EMPTY_FORM);
+// ── Modal formulario (crear + editar) ────────────────────
+const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
+    const [form, setForm] = useState(editData
+        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
+        : EMPTY_FORM
+    );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [suggestions, setSuggestions] = useState([]);
-    const [autoFilled, setAutoFilled] = useState(false);
+    const [autoFilled, setAutoFilled] = useState(!!editData);
     const searchTimer = useRef(null);
 
     const handleChange = e => {
@@ -79,16 +113,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
     };
 
     const selectSuggestion = v => {
-        setForm(f => ({
-            ...f,
-            placa: v.placa,
-            marca: v.marca || '',
-            color: v.color || '',
-            tipoVehiculo: v.tipoVehiculo || '',
-            empresa: v.empresa || '',
-            conductor: v.conductor || '',
-            cedula: v.cedula || '',
-        }));
+        setForm(f => ({ ...f, placa: v.placa, marca: v.marca || '', color: v.color || '', tipoVehiculo: v.tipoVehiculo || '', empresa: v.empresa || '', conductor: v.conductor || '', cedula: v.cedula || '' }));
         setSuggestions([]);
         setAutoFilled(true);
     };
@@ -97,7 +122,11 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
         if (!form.placa) { setError('La placa es obligatoria'); return; }
         setLoading(true);
         try {
-            await api.post('/movimientos', { ...form, puesto, bloque });
+            if (editData?._id) {
+                await api.put(`/movimientos/${editData._id}`, form);
+            } else {
+                await api.post('/movimientos', { ...form, puesto, bloque });
+            }
             onGuardado();
             onClose();
         } catch (err) {
@@ -113,7 +142,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3>Nuevo movimiento</h3>
+                    <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
 
@@ -127,7 +156,6 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
                 </div>
 
                 <div className="modal-fields">
-                    {/* Placa con autocomplete */}
                     <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
                         <label>PLACAS <span style={{ color: '#f87171' }}>*</span></label>
                         <div className="placa-wrapper">
@@ -139,9 +167,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
                                         <div key={i} className="placa-suggestion-item" onClick={() => selectSuggestion(v)}>
                                             <div>
                                                 <div className="placa-suggestion-placa">{v.placa}</div>
-                                                <div className="placa-suggestion-info">
-                                                    {[v.marca, v.color, v.conductor].filter(Boolean).join(' · ') || 'Sin datos'}
-                                                </div>
+                                                <div className="placa-suggestion-info">{formatMov(v)}</div>
                                             </div>
                                             <span className={`placa-suggestion-badge ${v._source}`}>
                                                 {v._source === 'hoy' ? 'Hoy' : 'BD'}
@@ -172,14 +198,110 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos }) => {
                 {error && <p className="modal-error">{error}</p>}
 
                 <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Registrar movimiento'}
+                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar movimiento'}
                 </button>
             </div>
         </div>
     );
 };
 
-// ── Pantalla Perfil ───────────────────────────────────────
+// ── Modal detalle ─────────────────────────────────────────
+const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => {
+    const campos = [
+        ['Marca', mov.marca], ['Color', mov.color], ['Tipo vehículo', mov.tipoVehiculo],
+        ['Empresa', mov.empresa], ['Conductor', mov.conductor], ['Cédula', mov.cedula],
+        ['Destino', mov.destino], ['Actividad', mov.actividad],
+    ].filter(([, v]) => v);
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <span className={`detalle-badge ${mov.tipo}`}>
+                        {mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}
+                    </span>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+
+                <div>
+                    <div className="detalle-placa">{mov.placa}</div>
+                    <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
+                </div>
+
+                {campos.length > 0 && (
+                    <div className="detalle-fields">
+                        {campos.map(([label, value]) => (
+                            <div key={label} className="detalle-field">
+                                <span className="detalle-label">{label}</span>
+                                <span className="detalle-value">{value}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="detalle-actions">
+                    <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}>
+                        <IconPencil /> Editar
+                    </button>
+                    <button className="detalle-act-btn" onClick={() => onCopy(mov)}>
+                        <IconCopy /> Copiar
+                    </button>
+                    <button className="detalle-act-btn" onClick={() => onShare(mov)}>
+                        <IconShare /> Compartir
+                    </button>
+                    <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}>
+                        <IconMinus /> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ── Tarjeta de movimiento ─────────────────────────────────
+const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
+    <div
+        className={`mov-item ${selected ? 'mov-selected' : ''}`}
+        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}
+    >
+        {selectMode && (
+            <input type="checkbox" className="mov-check"
+                checked={selected}
+                onChange={() => onToggleSelect(m._id)}
+                onClick={e => e.stopPropagation()} />
+        )}
+        <div className={`mov-icon ${m.tipo}`}>
+            <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
+            <span className="mov-hora-small">{m.hora}</span>
+        </div>
+        <div className="mov-info">
+            <span className={`mov-tipo ${m.tipo}`}>
+                {m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}
+            </span>
+            <span className="mov-detalle">
+                {m.conductor || '—'}{m.empresa ? ' · ' + m.empresa : ''}
+            </span>
+        </div>
+        {!selectMode && (
+            <div className="mov-actions" onClick={e => e.stopPropagation()}>
+                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}>
+                    <IconMinus />
+                </button>
+                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}>
+                    <IconPencil />
+                </button>
+                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}>
+                    <IconCopy />
+                </button>
+                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}>
+                    <IconShare />
+                </button>
+            </div>
+        )}
+    </div>
+);
+
+// ── Pantallas de tabs ─────────────────────────────────────
 const PantallaVehiculos = ({ movimientos }) => (
     <div className="ws-section-content">
         <h3 className="ws-sub-title">Todos los vehículos hoy</h3>
@@ -190,7 +312,7 @@ const PantallaVehiculos = ({ movimientos }) => (
                     <div className="mov-icon ingreso"><TruckIcon color="#818cf8" /></div>
                     <div className="mov-info">
                         <span className="mov-tipo ingreso">{m.placa}</span>
-                        <span className="mov-detalle">{m.conductor} · {m.cedula.slice(0, 7)}...</span>
+                        <span className="mov-detalle">{m.conductor || '—'}{m.empresa ? ' · ' + m.empresa : ''}</span>
                     </div>
                     <span className="mov-hora">{m.hora}</span>
                 </div>
@@ -211,9 +333,7 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 
             {turnoActivo && bloque && (
                 <div className="perfil-turno-card" style={{ borderColor: bloque.color + '40', background: bloque.bg }}>
-                    <span style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>
-                        TURNO ACTIVO
-                    </span>
+                    <span style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TURNO ACTIVO</span>
                     <p style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>{turnoActivo.puesto}</p>
                     <p style={{ color: '#888', fontSize: 13 }}>{bloque.nombre} {bloque.codigo}</p>
                     <p style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
@@ -234,13 +354,20 @@ const WorkspacePage = () => {
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(false);
     const [movCollapsed, setMovCollapsed] = useState(false);
-    const [showModal, setShowModal] = useState(false);
 
     const [stats, setStats] = useState(null);
     const [movimientos, setMovimientos] = useState([]);
     const [turnoActivo, setTurnoActivo] = useState(null);
 
-    // Obtener el primer turno activo del usuario
+    // Modales
+    const [showModal, setShowModal] = useState(false);
+    const [detailMov, setDetailMov] = useState(null);
+    const [editMov, setEditMov] = useState(null);
+
+    // Selección
+    const [selectMode, setSelectMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+
     useEffect(() => {
         const fetchTurno = async () => {
             try {
@@ -251,7 +378,6 @@ const WorkspacePage = () => {
         fetchTurno();
     }, []);
 
-    // Cargar stats y movimientos cuando hay turno activo
     const cargarDatos = async () => {
         if (!turnoActivo) return;
         try {
@@ -265,6 +391,70 @@ const WorkspacePage = () => {
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
+
+    // Handlers selección
+    const toggleSelectMode = () => {
+        setSelectMode(s => !s);
+        setSelectedIds(new Set());
+    };
+
+    const toggleSelect = id => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const selectAll = () => {
+        setSelectedIds(selectedIds.size === movimientos.length
+            ? new Set()
+            : new Set(movimientos.map(m => m._id))
+        );
+    };
+
+    // Handlers CRUD
+    const handleDelete = async id => {
+        try {
+            await api.delete(`/movimientos/${id}`);
+            cargarDatos();
+        } catch { }
+    };
+
+    const handleBatchDelete = async () => {
+        if (!selectedIds.size) return;
+        try {
+            await api.delete('/movimientos/batch', { data: { ids: [...selectedIds] } });
+            setSelectedIds(new Set());
+            setSelectMode(false);
+            cargarDatos();
+        } catch { }
+    };
+
+    const handleCopy = m => {
+        navigator.clipboard?.writeText(movToText(m));
+    };
+
+    const handleShare = async m => {
+        const text = movToText(m);
+        if (navigator.share) {
+            await navigator.share({ title: 'Movimiento FLUJO', text }).catch(() => { });
+        } else {
+            handleCopy(m);
+        }
+    };
+
+    const handleEdit = m => setEditMov(m);
+
+    const cardProps = {
+        selectMode,
+        onToggleSelect: toggleSelect,
+        onOpenDetail: setDetailMov,
+        onDelete: handleDelete,
+        onEdit: handleEdit,
+        onCopy: handleCopy,
+        onShare: handleShare,
+    };
 
     return (
         <div className="ws-wrapper">
@@ -285,12 +475,10 @@ const WorkspacePage = () => {
                 </button>
             </div>
 
-            {/* Contenido según tab */}
             <div className="ws-body">
-
                 {tabActiva === 'inicio' && (
                     <>
-                        {/* Sección Dashboard */}
+                        {/* Dashboard */}
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setDashCollapsed(p => !p)}>
                                 <span>DASHBOARD</span>
@@ -299,7 +487,6 @@ const WorkspacePage = () => {
 
                             {!dashCollapsed && (
                                 <div className="ws-section-content">
-                                    {/* Contadores */}
                                     <div className="ws-counters">
                                         {[
                                             { valor: stats?.totalVehiculos ?? '–', label: 'VEHÍCULOS' },
@@ -316,7 +503,6 @@ const WorkspacePage = () => {
                                         ))}
                                     </div>
 
-                                    {/* Gráfico */}
                                     <div className="ws-chart-card">
                                         <div className="ws-chart-header">
                                             <span>Movimiento de vehículos</span>
@@ -327,10 +513,7 @@ const WorkspacePage = () => {
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
                                                 <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={1} />
                                                 <YAxis tick={{ fill: '#666', fontSize: 10 }} />
-                                                <Tooltip
-                                                    contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }}
-                                                    labelStyle={{ color: '#aaa' }}
-                                                />
+                                                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#aaa' }} />
                                                 <Line type="monotone" dataKey="ingresos" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} name="Ingresos" />
                                                 <Line type="monotone" dataKey="salidas" stroke="#f87171" strokeWidth={2} dot={{ r: 3 }} name="Salidas" />
                                             </LineChart>
@@ -344,46 +527,58 @@ const WorkspacePage = () => {
                             )}
                         </div>
 
-                        {/* Sección Movimientos */}
+                        {/* Movimientos */}
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setMovCollapsed(p => !p)}>
                                 <span>MOVIMIENTOS</span>
-                                <span className={`ws-chevron ${movCollapsed ? 'collapsed' : ''}`}>∧</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {!movCollapsed && movimientos.length > 0 && (
+                                        <span className="select-toggle-btn"
+                                            onClick={e => { e.stopPropagation(); toggleSelectMode(); }}>
+                                            {selectMode ? 'Cancelar' : 'Selec.'}
+                                        </span>
+                                    )}
+                                    <span className={`ws-chevron ${movCollapsed ? 'collapsed' : ''}`}>∧</span>
+                                </div>
                             </button>
 
                             {!movCollapsed && (
-                                <div className="ws-section-content">
-                                    {movimientos.length === 0
-                                        ? <p className="ws-empty">Sin movimientos registrados hoy</p>
-                                        : movimientos.map(m => (
-                                            <div key={m._id} className="mov-item">
-                                                <div className={`mov-icon ${m.tipo}`}>
-                                                    <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
-                                                    <span className="mov-hora-small">{m.hora}</span>
-                                                </div>
-                                                <div className="mov-info">
-                                                    <span className={`mov-tipo ${m.tipo}`}>
-                                                        {m.tipo.charAt(0).toUpperCase() + m.tipo.slice(1)}
-                                                    </span>
-                                                    <span className="mov-detalle">
-                                                        {turnoActivo?.puesto} · {m.conductor} · {m.cedula.slice(0, 7)}...
-                                                    </span>
-                                                </div>
-                                                <div className={`mov-badge ${m.tipo}`}>
-                                                    {m.tipo[0].toUpperCase()}
-                                                </div>
-                                            </div>
-                                        ))
-                                    }
-                                </div>
+                                <>
+                                    {selectMode && (
+                                        <div className="select-bar">
+                                            <label className="select-bar-label" onClick={selectAll}>
+                                                <input type="checkbox"
+                                                    checked={selectedIds.size === movimientos.length && movimientos.length > 0}
+                                                    onChange={selectAll}
+                                                    style={{ accentColor: '#818cf8' }}
+                                                    onClick={e => e.stopPropagation()} />
+                                                {selectedIds.size === movimientos.length ? 'Ninguno' : 'Todos'} ({selectedIds.size}/{movimientos.length})
+                                            </label>
+                                            {selectedIds.size > 0 && (
+                                                <button className="delete-selected-btn" onClick={handleBatchDelete}>
+                                                    Eliminar {selectedIds.size}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="ws-section-content">
+                                        {movimientos.length === 0
+                                            ? <p className="ws-empty">Sin movimientos registrados hoy</p>
+                                            : movimientos.map(m => (
+                                                <MovCard key={m._id} m={m}
+                                                    selected={selectedIds.has(m._id)}
+                                                    {...cardProps} />
+                                            ))
+                                        }
+                                    </div>
+                                </>
                             )}
                         </div>
                     </>
                 )}
 
-                {tabActiva === 'vehiculos' && (
-                    <PantallaVehiculos movimientos={movimientos} />
-                )}
+                {tabActiva === 'vehiculos' && <PantallaVehiculos movimientos={movimientos} />}
 
                 {tabActiva === 'flujos' && (
                     <div className="ws-section-content">
@@ -397,12 +592,12 @@ const WorkspacePage = () => {
                 )}
             </div>
 
-            {/* Botón flotante + */}
-            {tabActiva === 'inicio' && (
+            {/* FAB */}
+            {tabActiva === 'inicio' && !selectMode && (
                 <button className="ws-fab" onClick={() => setShowModal(true)}>+</button>
             )}
 
-            {/* Modal */}
+            {/* Modal nuevo movimiento */}
             {showModal && turnoActivo && (
                 <ModalAgregar
                     puesto={turnoActivo.puesto}
@@ -410,6 +605,30 @@ const WorkspacePage = () => {
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
                     movimientos={movimientos}
+                />
+            )}
+
+            {/* Modal editar */}
+            {editMov && turnoActivo && (
+                <ModalAgregar
+                    puesto={turnoActivo.puesto}
+                    bloque={turnoActivo.bloque}
+                    onClose={() => setEditMov(null)}
+                    onGuardado={cargarDatos}
+                    movimientos={movimientos}
+                    editData={editMov}
+                />
+            )}
+
+            {/* Modal detalle */}
+            {detailMov && (
+                <ModalDetalle
+                    mov={detailMov}
+                    onClose={() => setDetailMov(null)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onCopy={handleCopy}
+                    onShare={handleShare}
                 />
             )}
 
@@ -443,11 +662,9 @@ const WorkspacePage = () => {
                         )
                     },
                 ].map(tab => (
-                    <button
-                        key={tab.id}
+                    <button key={tab.id}
                         className={`ws-nav-btn ${tabActiva === tab.id ? 'active' : ''}`}
-                        onClick={() => setTabActiva(tab.id)}
-                    >
+                        onClick={() => setTabActiva(tab.id)}>
                         {tab.icon}
                         <span>{tab.label}</span>
                         {tabActiva === tab.id && <div className="ws-nav-dot" />}

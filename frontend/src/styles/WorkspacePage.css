@@ -625,3 +625,170 @@
     border-color: #ef4444;
     color: #ef4444;
 }
+
+/* ── Botones de acción en tarjeta ── */
+.mov-item { cursor: pointer; transition: background 0.15s; }
+.mov-item:active { background: #242424; }
+.mov-item.mov-selected {
+    background: rgba(129,140,248,0.08);
+    border: 1px solid rgba(129,140,248,0.25);
+}
+
+.mov-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.mov-act-btn {
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.15s;
+    padding: 0;
+}
+.mov-act-btn:hover { color: #ccc; background: #2e2e2e; }
+.mov-act-btn.danger:hover { color: #f87171; background: rgba(248,113,113,0.12); }
+
+.mov-check {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    accent-color: #818cf8;
+    cursor: pointer;
+}
+
+/* ── Barra de selección ── */
+.select-toggle-btn {
+    font-size: 10px;
+    font-weight: 700;
+    color: #818cf8;
+    background: rgba(129,140,248,0.1);
+    border: none;
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+.select-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(129,140,248,0.06);
+    border-bottom: 1px solid rgba(129,140,248,0.15);
+}
+
+.select-bar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #aaa;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.delete-selected-btn {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f87171;
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.25);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.delete-selected-btn:hover { background: rgba(248,113,113,0.18); }
+
+/* ── Modal detalle ── */
+.detalle-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+}
+.detalle-badge.ingreso { background: rgba(129,140,248,0.15); color: #818cf8; }
+.detalle-badge.salida { background: rgba(248,113,113,0.15); color: #f87171; }
+
+.detalle-placa {
+    font-size: 30px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 2px;
+}
+
+.detalle-hora {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.detalle-fields {
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.detalle-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 14px;
+    border-bottom: 1px solid #1c1c1c;
+}
+.detalle-field:last-child { border-bottom: none; }
+
+.detalle-label {
+    font-size: 11px;
+    color: #555;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.detalle-value {
+    font-size: 13px;
+    color: #ddd;
+    font-weight: 500;
+    text-align: right;
+    max-width: 60%;
+}
+
+.detalle-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.detalle-act-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: #222;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+    color: #aaa;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.detalle-act-btn:hover { background: #2a2a2a; color: #fff; }
+.detalle-act-btn.danger { border-color: rgba(248,113,113,0.2); }
+.detalle-act-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; }
