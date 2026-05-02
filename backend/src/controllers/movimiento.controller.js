@@ -59,9 +59,8 @@ export const getStats = async (req, res) => {
             Movimiento.find({ ...filter, fecha }),
         ]);
 
-        const horas = ['6am', '7am', '8am', '9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm', '6pm'];
-        const grafico = horas.map((label, i) => {
-            const hora = i + 6;
+        const grafico = Array.from({ length: 24 }, (_, hora) => {
+            const label = `${hora}h`;
             const ingresos = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'ingreso').length;
             const salidas = movimientosHoy.filter(m => parseInt(m.hora.split(':')[0]) === hora && m.tipo === 'salida').length;
             return { label, ingresos, salidas };

@@ -279,8 +279,13 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
                 {m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}
             </span>
             <span className="mov-detalle">
-                {m.conductor || '—'}{m.empresa ? ' · ' + m.empresa : ''}
+                {m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}
             </span>
+            {(m.empresa || m.destino) && (
+                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                </span>
+            )}
         </div>
         {!selectMode && (
             <div className="mov-actions" onClick={e => e.stopPropagation()}>
@@ -361,6 +366,7 @@ const WorkspacePage = () => {
 
     // Modales
     const [showModal, setShowModal] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
     const [detailMov, setDetailMov] = useState(null);
     const [editMov, setEditMov] = useState(null);
 
@@ -446,6 +452,32 @@ const WorkspacePage = () => {
 
     const handleEdit = m => setEditMov(m);
 
+    const exportData = format => {
+        setShowExportMenu(false);
+        const fecha = new Date().toISOString().split('T')[0];
+        const cols = ['Tipo', 'Placa', 'Marca', 'Color', 'Tipo Vehículo', 'Empresa', 'Conductor', 'Cédula', 'Destino', 'Actividad', 'Hora', 'Fecha', 'Puesto'];
+        const rows = movimientos.map(m => [
+            m.tipo, m.placa, m.marca, m.color, m.tipoVehiculo, m.empresa,
+            m.conductor, m.cedula, m.destino, m.actividad, m.hora, m.fecha, m.puesto,
+        ]);
+
+        if (format === 'csv') {
+            const sep = ';';
+            const content = [cols, ...rows].map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(sep)).join('\r\n');
+            const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.csv` }).click();
+            URL.revokeObjectURL(url);
+        } else {
+            const header = cols.join('\t');
+            const body = rows.map(r => r.map(v => v || '').join('\t')).join('\r\n');
+            const blob = new Blob(['﻿' + header + '\r\n' + body], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.xls` }).click();
+            URL.revokeObjectURL(url);
+        }
+    };
+
     const cardProps = {
         selectMode,
         onToggleSelect: toggleSelect,
@@ -511,7 +543,7 @@ const WorkspacePage = () => {
                                         <ResponsiveContainer width="100%" height={180}>
                                             <LineChart data={stats?.grafico || []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-                                                <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={1} />
+                                                <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={5} />
                                                 <YAxis tick={{ fill: '#666', fontSize: 10 }} />
                                                 <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#aaa' }} />
                                                 <Line type="monotone" dataKey="ingresos" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} name="Ingresos" />
@@ -592,9 +624,30 @@ const WorkspacePage = () => {
                 )}
             </div>
 
-            {/* FAB */}
+            {/* FABs */}
             {tabActiva === 'inicio' && !selectMode && (
-                <button className="ws-fab" onClick={() => setShowModal(true)}>+</button>
+                <>
+                    {showExportMenu && (
+                        <div className="export-menu">
+                            <div className="export-menu-item" onClick={() => exportData('xls')}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2"/><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2"/><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                Excel (.xls)
+                            </div>
+                            <div className="export-menu-item" onClick={() => exportData('csv')}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round"/></svg>
+                                CSV (.csv)
+                            </div>
+                        </div>
+                    )}
+                    <button className="ws-fab-export"
+                        onClick={() => setShowExportMenu(s => !s)}
+                        title="Exportar movimientos">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </button>
+                    <button className="ws-fab" onClick={() => { setShowModal(true); setShowExportMenu(false); }}>+</button>
+                </>
             )}
 
             {/* Modal nuevo movimiento */}
