@@ -8,6 +8,7 @@ import turnoRoutes from './src/routes/turno.routes.js';
 import movimientoRoutes from './src/routes/movimiento.routes.js';
 import vehiculoRoutes from './src/routes/vehiculo.routes.js';
 import extensionRoutes from './src/routes/extension.routes.js';
+import personaRoutes from './src/routes/persona.routes.js';
 
 dotenv.config();
 connectDB();
@@ -32,6 +33,7 @@ app.use('/api/turnos', turnoRoutes);
 app.use('/api/movimientos', movimientoRoutes);
 app.use('/api/vehiculos', vehiculoRoutes);
 app.use('/api/extensiones', extensionRoutes);
+app.use('/api/personas', personaRoutes);
 
 // Health check
 app.get('/', (req, res) => res.json({ message: '🚀 Flujo API corriendo' }));

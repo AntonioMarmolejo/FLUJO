@@ -8,6 +8,7 @@ import {
     ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import '../styles/WorkspacePage.css';
+import * as XLSX from 'xlsx';
 
 // ── Iconos ────────────────────────────────────────────────
 const TruckIcon = ({ color }) => (
@@ -911,6 +912,15 @@ const extToText = e => [
     e.celular ? `CEL: ${e.celular}` : '',
 ].filter(Boolean).join('\n');
 
+const pToText = p => [
+    `CÉDULA: ${p.cedula}`,
+    `NOMBRES: ${p.nombres}`,
+    p.empresa ? `EMPRESA: ${p.empresa}` : '',
+    p.cargo ? `CARGO: ${p.cargo}` : '',
+    p.departamento ? `DEPT: ${p.departamento}` : '',
+    p.nominativo ? `NOMINATIVO: ${p.nominativo}` : '',
+].filter(Boolean).join('\n');
+
 const handleCopyText = text => navigator.clipboard?.writeText(text);
 const handleShareText = async text => {
     if (navigator.share) {
@@ -1085,6 +1095,452 @@ const PantallaExtensiones = () => {
                     onGuardado={cargar}
                     editData={editExt}
                 />
+            )}
+        </div>
+    );
+};
+
+// ── Modal persona (agregar / editar) ─────────────────────
+const EMPTY_PERSONA = { cedula: '', nombres: '', empresa: '', cargo: '', departamento: '', nominativo: '' };
+
+const ModalPersona = ({ onClose, onGuardado, editData }) => {
+    const [form, setForm] = useState(editData
+        ? { cedula: editData.cedula, nombres: editData.nombres, empresa: editData.empresa || '', cargo: editData.cargo || '', departamento: editData.departamento || '', nominativo: editData.nominativo || '' }
+        : EMPTY_PERSONA
+    );
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleChange = e => {
+        setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+        setError('');
+    };
+
+    const handleSubmit = async () => {
+        if (!form.cedula || !form.nombres) { setError('Cédula y nombres son obligatorios'); return; }
+        setLoading(true);
+        try {
+            if (editData?._id) {
+                await api.put(`/personas/${editData._id}`, form);
+            } else {
+                await api.post('/personas', form);
+            }
+            onGuardado();
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al guardar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fp = { onChange: handleChange, autoFilled: false };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>{editData ? 'Editar persona' : 'Nueva persona'}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <div className="modal-fields">
+                    <div className="modal-fields-row">
+                        <ModalField name="cedula" label="CÉDULA *" placeholder="1234567890" value={form.cedula} {...fp} />
+                        <ModalField name="nominativo" label="NOMINATIVO" placeholder="VENUS, ECO 43..." value={form.nominativo} {...fp} />
+                    </div>
+                    <ModalField name="nombres" label="NOMBRES *" placeholder="Apellidos y nombres completos" value={form.nombres} {...fp} />
+                    <div className="modal-fields-row">
+                        <ModalField name="empresa" label="EMPRESA" placeholder="EP Petroecuador" value={form.empresa} {...fp} />
+                        <ModalField name="departamento" label="DEPARTAMENTO" placeholder="OPR, SFI..." value={form.departamento} {...fp} />
+                    </div>
+                    <ModalField name="cargo" label="CARGO" placeholder="Jefe de Campo..." value={form.cargo} {...fp} />
+                </div>
+                {error && <p className="modal-error">{error}</p>}
+                <button className={`modal-btn ${form.cedula && form.nombres ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
+                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar persona'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ── Modal importar personas (CSV / Excel) ─────────────────
+const ModalImportPersonas = ({ onClose, onGuardado }) => {
+    const [step, setStep] = useState('upload'); // 'upload' | 'conflicts' | 'done'
+    const [parsedRows, setParsedRows] = useState([]);
+    const [fileName, setFileName] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [result, setResult] = useState(null);
+    const [choices, setChoices] = useState({});
+
+    const norm = h => String(h || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const mapHeader = h => {
+        const n = norm(h);
+        if (n.includes('cedul') || n === 'id') return 'cedula';
+        if (n.includes('nombre')) return 'nombres';
+        if (n.includes('empresa') || n.includes('company')) return 'empresa';
+        if (n.includes('cargo') || n.includes('puesto') || n.includes('posit')) return 'cargo';
+        if (n.includes('depart') || n === 'dept') return 'departamento';
+        if (n.includes('nominat') || n.includes('codigo') || n.includes('cod')) return 'nominativo';
+        return null;
+    };
+
+    const handleFile = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setFileName(file.name);
+        setError('');
+        setParsedRows([]);
+
+        const reader = new FileReader();
+        reader.onload = evt => {
+            try {
+                const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+                if (rows.length < 2) { setError('El archivo está vacío o no tiene datos'); return; }
+
+                const hMap = rows[0].map(mapHeader);
+                const parsed = rows.slice(1)
+                    .filter(r => r.some(v => String(v).trim()))
+                    .map(r => {
+                        const obj = {};
+                        hMap.forEach((f, i) => { if (f) obj[f] = String(r[i] || '').trim(); });
+                        return obj;
+                    })
+                    .filter(p => p.cedula);
+
+                if (!parsed.length) {
+                    setError('No se encontraron filas válidas. Asegúrate de que el encabezado incluya CÉDULA y NOMBRES.');
+                    return;
+                }
+                setParsedRows(parsed);
+            } catch {
+                setError('No se pudo leer el archivo. Verifica que sea CSV o Excel válido.');
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    const handleImport = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const { data } = await api.post('/personas/bulk', { personas: parsedRows });
+            setResult(data);
+            if (data.conflicts.length > 0) {
+                const defaultChoices = {};
+                data.conflicts.forEach(c => { defaultChoices[c.existing.cedula] = 'keep'; });
+                setChoices(defaultChoices);
+                setStep('conflicts');
+            } else {
+                setStep('done');
+                onGuardado();
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al importar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResolve = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const toUpdate = result.conflicts.filter(c => choices[c.existing.cedula] === 'update');
+            await Promise.all(toUpdate.map(c =>
+                api.put(`/personas/${c.existing._id}`, {
+                    nombres: c.incoming.nombres || c.existing.nombres,
+                    empresa: c.incoming.empresa !== undefined ? c.incoming.empresa : c.existing.empresa,
+                    cargo: c.incoming.cargo !== undefined ? c.incoming.cargo : c.existing.cargo,
+                    departamento: c.incoming.departamento !== undefined ? c.incoming.departamento : c.existing.departamento,
+                    nominativo: c.incoming.nominativo !== undefined ? c.incoming.nominativo : c.existing.nominativo,
+                })
+            ));
+            setStep('done');
+            onGuardado();
+        } catch {
+            setError('Error al aplicar los cambios');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Pantalla subida ──
+    if (step === 'upload') return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>Importar personas</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <p style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+                    Sube un archivo <strong style={{ color: '#4ade80' }}>CSV</strong> o <strong style={{ color: '#4ade80' }}>Excel (.xlsx)</strong>.<br />
+                    Encabezados reconocidos: <span style={{ color: '#818cf8' }}>CÉDULA, NOMBRES, EMPRESA, CARGO, DEPARTAMENTO, NOMINATIVO</span>
+                </p>
+
+                <label className="import-dropzone">
+                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} style={{ display: 'none' }} />
+                    {fileName ? (
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
+                            <div style={{ color: '#ddd', fontWeight: 700, fontSize: 13 }}>{fileName}</div>
+                            {parsedRows.length > 0
+                                ? <div style={{ color: '#4ade80', marginTop: 6, fontSize: 13 }}>{parsedRows.length} registros detectados</div>
+                                : <div style={{ color: '#f87171', marginTop: 6, fontSize: 12 }}>Sin registros válidos</div>
+                            }
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: 'center', color: '#555' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 10 }}>
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <div style={{ fontSize: 13 }}>Toca para seleccionar CSV o Excel</div>
+                        </div>
+                    )}
+                </label>
+
+                {parsedRows.length > 0 && (
+                    <div style={{ background: '#111', borderRadius: 10, padding: 12, fontSize: 12, color: '#888', maxHeight: 130, overflowY: 'auto' }}>
+                        {parsedRows.slice(0, 6).map((p, i) => (
+                            <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
+                                <span style={{ color: '#818cf8', flexShrink: 0 }}>{p.cedula}</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombres}</span>
+                            </div>
+                        ))}
+                        {parsedRows.length > 6 && <div style={{ color: '#444', marginTop: 6 }}>+{parsedRows.length - 6} más...</div>}
+                    </div>
+                )}
+
+                {error && <p className="modal-error">{error}</p>}
+                <button className={`modal-btn ${parsedRows.length > 0 ? 'active' : ''}`}
+                    onClick={handleImport} disabled={!parsedRows.length || loading}>
+                    {loading ? 'Importando...' : parsedRows.length > 0 ? `Importar ${parsedRows.length} registros` : 'Selecciona un archivo primero'}
+                </button>
+            </div>
+        </div>
+    );
+
+    // ── Pantalla conflictos ──
+    if (step === 'conflicts') return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>{result.conflicts.length} conflicto{result.conflicts.length !== 1 ? 's' : ''}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
+                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{result.created} nuevos</span> importados. Las cédulas siguientes ya existen — elige qué conservar:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '48vh', overflowY: 'auto' }}>
+                    {result.conflicts.map(c => (
+                        <div key={c.existing.cedula} style={{ background: '#111', borderRadius: 12, padding: 14, fontSize: 12 }}>
+                            <div style={{ color: '#818cf8', fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>{c.existing.cedula}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
+                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ACTUAL</div>
+                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.existing.nombres}</div>
+                                    <div style={{ color: '#888', marginTop: 2 }}>{c.existing.empresa || '—'}</div>
+                                    {c.existing.cargo && <div style={{ color: '#666', marginTop: 2 }}>{c.existing.cargo}</div>}
+                                </div>
+                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
+                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NUEVO</div>
+                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.incoming.nombres}</div>
+                                    <div style={{ color: '#888', marginTop: 2 }}>{c.incoming.empresa || '—'}</div>
+                                    {c.incoming.cargo && <div style={{ color: '#666', marginTop: 2 }}>{c.incoming.cargo}</div>}
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                {[['keep', 'Mantener actual', '#818cf8'], ['update', 'Usar nuevo', '#4ade80']].map(([val, label, color]) => (
+                                    <button key={val}
+                                        onClick={() => setChoices(ch => ({ ...ch, [c.existing.cedula]: val }))}
+                                        style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${choices[c.existing.cedula] === val ? color : '#2e2e2e'}`, background: choices[c.existing.cedula] === val ? `${color}18` : '#1e1e1e', color: choices[c.existing.cedula] === val ? color : '#666', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {error && <p className="modal-error">{error}</p>}
+                <button className="modal-btn active" onClick={handleResolve} disabled={loading}>
+                    {loading ? 'Aplicando...' : 'Aplicar selección'}
+                </button>
+            </div>
+        </div>
+    );
+
+    // ── Pantalla éxito ──
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" style={{ alignItems: 'center', gap: 18 }} onClick={e => e.stopPropagation()}>
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#4ade80" strokeWidth="2" />
+                    <path d="M8 12l3 3 5-5" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Importación exitosa</div>
+                <div style={{ color: '#888', fontSize: 13, textAlign: 'center', lineHeight: 1.7 }}>
+                    {result.created} registro{result.created !== 1 ? 's' : ''} nuevos importados
+                    {result.conflicts.length > 0 && ` · ${result.conflicts.length} conflicto${result.conflicts.length !== 1 ? 's' : ''} resuelto${result.conflicts.length !== 1 ? 's' : ''}`}
+                </div>
+                <button className="modal-btn active" style={{ marginBottom: 0 }} onClick={onClose}>Listo</button>
+            </div>
+        </div>
+    );
+};
+
+// ── Pantalla Personas ──────────────────────────────────────
+const PantallaPersonas = () => {
+    const [personas, setPersonas] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [editPersona, setEditPersona] = useState(null);
+    const [showImport, setShowImport] = useState(false);
+    const [qrPersona, setQrPersona] = useState(null);
+
+    const cargar = () => {
+        api.get('/personas')
+            .then(res => { setPersonas(res.data.personas); setLoading(false); })
+            .catch(() => setLoading(false));
+    };
+
+    useEffect(() => { cargar(); }, []);
+
+    const sq = search.toLowerCase();
+    const filtrados = sq
+        ? personas.filter(p =>
+            (p.nombres || '').toLowerCase().includes(sq) ||
+            (p.empresa || '').toLowerCase().includes(sq) ||
+            (p.cedula || '').includes(sq) ||
+            (p.departamento || '').toLowerCase().includes(sq))
+        : personas;
+
+    const handleDelete = async id => {
+        try { await api.delete(`/personas/${id}`); cargar(); } catch { }
+    };
+
+    const pQrData = p => [
+        `CEDULA: ${p.cedula}`,
+        p.nombres ? `NOMBRES: ${p.nombres}` : '',
+        p.empresa ? `EMPRESA: ${p.empresa}` : '',
+        p.departamento ? `DEPT: ${p.departamento}` : '',
+        p.nominativo ? `NOM: ${p.nominativo}` : '',
+    ].filter(Boolean).join('\n');
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+
+            {/* Barra búsqueda */}
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text"
+                        placeholder="Filtrar por nombre, cédula o departamento..."
+                        value={search} onChange={e => setSearch(e.target.value)} />
+                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                </div>
+                <button className="ws-topbar-btn" title="Importar CSV / Excel" onClick={() => setShowImport(true)}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5"
+                            stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {filtrados.length} reg.
+                </span>
+            </div>
+
+            {/* Tabla */}
+            {loading
+                ? <p className="ws-empty">Cargando...</p>
+                : filtrados.length === 0
+                    ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay personas registradas'}</p>
+                    : (
+                        <div className="placas-scroll">
+                            <table className="placas-table">
+                                <thead>
+                                    <tr>
+                                        <th>CÉDULA</th>
+                                        <th>NOMBRES</th>
+                                        <th>EMPRESA</th>
+                                        <th>CARGO</th>
+                                        <th>DEPT.</th>
+                                        <th>NOMINATIVO</th>
+                                        <th>QR</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtrados.map(p => (
+                                        <tr key={p._id}>
+                                            <td className="placas-td-placa">{p.cedula}</td>
+                                            <td className="placas-td-nombre">{(p.nombres || '').toUpperCase()}</td>
+                                            <td>{(p.empresa || '—').toUpperCase()}</td>
+                                            <td>{p.cargo || '—'}</td>
+                                            <td>{(p.departamento || '—').toUpperCase()}</td>
+                                            <td>{p.nominativo || '—'}</td>
+                                            <td>
+                                                <img
+                                                    className="placas-qr"
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(pQrData(p))}`}
+                                                    alt="QR"
+                                                    onClick={() => setQrPersona(p)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="placas-actions">
+                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditPersona(p)}><IconPencil /></button>
+                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(p._id)}><IconMinus /></button>
+                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(pToText(p))}><IconCopy /></button>
+                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(pToText(p))}><IconShare /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+            }
+
+            <button className="placas-fab" onClick={() => setShowForm(true)}>+</button>
+
+            {(showForm || editPersona) && (
+                <ModalPersona
+                    onClose={() => { setShowForm(false); setEditPersona(null); }}
+                    onGuardado={cargar}
+                    editData={editPersona}
+                />
+            )}
+            {showImport && (
+                <ModalImportPersonas
+                    onClose={() => setShowImport(false)}
+                    onGuardado={cargar}
+                />
+            )}
+            {qrPersona && (
+                <div className="modal-overlay" onClick={() => setQrPersona(null)}>
+                    <div className="modal-card" style={{ alignItems: 'center', gap: 20 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ width: '100%' }}>
+                            <h3>{qrPersona.cedula}</h3>
+                            <button className="modal-close" onClick={() => setQrPersona(null)}>✕</button>
+                        </div>
+                        <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pQrData(qrPersona))}`}
+                            alt="QR" style={{ width: 200, height: 200, borderRadius: 8, background: '#fff', padding: 8 }}
+                        />
+                        <p style={{ fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 1.8 }}>
+                            {pQrData(qrPersona).split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
+                        </p>
+                    </div>
+                </div>
             )}
         </div>
     );
@@ -1411,7 +1867,7 @@ const WorkspacePage = () => {
 
                 {tabActiva === 'placas-db' && <PantallaPlacasDB />}
                 {tabActiva === 'extensiones' && <PantallaExtensiones />}
-                {tabActiva === 'personas' && <PantallaStub title="Personas" />}
+                {tabActiva === 'personas' && <PantallaPersonas />}
                 {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
             </div>
 

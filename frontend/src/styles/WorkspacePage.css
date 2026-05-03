@@ -1108,6 +1108,24 @@
     font-size: 12px;
 }
 
+/* ── Zona de importación ── */
+.import-dropzone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 110px;
+    border: 2px dashed #2e2e2e;
+    border-radius: 14px;
+    padding: 24px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #161616;
+}
+.import-dropzone:hover {
+    border-color: #4ade80;
+    background: rgba(74, 222, 128, 0.04);
+}
+
 .ws-search-clear {
     background: #1e1e1e;
     border: none;
