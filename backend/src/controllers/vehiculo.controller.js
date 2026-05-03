@@ -56,6 +56,37 @@ export const updateVehiculo = async (req, res) => {
     }
 };
 
+// POST /api/vehiculos/bulk
+export const bulkImport = async (req, res) => {
+    try {
+        const { vehiculos } = req.body;
+        if (!vehiculos?.length) return res.status(400).json({ message: 'No hay datos para importar' });
+
+        const conflicts = [];
+        let created = 0;
+
+        for (const v of vehiculos) {
+            if (!v.placa) continue;
+            const placa = v.placa.trim().toUpperCase();
+            const existing = await Vehiculo.findOne({ placa });
+            if (existing) {
+                conflicts.push({ existing, incoming: { ...v, placa } });
+            } else {
+                await Vehiculo.create({
+                    placa,
+                    marca: v.marca || '', color: v.color || '', tipoVehiculo: v.tipoVehiculo || '',
+                    empresa: v.empresa || '', conductor: v.conductor || '', cedula: v.cedula || '',
+                });
+                created++;
+            }
+        }
+
+        res.json({ created, conflicts });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // DELETE /api/vehiculos/:id
 export const deleteVehiculo = async (req, res) => {
     try {

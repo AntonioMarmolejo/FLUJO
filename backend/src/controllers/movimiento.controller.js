@@ -34,35 +34,42 @@ export const crearMovimiento = async (req, res) => {
     }
 };
 
-// GET /api/movimientos?puesto=X&bloque=Y
+// GET /api/movimientos?puesto=X&bloque=Y[&desde=ISO_DATE]
 export const getMovimientos = async (req, res) => {
     try {
-        const { puesto, bloque } = req.query;
-        const movimientos = await Movimiento.find({ usuario: req.user._id, puesto, bloque, fecha: getFecha() }).sort({ createdAt: -1 });
+        const { puesto, bloque, desde } = req.query;
+        const filter = { usuario: req.user._id, puesto, bloque, fecha: getFecha() };
+        if (desde) filter.createdAt = { $gte: new Date(desde) };
+        const movimientos = await Movimiento.find(filter).sort({ createdAt: -1 });
         res.status(200).json({ movimientos });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };
 
-// GET /api/movimientos/stats?puesto=X&bloque=Y
+// GET /api/movimientos/stats?puesto=X&bloque=Y[&desde=ISO_DATE]
 export const getStats = async (req, res) => {
     try {
-        const { puesto, bloque } = req.query;
+        const { puesto, bloque, desde } = req.query;
         const fecha = getFecha();
         const filter = { usuario: req.user._id, puesto, bloque };
+        const movFilter = { ...filter, fecha };
+        if (desde) movFilter.createdAt = { $gte: new Date(desde) };
 
-        const [totalVehiculos, totalFlujos, fechasActivas, movimientosHoy] = await Promise.all([
-            Movimiento.countDocuments({ ...filter, fecha, tipo: 'ingreso' }),
-            Movimiento.countDocuments({ ...filter, fecha }),
+        const [totalFlujos, fechasActivas, movimientosHoy] = await Promise.all([
+            Movimiento.countDocuments(movFilter),
             Movimiento.distinct('fecha', filter),
-            Movimiento.find({ ...filter, fecha }),
+            Movimiento.find(movFilter),
         ]);
 
         const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
-        const ingresos = movimientosHoy.filter(m => m.tipo === 'ingreso');
-        const petroecuador = ingresos.filter(isPetro).length;
-        const contratistas = ingresos.filter(m => !isPetro(m)).length;
+        const placaMap = {};
+        movimientosHoy.forEach(m => {
+            if (!placaMap[m.placa] || (!placaMap[m.placa].empresa && m.empresa)) placaMap[m.placa] = m;
+        });
+        const uniqueVehicles = Object.values(placaMap);
+        const petroecuador = uniqueVehicles.filter(isPetro).length;
+        const contratistas = uniqueVehicles.filter(m => !isPetro(m)).length;
 
         const grafico = Array.from({ length: 24 }, (_, hora) => {
             const label = `${hora}h`;
@@ -71,7 +78,7 @@ export const getStats = async (req, res) => {
             return { label, ingresos: ing, salidas: sal };
         });
 
-        res.status(200).json({ totalVehiculos, totalFlujos, diasActivos: fechasActivas.length, petroecuador, contratistas, grafico });
+        res.status(200).json({ totalVehiculos: uniqueVehicles.length, totalFlujos, diasActivos: fechasActivas.length, petroecuador, contratistas, grafico });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }

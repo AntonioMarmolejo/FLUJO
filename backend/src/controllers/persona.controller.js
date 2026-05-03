@@ -8,6 +8,23 @@ const fields = p => ({
     nominativo:   p.nominativo || '',
 });
 
+// GET /api/personas/search?q=texto (busca por cédula o nombres)
+export const searchPersonas = async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q || q.length < 2) return res.json({ personas: [] });
+        const personas = await Persona.find({
+            $or: [
+                { cedula: { $regex: q.trim(), $options: 'i' } },
+                { nombres: { $regex: q.trim(), $options: 'i' } },
+            ]
+        }).limit(6);
+        res.json({ personas });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al buscar personas', error: error.message });
+    }
+};
+
 // GET /api/personas
 export const getPersonas = async (req, res) => {
     try {

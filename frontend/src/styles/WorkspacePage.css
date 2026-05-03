@@ -1108,6 +1108,22 @@
     font-size: 12px;
 }
 
+.flujo-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #f87171;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+.flujo-delete-btn:hover { background: rgba(248, 113, 113, 0.12); }
+
 /* ── Zona de importación ── */
 .import-dropzone {
     display: flex;
@@ -1141,6 +1157,16 @@
     flex-shrink: 0;
 }
 
+/* ── Columnas condicionales (mobile-first) ── */
+.col-xs-hide { display: none; }
+.col-md-hide { display: none; }
+.personas-td-name {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ══════════════════════════════════════════════════════════
    RESPONSIVE — Tablet >= 640px
 ══════════════════════════════════════════════════════════ */
@@ -1167,6 +1193,9 @@
     .placas-table  { min-width: unset; width: 100%; }
 
     .ws-topbar { padding: 14px 24px; }
+
+    .col-xs-hide { display: table-cell; }
+    .personas-td-name { max-width: 200px; }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1193,4 +1222,7 @@
     .ws-topbar       { padding: 16px 32px; }
     .ws-topbar-title { font-size: 18px; }
     .ws-counter-val  { font-size: 36px; }
+
+    .col-md-hide { display: table-cell; }
+    .personas-td-name { max-width: unset; overflow: visible; white-space: normal; }
 }

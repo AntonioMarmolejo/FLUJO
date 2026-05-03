@@ -21,9 +21,7 @@ const PostSelectPage = () => {
     const bloqueActual = BLOQUES_DATA[bloqueActualId];
 
     const togglePuesto = (puesto) => {
-        setSelectedPuestos((prev) =>
-            prev.includes(puesto) ? prev.filter((p) => p !== puesto) : [...prev, puesto]
-        );
+        setSelectedPuestos([puesto]);
         setError('');
     };
 

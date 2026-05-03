@@ -11,8 +11,11 @@ const TurnoPage = () => {
     const location = useLocation();
 
     // Recibe bloque y puesto desde el estado de navegación
-    const { bloqueId, puesto, bloqueIndex, totalBloques } = location.state || {};
+    const { bloqueId, puesto: puestoInicial, bloqueIndex, totalBloques, fromWorkspace } = location.state || {};
     const bloque = BLOQUES_DATA[bloqueId];
+
+    const [puestoActual, setPuestoActual] = useState(puestoInicial || '');
+    const [showPuestoMenu, setShowPuestoMenu] = useState(false);
 
     const [form, setForm] = useState({
         cedula: '',
@@ -58,7 +61,7 @@ const TurnoPage = () => {
             const { data } = await api.post('/turnos/iniciar', {
                 ...form,
                 bloque: bloqueId,
-                puesto,
+                puesto: puestoActual,
                 turno,
             });
 
@@ -98,7 +101,7 @@ const TurnoPage = () => {
         }
     };
 
-    const handleVolver = () => navigate(-1);
+    const handleVolver = () => fromWorkspace ? navigate('/workspace') : navigate(-1);
 
     if (!bloque) return null;
 
@@ -122,14 +125,51 @@ const TurnoPage = () => {
                     <span style={{ color: bloque.color }}>
                         {bloque.nombre.toUpperCase()} {bloque.codigo}
                     </span>
-                    <h2>{puesto}</h2>
-                    <p>Ingresa los datos del guardia para iniciar el turno.</p>
+                    <h2>{fromWorkspace ? 'Nuevo turno' : puestoActual}</h2>
+                    <p>{fromWorkspace ? 'Selecciona el turno para iniciar un nuevo flujo.' : 'Ingresa los datos del guardia para iniciar el turno.'}</p>
                 </div>
 
                 {/* Indicador de progreso si hay múltiples puestos */}
-                {totalBloques > 1 && (
+                {!fromWorkspace && totalBloques > 1 && (
                     <div className="turno-progress">
                         Puesto {bloqueIndex + 1} de {totalBloques}
+                    </div>
+                )}
+
+                {/* Selector puesto/bloque cuando viene de workspace */}
+                {fromWorkspace && (
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* Puesto con dropdown */}
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowPuestoMenu(v => !v)}
+                                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#252525', border: '1px solid #2e2e2e', borderRadius: 10, padding: '11px 16px', color: '#ddd', fontSize: 13, cursor: 'pointer' }}
+                            >
+                                <span><span style={{ color: '#666', marginRight: 8 }}>Puesto:</span><strong style={{ color: '#fff' }}>{puestoActual}</strong></span>
+                                <span style={{ fontSize: 11, color: '#818cf8' }}>¿Cambiaste de puesto? ▾</span>
+                            </button>
+                            {showPuestoMenu && (
+                                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#1e1e1e', border: '1px solid #2e2e2e', borderRadius: 10, overflow: 'hidden', zIndex: 10 }}>
+                                    {bloque.puestos.map(p => (
+                                        <div key={p}
+                                            onClick={() => { setPuestoActual(p); setShowPuestoMenu(false); }}
+                                            style={{ padding: '12px 16px', fontSize: 14, color: p === puestoActual ? '#818cf8' : '#ccc', background: p === puestoActual ? 'rgba(129,140,248,0.08)' : 'transparent', cursor: 'pointer', borderBottom: '1px solid #2a2a2a' }}
+                                        >
+                                            {p}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {/* Cambiar bloque */}
+                        <button
+                            onClick={() => navigate('/onboarding')}
+                            style={{ background: 'transparent', border: '1px solid #2e2e2e', borderRadius: 10, padding: '10px 16px', color: '#666', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                        >
+                            <span style={{ color: '#666', marginRight: 8 }}>Bloque:</span>
+                            <strong style={{ color: '#888' }}>{bloque.nombre} {bloque.codigo}</strong>
+                            <span style={{ float: 'right', color: '#f59e0b', fontSize: 11 }}>¿Cambiaste de bloque? →</span>
+                        </button>
                     </div>
                 )}
 

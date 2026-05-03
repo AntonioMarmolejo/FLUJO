@@ -98,8 +98,21 @@ const IconClock = () => (
     </svg>
 );
 
+const IconSun = ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
+const IconMoon = ({ size = 14 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────
-const EMPTY_FORM = { tipo: 'ingreso', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
+const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
@@ -125,6 +138,32 @@ const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFi
         <datalist id={`combo-${name}`}>
             {options.map(o => <option key={o} value={o} />)}
         </datalist>
+    </div>
+);
+
+const SuggestionField = ({ name, label, required, placeholder, value, onChange, autoFilled, suggestions, onSelect }) => (
+    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}</label>
+        <div className="placa-wrapper">
+            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off" />
+            {suggestions.length > 0 && (
+                <div className="placa-suggestions">
+                    {suggestions.map((s, i) => (
+                        <div key={i} className="placa-suggestion-item" onClick={() => onSelect(s)}>
+                            <div>
+                                <div className="placa-suggestion-placa">{s.nombres || s.cedula}</div>
+                                <div className="placa-suggestion-info">
+                                    {[s.cedula, s.empresa].filter(Boolean).join(' · ') || '—'}
+                                </div>
+                            </div>
+                            <span className={`placa-suggestion-badge ${s._source}`}>
+                                {s._source === 'hoy' ? 'Hoy' : 'BD'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
     </div>
 );
 
@@ -170,9 +209,14 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [guardado, setGuardado] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
+    const [cedulaSugs, setCedulaSugs] = useState([]);
+    const [conductorSugs, setConductorSugs] = useState([]);
     const [autoFilled, setAutoFilled] = useState(!!editData);
     const searchTimer = useRef(null);
+    const cedulaTimer = useRef(null);
+    const conductorTimer = useRef(null);
 
     const handleChange = e => {
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -184,7 +228,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setForm(f => ({ ...f, placa: val }));
         setAutoFilled(false);
         setError('');
-        if (val.length < 2) { setSuggestions([]); return; }
+        if (val.length < 3) { setSuggestions([]); return; }
 
         const seen = new Set();
         const todayHits = movimientos
@@ -205,6 +249,61 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const selectSuggestion = v => {
         setForm(f => ({ ...f, placa: v.placa, marca: v.marca || '', color: v.color || '', tipoVehiculo: v.tipoVehiculo || '', empresa: v.empresa || '', conductor: v.conductor || '', cedula: v.cedula || '' }));
         setSuggestions([]);
+        setCedulaSugs([]);
+        setConductorSugs([]);
+        setAutoFilled(true);
+    };
+
+    const handleCedulaChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, cedula: val }));
+        setError('');
+        if (val.length < 3) { setCedulaSugs([]); return; }
+
+        const seen = new Set();
+        const hits = movimientos
+            .filter(m => m.cedula && m.cedula.includes(val) && !seen.has(m.cedula) && seen.add(m.cedula))
+            .slice(0, 5)
+            .map(m => ({ cedula: m.cedula, nombres: m.conductor || '', empresa: m.empresa || '', _source: 'hoy' }));
+
+        if (hits.length > 0) { setCedulaSugs(hits); return; }
+
+        clearTimeout(cedulaTimer.current);
+        cedulaTimer.current = setTimeout(async () => {
+            try {
+                const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
+                setCedulaSugs(data.personas.map(p => ({ ...p, _source: 'db' })));
+            } catch { setCedulaSugs([]); }
+        }, 300);
+    };
+
+    const handleConductorChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, conductor: val }));
+        setError('');
+        if (val.length < 3) { setConductorSugs([]); return; }
+
+        const seen = new Set();
+        const hits = movimientos
+            .filter(m => m.conductor && m.conductor.toLowerCase().includes(val.toLowerCase()) && !seen.has(m.conductor) && seen.add(m.conductor))
+            .slice(0, 5)
+            .map(m => ({ cedula: m.cedula || '', nombres: m.conductor, empresa: m.empresa || '', _source: 'hoy' }));
+
+        if (hits.length > 0) { setConductorSugs(hits); return; }
+
+        clearTimeout(conductorTimer.current);
+        conductorTimer.current = setTimeout(async () => {
+            try {
+                const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
+                setConductorSugs(data.personas.map(p => ({ ...p, _source: 'db' })));
+            } catch { setConductorSugs([]); }
+        }, 300);
+    };
+
+    const selectPersonaSug = sug => {
+        setForm(f => ({ ...f, conductor: sug.nombres || '', cedula: sug.cedula || '' }));
+        setCedulaSugs([]);
+        setConductorSugs([]);
         setAutoFilled(true);
     };
 
@@ -214,11 +313,20 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         try {
             if (editData?._id) {
                 await api.put(`/movimientos/${editData._id}`, form);
+                onGuardado();
+                onClose();
             } else {
                 await api.post('/movimientos', { ...form, puesto, bloque });
+                onGuardado();
+                setForm(EMPTY_FORM);
+                setSuggestions([]);
+                setCedulaSugs([]);
+                setConductorSugs([]);
+                setAutoFilled(false);
+                setError('');
+                setGuardado(true);
+                setTimeout(() => setGuardado(false), 2500);
             }
-            onGuardado();
-            onClose();
         } catch (err) {
             setError(err.response?.data?.message || 'Error al guardar');
         } finally {
@@ -238,7 +346,11 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                 <div className="modal-tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
                         <button key={val} className={`modal-tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
-                            onClick={() => setForm(f => ({ ...f, tipo: val }))}>
+                            onClick={() => setForm(f => ({
+                                ...f,
+                                tipo: val,
+                                ...(val === 'ingreso' && !f.destino ? { destino: 'EPF' } : {}),
+                            }))}>
                             {label}
                         </button>
                     ))}
@@ -274,12 +386,21 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV, Sedán..." value={form.tipoVehiculo} {...fp} />
                         <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
                     </div>
-                    <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
-                    <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
+                    <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
+                        value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
+                        suggestions={conductorSugs} onSelect={selectPersonaSug} />
+                    <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
+                        value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
+                        suggestions={cedulaSugs} onSelect={selectPersonaSug} />
                     <ModalField name="destino" label="DESTINO" placeholder="Área o lugar" value={form.destino} {...fp} />
                     <ModalField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..." value={form.actividad} {...fp} />
                 </div>
                 {error && <p className="modal-error">{error}</p>}
+                {guardado && (
+                    <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#4ade80', textAlign: 'center', fontWeight: 600 }}>
+                        ✓ Movimiento registrado
+                    </div>
+                )}
                 <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
                     {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar movimiento'}
                 </button>
@@ -568,6 +689,207 @@ const ModalQR = ({ vehiculo, onClose }) => {
     );
 };
 
+// ── Modal importar vehículos (CSV / Excel) ────────────────
+const ModalImportVehiculos = ({ onClose, onGuardado }) => {
+    const [step, setStep] = useState('upload');
+    const [parsedRows, setParsedRows] = useState([]);
+    const [fileName, setFileName] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [result, setResult] = useState(null);
+    const [choices, setChoices] = useState({});
+
+    const norm = h => String(h || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const mapHeader = h => {
+        const n = norm(h);
+        if (n.includes('placa') || n === 'plate') return 'placa';
+        if (n.includes('marca') || n.includes('brand') || n.includes('make')) return 'marca';
+        if (n.includes('color')) return 'color';
+        if (n.includes('tipo') || n === 'type') return 'tipoVehiculo';
+        if (n.includes('empresa') || n.includes('company')) return 'empresa';
+        return null;
+    };
+
+    const handleFile = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setFileName(file.name);
+        setError('');
+        setParsedRows([]);
+        const reader = new FileReader();
+        reader.onload = evt => {
+            try {
+                const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                if (rows.length < 2) { setError('El archivo está vacío o no tiene datos'); return; }
+                const hMap = rows[0].map(mapHeader);
+                const parsed = rows.slice(1)
+                    .filter(r => r.some(v => String(v).trim()))
+                    .map(r => {
+                        const obj = {};
+                        hMap.forEach((f, i) => { if (f) obj[f] = String(r[i] || '').trim(); });
+                        return obj;
+                    })
+                    .filter(v => v.placa);
+                if (!parsed.length) { setError('No se encontraron filas válidas. Asegúrate de que el encabezado incluya PLACA.'); return; }
+                setParsedRows(parsed);
+            } catch { setError('No se pudo leer el archivo. Verifica que sea CSV o Excel válido.'); }
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    const handleImport = async () => {
+        setLoading(true); setError('');
+        try {
+            const { data } = await api.post('/vehiculos/bulk', { vehiculos: parsedRows });
+            setResult(data);
+            if (data.conflicts.length > 0) {
+                const defaultChoices = {};
+                data.conflicts.forEach(c => { defaultChoices[c.existing.placa] = 'keep'; });
+                setChoices(defaultChoices);
+                setStep('conflicts');
+            } else {
+                setStep('done');
+                onGuardado();
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al importar');
+        } finally { setLoading(false); }
+    };
+
+    const handleResolve = async () => {
+        setLoading(true); setError('');
+        try {
+            const toUpdate = result.conflicts.filter(c => choices[c.existing.placa] === 'update');
+            await Promise.all(toUpdate.map(c =>
+                api.put(`/vehiculos/${c.existing._id}`, {
+                    marca: c.incoming.marca || c.existing.marca,
+                    color: c.incoming.color || c.existing.color,
+                    tipoVehiculo: c.incoming.tipoVehiculo || c.existing.tipoVehiculo,
+                    empresa: c.incoming.empresa !== undefined ? c.incoming.empresa : c.existing.empresa,
+                })
+            ));
+            setStep('done');
+            onGuardado();
+        } catch { setError('Error al aplicar los cambios'); }
+        finally { setLoading(false); }
+    };
+
+    if (step === 'upload') return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>Importar vehículos</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <p style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+                    Sube un archivo <strong style={{ color: '#4ade80' }}>CSV</strong> o <strong style={{ color: '#4ade80' }}>Excel (.xlsx)</strong>.<br />
+                    Encabezados reconocidos: <span style={{ color: '#818cf8' }}>PLACA, MARCA, COLOR, TIPO, EMPRESA</span>
+                </p>
+                <label className="import-dropzone">
+                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} style={{ display: 'none' }} />
+                    {fileName ? (
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
+                            <div style={{ color: '#ddd', fontWeight: 700, fontSize: 13 }}>{fileName}</div>
+                            {parsedRows.length > 0
+                                ? <div style={{ color: '#4ade80', marginTop: 6, fontSize: 13 }}>{parsedRows.length} registros detectados</div>
+                                : <div style={{ color: '#f87171', marginTop: 6, fontSize: 12 }}>Sin registros válidos</div>}
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: 'center', color: '#555' }}>
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 10 }}>
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <div style={{ fontSize: 13 }}>Toca para seleccionar CSV o Excel</div>
+                        </div>
+                    )}
+                </label>
+                {parsedRows.length > 0 && (
+                    <div style={{ background: '#111', borderRadius: 10, padding: 12, fontSize: 12, color: '#888', maxHeight: 130, overflowY: 'auto' }}>
+                        {parsedRows.slice(0, 6).map((v, i) => (
+                            <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
+                                <span style={{ color: '#818cf8', flexShrink: 0 }}>{v.placa}</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[v.marca, v.empresa].filter(Boolean).join(' · ') || '—'}</span>
+                            </div>
+                        ))}
+                        {parsedRows.length > 6 && <div style={{ color: '#444', marginTop: 6 }}>+{parsedRows.length - 6} más...</div>}
+                    </div>
+                )}
+                {error && <p className="modal-error">{error}</p>}
+                <button className={`modal-btn ${parsedRows.length > 0 ? 'active' : ''}`}
+                    onClick={handleImport} disabled={!parsedRows.length || loading}>
+                    {loading ? 'Importando...' : parsedRows.length > 0 ? `Importar ${parsedRows.length} registros` : 'Selecciona un archivo primero'}
+                </button>
+            </div>
+        </div>
+    );
+
+    if (step === 'conflicts') return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>{result.conflicts.length} conflicto{result.conflicts.length !== 1 ? 's' : ''}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
+                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{result.created} nuevos</span> importados. Las placas siguientes ya existen — elige qué conservar:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '48vh', overflowY: 'auto' }}>
+                    {result.conflicts.map(c => (
+                        <div key={c.existing.placa} style={{ background: '#111', borderRadius: 12, padding: 14, fontSize: 12 }}>
+                            <div style={{ color: '#818cf8', fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>{c.existing.placa}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
+                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ACTUAL</div>
+                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.existing.marca || '—'}</div>
+                                    <div style={{ color: '#888', marginTop: 2 }}>{c.existing.empresa || '—'}</div>
+                                </div>
+                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
+                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NUEVO</div>
+                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.incoming.marca || '—'}</div>
+                                    <div style={{ color: '#888', marginTop: 2 }}>{c.incoming.empresa || '—'}</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                {[['keep', 'Mantener actual', '#818cf8'], ['update', 'Usar nuevo', '#4ade80']].map(([val, label, color]) => (
+                                    <button key={val}
+                                        onClick={() => setChoices(ch => ({ ...ch, [c.existing.placa]: val }))}
+                                        style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${choices[c.existing.placa] === val ? color : '#2e2e2e'}`, background: choices[c.existing.placa] === val ? `${color}18` : '#1e1e1e', color: choices[c.existing.placa] === val ? color : '#666', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {error && <p className="modal-error">{error}</p>}
+                <button className="modal-btn active" onClick={handleResolve} disabled={loading}>
+                    {loading ? 'Aplicando...' : 'Aplicar selección'}
+                </button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" style={{ alignItems: 'center', gap: 18 }} onClick={e => e.stopPropagation()}>
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="#4ade80" strokeWidth="2" />
+                    <path d="M8 12l3 3 5-5" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Importación exitosa</div>
+                <div style={{ color: '#888', fontSize: 13, textAlign: 'center', lineHeight: 1.7 }}>
+                    {result.created} vehículo{result.created !== 1 ? 's' : ''} nuevos importados
+                    {result.conflicts.length > 0 && ` · ${result.conflicts.length} conflicto${result.conflicts.length !== 1 ? 's' : ''} resuelto${result.conflicts.length !== 1 ? 's' : ''}`}
+                </div>
+                <button className="modal-btn active" style={{ marginBottom: 0 }} onClick={onClose}>Listo</button>
+            </div>
+        </div>
+    );
+};
+
 // ── Pantalla Placas DB ────────────────────────────────────
 const PantallaPlacasDB = () => {
     const [vehiculos, setVehiculos] = useState([]);
@@ -576,6 +898,7 @@ const PantallaPlacasDB = () => {
     const [showForm, setShowForm] = useState(false);
     const [editVehiculo, setEditVehiculo] = useState(null);
     const [qrVehiculo, setQrVehiculo] = useState(null);
+    const [showImport, setShowImport] = useState(false);
 
     const cargar = () => {
         api.get('/vehiculos')
@@ -608,7 +931,7 @@ const PantallaPlacasDB = () => {
         <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
 
             {/* Barra búsqueda */}
-            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
@@ -619,6 +942,12 @@ const PantallaPlacasDB = () => {
                         value={search} onChange={e => setSearch(e.target.value)} />
                     {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
                 </div>
+                <button className="ws-topbar-btn" title="Importar CSV / Excel" onClick={() => setShowImport(true)}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5"
+                            stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
                 <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {filtrados.length} reg.
                 </span>
@@ -686,6 +1015,12 @@ const PantallaPlacasDB = () => {
                 />
             )}
             {qrVehiculo && <ModalQR vehiculo={qrVehiculo} onClose={() => setQrVehiculo(null)} />}
+            {showImport && (
+                <ModalImportVehiculos
+                    onClose={() => setShowImport(false)}
+                    onGuardado={cargar}
+                />
+            )}
         </div>
     );
 };
@@ -727,9 +1062,12 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
         : movs;
 
     const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
-    const ingresos = movs.filter(m => m.tipo === 'ingreso');
-    const petroecuador = ingresos.filter(isPetro).length;
-    const contratistas = ingresos.filter(m => !isPetro(m)).length;
+    const uniqueVehicles = Object.values(movs.reduce((acc, m) => {
+        if (!acc[m.placa] || (!acc[m.placa].empresa && m.empresa)) acc[m.placa] = m;
+        return acc;
+    }, {}));
+    const petroecuador = uniqueVehicles.filter(isPetro).length;
+    const contratistas = uniqueVehicles.filter(m => !isPetro(m)).length;
 
     const fechaLarga = new Date(fecha + 'T12:00:00').toLocaleDateString('es-EC', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -822,11 +1160,29 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     );
 };
 
+// ── Modal confirmación genérico ───────────────────────────
+const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
+    <div className="modal-overlay" onClick={onCancel}>
+        <div className="modal-card" style={{ maxWidth: 320, gap: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto' }}>
+                <circle cx="12" cy="12" r="10" stroke="#f87171" strokeWidth="2" />
+                <path d="M12 8v4M12 16h.01" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <p style={{ color: '#ddd', fontSize: 15, fontWeight: 600, lineHeight: 1.5, margin: 0 }}>{mensaje}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
+                <button onClick={onCancel} style={{ padding: '11px 0', borderRadius: 10, border: '1px solid #2e2e2e', background: '#1e1e1e', color: '#aaa', fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+                <button onClick={onConfirm} style={{ padding: '11px 0', borderRadius: 10, border: 'none', background: '#f87171', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Eliminar</button>
+            </div>
+        </div>
+    </div>
+);
+
 // ── Pantalla lista de flujos ───────────────────────────────
 const PantallaFlujos = ({ turnoActivo }) => {
     const [movimientos, setMovimientos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
+    const [confirmarFlujo, setConfirmarFlujo] = useState(null);
 
     useEffect(() => {
         if (!turnoActivo) { setLoading(false); return; }
@@ -834,6 +1190,15 @@ const PantallaFlujos = ({ turnoActivo }) => {
             .then(res => { setMovimientos(res.data.movimientos); setLoading(false); })
             .catch(() => setLoading(false));
     }, [turnoActivo]);
+
+    const handleDeleteFlujo = async () => {
+        if (!confirmarFlujo) return;
+        try {
+            await api.delete('/movimientos/batch', { data: { ids: confirmarFlujo.ids } });
+            setMovimientos(prev => prev.filter(m => m.fecha !== confirmarFlujo.fecha));
+        } catch { }
+        setConfirmarFlujo(null);
+    };
 
     const flujos = useMemo(() => {
         const groups = {};
@@ -865,6 +1230,7 @@ const PantallaFlujos = ({ turnoActivo }) => {
     if (flujos.length === 0) return <p className="ws-empty" style={{ padding: 32 }}>No hay flujos registrados aún</p>;
 
     return (
+        <>
         <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {flujos.map(f => {
                 const fechaLarga = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
@@ -873,11 +1239,25 @@ const PantallaFlujos = ({ turnoActivo }) => {
                 const ingresos = f.movs.filter(m => m.tipo === 'ingreso').length;
                 const salidas = f.movs.filter(m => m.tipo === 'salida').length;
                 const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
-                const petro = f.movs.filter(m => m.tipo === 'ingreso' && isPetro(m)).length;
+                const unicos = Object.values(f.movs.reduce((acc, m) => {
+                    if (!acc[m.placa] || (!acc[m.placa].empresa && m.empresa)) acc[m.placa] = m;
+                    return acc;
+                }, {}));
+                const petro = unicos.filter(isPetro).length;
+                const earliestHour = (() => {
+                    const sorted = [...f.movs].sort((a, b) => a.hora.localeCompare(b.hora));
+                    return parseInt((sorted[0]?.hora || '12:00').split(':')[0]);
+                })();
+                const isDiurno = earliestHour >= 6 && earliestHour < 18;
                 return (
                     <div key={f.fecha} className="flujo-card" onClick={() => setFlujoSeleccionado(f.fecha)}>
                         <div style={{ flex: 1 }}>
-                            <div className="flujo-fecha">{fechaLarga}</div>
+                            <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ color: isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
+                                    {isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
+                                </span>
+                                {fechaLarga}
+                            </div>
                             <div className="flujo-stats">
                                 <span style={{ color: '#818cf8' }}>{ingresos} ing.</span>
                                 <span style={{ color: '#555' }}> · </span>
@@ -885,11 +1265,27 @@ const PantallaFlujos = ({ turnoActivo }) => {
                                 {petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{petro} EP</span></>}
                             </div>
                         </div>
+                        <button
+                            className="flujo-delete-btn"
+                            title="Eliminar flujo"
+                            onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: f.fecha, ids: f.movs.map(m => m._id), fechaLarga }); }}
+                        >
+                            <IconMinus />
+                        </button>
                         <IconChevronRight />
                     </div>
                 );
             })}
         </div>
+
+        {confirmarFlujo && (
+            <ModalConfirm
+                mensaje={`¿Eliminar los ${confirmarFlujo.ids.length} movimientos del ${confirmarFlujo.fechaLarga}?`}
+                onConfirm={handleDeleteFlujo}
+                onCancel={() => setConfirmarFlujo(null)}
+            />
+        )}
+        </>
     );
 };
 
@@ -1470,9 +1866,9 @@ const PantallaPersonas = () => {
                                         <th>CÉDULA</th>
                                         <th>NOMBRES</th>
                                         <th>EMPRESA</th>
-                                        <th>CARGO</th>
-                                        <th>DEPT.</th>
-                                        <th>NOMINATIVO</th>
+                                        <th className="col-xs-hide">CARGO</th>
+                                        <th className="col-xs-hide">DEPT.</th>
+                                        <th className="col-md-hide">NOMINATIVO</th>
                                         <th>QR</th>
                                         <th></th>
                                     </tr>
@@ -1481,11 +1877,11 @@ const PantallaPersonas = () => {
                                     {filtrados.map(p => (
                                         <tr key={p._id}>
                                             <td className="placas-td-placa">{p.cedula}</td>
-                                            <td className="placas-td-nombre">{(p.nombres || '').toUpperCase()}</td>
+                                            <td className="placas-td-nombre personas-td-name">{(p.nombres || '').toUpperCase()}</td>
                                             <td>{(p.empresa || '—').toUpperCase()}</td>
-                                            <td>{p.cargo || '—'}</td>
-                                            <td>{(p.departamento || '—').toUpperCase()}</td>
-                                            <td>{p.nominativo || '—'}</td>
+                                            <td className="col-xs-hide">{p.cargo || '—'}</td>
+                                            <td className="col-xs-hide">{(p.departamento || '—').toUpperCase()}</td>
+                                            <td className="col-md-hide">{p.nominativo || '—'}</td>
                                             <td>
                                                 <img
                                                     className="placas-qr"
@@ -1619,10 +2015,11 @@ const WorkspacePage = () => {
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
+        const desde = turnoActivo.createdAt ? `&desde=${encodeURIComponent(turnoActivo.createdAt)}` : '';
         try {
             const [sRes, mRes] = await Promise.all([
-                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
-                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
+                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}${desde}`),
+                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}${desde}`),
             ]);
             setStats(sRes.data);
             setMovimientos(mRes.data.movimientos);
@@ -1697,7 +2094,8 @@ const WorkspacePage = () => {
                                     bloqueIndex: 0,
                                     totalBloques: 1,
                                     bloquesConPuestos: [{ bloqueId: turnoActivo.bloque, puesto: turnoActivo.puesto }],
-                                },
+                                    fromWorkspace: true,
+                                }
                             });
                         } else {
                             navigate('/onboarding');
