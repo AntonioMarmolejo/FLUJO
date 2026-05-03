@@ -660,12 +660,10 @@ const PantallaPlacasDB = () => {
                                             </td>
                                             <td>
                                                 <div className="placas-actions">
-                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditVehiculo(v)}>
-                                                        <IconPencil />
-                                                    </button>
-                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(v._id)}>
-                                                        <IconMinus />
-                                                    </button>
+                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditVehiculo(v)}><IconPencil /></button>
+                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(v._id)}><IconMinus /></button>
+                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(vToText(v))}><IconCopy /></button>
+                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(vToText(v))}><IconShare /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -890,6 +888,204 @@ const PantallaFlujos = ({ turnoActivo }) => {
                     </div>
                 );
             })}
+        </div>
+    );
+};
+
+// ── Helpers de texto para copiar/compartir ────────────────
+const vToText = v => [
+    `PLACA: ${v.placa}`,
+    v.marca ? `MARCA: ${v.marca}` : '',
+    v.color ? `COLOR: ${v.color}` : '',
+    v.tipoVehiculo ? `TIPO: ${v.tipoVehiculo}` : '',
+    v.empresa ? `EMPRESA: ${v.empresa}` : '',
+    v.conductor ? `CONDUCTOR: ${v.conductor}` : '',
+].filter(Boolean).join('\n');
+
+const extToText = e => [
+    `NOMBRE: ${e.nombre}`,
+    e.empresa ? `EMPRESA: ${e.empresa}` : '',
+    e.cargo ? `CARGO: ${e.cargo}` : '',
+    e.departamento ? `DEPT: ${e.departamento}` : '',
+    e.extension ? `EXT: ${e.extension}` : '',
+    e.celular ? `CEL: ${e.celular}` : '',
+].filter(Boolean).join('\n');
+
+const handleCopyText = text => navigator.clipboard?.writeText(text);
+const handleShareText = async text => {
+    if (navigator.share) {
+        await navigator.share({ title: 'FLUJO', text }).catch(() => { });
+    } else {
+        handleCopyText(text);
+    }
+};
+
+// ── Modal extensión (agregar / editar) ────────────────────
+const EMPTY_EXT = { nombre: '', empresa: '', cargo: '', departamento: '', extension: '', celular: '' };
+
+const ModalExtension = ({ onClose, onGuardado, editData }) => {
+    const [form, setForm] = useState(editData
+        ? { nombre: editData.nombre, empresa: editData.empresa || '', cargo: editData.cargo || '', departamento: editData.departamento || '', extension: editData.extension || '', celular: editData.celular || '' }
+        : EMPTY_EXT
+    );
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleChange = e => {
+        setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+        setError('');
+    };
+
+    const handleSubmit = async () => {
+        if (!form.nombre) { setError('El nombre es obligatorio'); return; }
+        setLoading(true);
+        try {
+            if (editData?._id) {
+                await api.put(`/extensiones/${editData._id}`, form);
+            } else {
+                await api.post('/extensiones', form);
+            }
+            onGuardado();
+            onClose();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al guardar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fp = { onChange: handleChange, autoFilled: false };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>{editData ? 'Editar extensión' : 'Nueva extensión'}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <div className="modal-fields">
+                    <ModalField name="nombre" label="NOMBRE *" placeholder="Nombre completo" value={form.nombre} {...fp} />
+                    <div className="modal-fields-row">
+                        <ModalField name="empresa" label="EMPRESA" placeholder="EP Petroecuador" value={form.empresa} {...fp} />
+                        <ModalField name="departamento" label="DEPARTAMENTO" placeholder="OPR, ADM..." value={form.departamento} {...fp} />
+                    </div>
+                    <ModalField name="cargo" label="CARGO" placeholder="Jefe de Campo..." value={form.cargo} {...fp} />
+                    <div className="modal-fields-row">
+                        <ModalField name="extension" label="EXTENSIÓN" placeholder="78201" value={form.extension} {...fp} />
+                        <ModalField name="celular" label="CELULAR" placeholder="0998..." value={form.celular} {...fp} />
+                    </div>
+                </div>
+                {error && <p className="modal-error">{error}</p>}
+                <button className={`modal-btn ${form.nombre ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
+                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar extensión'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// ── Pantalla Extensiones ──────────────────────────────────
+const PantallaExtensiones = () => {
+    const [extensiones, setExtensiones] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [showForm, setShowForm] = useState(false);
+    const [editExt, setEditExt] = useState(null);
+
+    const cargar = () => {
+        api.get('/extensiones')
+            .then(res => { setExtensiones(res.data.extensiones); setLoading(false); })
+            .catch(() => setLoading(false));
+    };
+
+    useEffect(() => { cargar(); }, []);
+
+    const sq = search.toLowerCase();
+    const filtrados = sq
+        ? extensiones.filter(e =>
+            (e.nombre || '').toLowerCase().includes(sq) ||
+            (e.cargo || '').toLowerCase().includes(sq) ||
+            (e.departamento || '').toLowerCase().includes(sq))
+        : extensiones;
+
+    const handleDelete = async id => {
+        try { await api.delete(`/extensiones/${id}`); cargar(); } catch { }
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+
+            {/* Barra búsqueda */}
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text"
+                        placeholder="Filtrar por nombre, cargo o departamento..."
+                        value={search} onChange={e => setSearch(e.target.value)} />
+                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                </div>
+                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {filtrados.length} reg.
+                </span>
+            </div>
+
+            {/* Tabla */}
+            {loading
+                ? <p className="ws-empty">Cargando...</p>
+                : filtrados.length === 0
+                    ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay extensiones registradas'}</p>
+                    : (
+                        <div className="placas-scroll">
+                            <table className="placas-table">
+                                <thead>
+                                    <tr>
+                                        <th>NOMBRE</th>
+                                        <th>EMPRESA</th>
+                                        <th>CARGO</th>
+                                        <th>DEPT.</th>
+                                        <th>EXT.</th>
+                                        <th>CELULAR</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtrados.map(e => (
+                                        <tr key={e._id}>
+                                            <td className="placas-td-nombre">{e.nombre.toUpperCase()}</td>
+                                            <td>{(e.empresa || '—').toUpperCase()}</td>
+                                            <td>{e.cargo || '—'}</td>
+                                            <td>{(e.departamento || '—').toUpperCase()}</td>
+                                            <td className="placas-td-ext">{e.extension || '—'}</td>
+                                            <td>{e.celular || '—'}</td>
+                                            <td>
+                                                <div className="placas-actions">
+                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditExt(e)}><IconPencil /></button>
+                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(e._id)}><IconMinus /></button>
+                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(extToText(e))}><IconCopy /></button>
+                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(extToText(e))}><IconShare /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+            }
+
+            {/* FAB agregar */}
+            <button className="placas-fab" onClick={() => setShowForm(true)}>+</button>
+
+            {(showForm || editExt) && (
+                <ModalExtension
+                    onClose={() => { setShowForm(false); setEditExt(null); }}
+                    onGuardado={cargar}
+                    editData={editExt}
+                />
+            )}
         </div>
     );
 };
@@ -1214,7 +1410,7 @@ const WorkspacePage = () => {
                 )}
 
                 {tabActiva === 'placas-db' && <PantallaPlacasDB />}
-                {tabActiva === 'extensiones' && <PantallaStub title="Extensiones" />}
+                {tabActiva === 'extensiones' && <PantallaExtensiones />}
                 {tabActiva === 'personas' && <PantallaStub title="Personas" />}
                 {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
             </div>
