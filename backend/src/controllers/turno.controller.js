@@ -78,6 +78,24 @@ export const iniciarTurno = async (req, res) => {
     }
 };
 
+// GET /api/turnos/ultimo  — datos del último turno + turno más frecuente
+export const getUltimoTurno = async (req, res) => {
+    try {
+        const [ultimo, todos] = await Promise.all([
+            Turno.findOne({ usuario: req.user._id }).sort({ createdAt: -1 }),
+            Turno.find({ usuario: req.user._id }, 'turnoInicial'),
+        ]);
+
+        const counts = { diurno: 0, nocturno: 0 };
+        todos.forEach(t => { if (t.turnoInicial) counts[t.turnoInicial]++; });
+        const turnoFrecuente = counts.nocturno > counts.diurno ? 'nocturno' : 'diurno';
+
+        res.status(200).json({ turno: ultimo, turnoFrecuente });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // GET /api/turnos/activo
 export const getTurnoActivo = async (req, res) => {
     try {

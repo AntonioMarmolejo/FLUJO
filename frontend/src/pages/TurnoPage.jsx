@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
@@ -23,6 +23,24 @@ const TurnoPage = () => {
     const [turno, setTurno] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [autoFilled, setAutoFilled] = useState(false);
+
+    useEffect(() => {
+        api.get('/turnos/ultimo')
+            .then(({ data }) => {
+                if (data.turno) {
+                    setForm({
+                        cedula: data.turno.cedula || '',
+                        nombre: data.turno.nombre || '',
+                        apellidos: data.turno.apellidos || '',
+                        empresa: data.turno.empresa || '',
+                    });
+                    setAutoFilled(true);
+                }
+                if (data.turnoFrecuente) setTurno(data.turnoFrecuente);
+            })
+            .catch(() => {});
+    }, []);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -118,6 +136,11 @@ const TurnoPage = () => {
                 <div className="turno-divider" />
 
                 {/* Formulario */}
+                {autoFilled && (
+                    <div style={{ fontSize: 11, color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>
+                        Datos del último turno cargados automáticamente
+                    </div>
+                )}
                 <div className="turno-form">
 
                     <div className="turno-field">

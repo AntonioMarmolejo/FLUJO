@@ -100,6 +100,17 @@ export const batchDeleteMovimientos = async (req, res) => {
     }
 };
 
+// GET /api/movimientos/todos?puesto=X&bloque=Y  (sin filtro de fecha)
+export const getMovimientosTodos = async (req, res) => {
+    try {
+        const { puesto, bloque } = req.query;
+        const movimientos = await Movimiento.find({ usuario: req.user._id, puesto, bloque }).sort({ fecha: -1, createdAt: -1 });
+        res.status(200).json({ movimientos });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // PUT /api/movimientos/:id
 export const updateMovimiento = async (req, res) => {
     try {

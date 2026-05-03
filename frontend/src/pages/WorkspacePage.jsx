@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
@@ -691,6 +691,209 @@ const PantallaPlacasDB = () => {
     );
 };
 
+// ── Export helper (módulo-level para reutilizar) ──────────
+const exportMovimientos = (movimientos, format, filename) => {
+    const cols = ['Hora', 'Tipo', 'Placa', 'Marca', 'Color', 'Tipo Vehículo', 'Empresa', 'Conductor', 'Cédula', 'Destino', 'Actividad', 'Fecha', 'Puesto'];
+    const rows = movimientos.map(m => [
+        m.hora, m.tipo, m.placa, m.marca, m.color, m.tipoVehiculo, m.empresa,
+        m.conductor, m.cedula, m.destino, m.actividad, m.fecha, m.puesto,
+    ]);
+    if (format === 'csv') {
+        const content = [cols, ...rows].map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+        const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        Object.assign(document.createElement('a'), { href: url, download: `${filename}.csv` }).click();
+        URL.revokeObjectURL(url);
+    } else {
+        const esc = v => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `<html><head><meta charset="UTF-8"></head><body><table>
+<tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
+${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\n')}
+</table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        Object.assign(document.createElement('a'), { href: url, download: `${filename}.xls` }).click();
+        URL.revokeObjectURL(url);
+    }
+};
+
+// ── Pantalla detalle de un flujo ──────────────────────────
+const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
+    const [search, setSearch] = useState('');
+    const [showExport, setShowExport] = useState(false);
+
+    const sq = search.toLowerCase();
+    const filtrados = sq
+        ? movs.filter(m => m.placa.toLowerCase().includes(sq) || (m.conductor || '').toLowerCase().includes(sq))
+        : movs;
+
+    const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
+    const ingresos = movs.filter(m => m.tipo === 'ingreso');
+    const petroecuador = ingresos.filter(isPetro).length;
+    const contratistas = ingresos.filter(m => !isPetro(m)).length;
+
+    const fechaLarga = new Date(fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+
+    const doExport = fmt => {
+        setShowExport(false);
+        exportMovimientos(movs, fmt, `flujo_${fecha}`);
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+            {/* Cabecera */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px 8px' }}>
+                <button className="ws-topbar-btn" style={{ flexShrink: 0 }} onClick={onBack}>
+                    <IconArrowLeft />
+                </button>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: '#aaa', textTransform: 'capitalize' }}>{fechaLarga}</div>
+                    <div style={{ fontSize: 11, color: '#555' }}>{movs.length} movimiento{movs.length !== 1 ? 's' : ''}</div>
+                </div>
+                <button className="ws-topbar-btn" style={{ color: '#4ade80' }} onClick={() => setShowExport(s => !s)} title="Exportar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* Menú exportar */}
+            {showExport && (
+                <div style={{ margin: '0 16px 8px', background: '#1e1e1e', border: '1px solid #2e2e2e', borderRadius: 12, overflow: 'hidden' }}>
+                    <div className="export-menu-item" onClick={() => doExport('xls')}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                        Excel (.xls)
+                    </div>
+                    <div className="export-menu-item" onClick={() => doExport('csv')}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2" /><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" /></svg>
+                        CSV (.csv)
+                    </div>
+                </div>
+            )}
+
+            {/* Contadores */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 12px' }}>
+                <div className="ws-counter-card">
+                    <span className="ws-counter-val">{contratistas}</span>
+                    <span className="ws-counter-label">CONTRATISTAS</span>
+                </div>
+                <div className="ws-counter-card">
+                    <span className="ws-counter-val">{petroecuador}</span>
+                    <span className="ws-counter-label">EP PETRO.</span>
+                </div>
+            </div>
+
+            {/* Búsqueda */}
+            <div className="ws-search-bar" style={{ padding: '0 16px 12px', background: 'transparent' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
+                    value={search} onChange={e => setSearch(e.target.value)} />
+                {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+            </div>
+
+            {/* Lista de movimientos (solo lectura) */}
+            <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filtrados.length === 0
+                    ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
+                    : filtrados.map(m => (
+                        <div key={m._id} className="mov-item" style={{ cursor: 'default' }}>
+                            <div className={`mov-icon ${m.tipo}`}>
+                                <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
+                                <span className="mov-hora-small">{m.hora}</span>
+                            </div>
+                            <div className="mov-info">
+                                <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                                <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                                {(m.empresa || m.destino) && (
+                                    <span className="mov-detalle" style={{ fontSize: 11 }}>
+                                        {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                }
+            </div>
+        </div>
+    );
+};
+
+// ── Pantalla lista de flujos ───────────────────────────────
+const PantallaFlujos = ({ turnoActivo }) => {
+    const [movimientos, setMovimientos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
+
+    useEffect(() => {
+        if (!turnoActivo) { setLoading(false); return; }
+        api.get(`/movimientos/todos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`)
+            .then(res => { setMovimientos(res.data.movimientos); setLoading(false); })
+            .catch(() => setLoading(false));
+    }, [turnoActivo]);
+
+    const flujos = useMemo(() => {
+        const groups = {};
+        movimientos.forEach(m => {
+            if (!groups[m.fecha]) groups[m.fecha] = [];
+            groups[m.fecha].push(m);
+        });
+        return Object.entries(groups)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([fecha, movs]) => ({ fecha, movs }));
+    }, [movimientos]);
+
+    if (!turnoActivo) {
+        return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
+    }
+
+    if (flujoSeleccionado) {
+        const flujo = flujos.find(f => f.fecha === flujoSeleccionado);
+        return (
+            <PantallaFlujoDetalle
+                fecha={flujoSeleccionado}
+                movs={flujo?.movs || []}
+                onBack={() => setFlujoSeleccionado(null)}
+            />
+        );
+    }
+
+    if (loading) return <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>;
+    if (flujos.length === 0) return <p className="ws-empty" style={{ padding: 32 }}>No hay flujos registrados aún</p>;
+
+    return (
+        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {flujos.map(f => {
+                const fechaLarga = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                });
+                const ingresos = f.movs.filter(m => m.tipo === 'ingreso').length;
+                const salidas = f.movs.filter(m => m.tipo === 'salida').length;
+                const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
+                const petro = f.movs.filter(m => m.tipo === 'ingreso' && isPetro(m)).length;
+                return (
+                    <div key={f.fecha} className="flujo-card" onClick={() => setFlujoSeleccionado(f.fecha)}>
+                        <div style={{ flex: 1 }}>
+                            <div className="flujo-fecha">{fechaLarga}</div>
+                            <div className="flujo-stats">
+                                <span style={{ color: '#818cf8' }}>{ingresos} ing.</span>
+                                <span style={{ color: '#555' }}> · </span>
+                                <span style={{ color: '#f87171' }}>{salidas} sal.</span>
+                                {petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{petro} EP</span></>}
+                            </div>
+                        </div>
+                        <IconChevronRight />
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 // ── Pantalla stub ─────────────────────────────────────────
 const PantallaStub = ({ title }) => (
     <div className="ws-section-content" style={{ padding: 16 }}>
@@ -819,29 +1022,7 @@ const WorkspacePage = () => {
     const exportData = format => {
         setShowExportMenu(false);
         const fecha = new Date().toISOString().split('T')[0];
-        const cols = ['Hora', 'Tipo', 'Placa', 'Marca', 'Color', 'Tipo Vehículo', 'Empresa', 'Conductor', 'Cédula', 'Destino', 'Actividad', 'Fecha', 'Puesto'];
-        const rows = movimientos.map(m => [
-            m.hora, m.tipo, m.placa, m.marca, m.color, m.tipoVehiculo, m.empresa,
-            m.conductor, m.cedula, m.destino, m.actividad, m.fecha, m.puesto,
-        ]);
-
-        if (format === 'csv') {
-            const content = [cols, ...rows].map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-            const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.csv` }).click();
-            URL.revokeObjectURL(url);
-        } else {
-            const esc = v => (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const html = `<html><head><meta charset="UTF-8"></head><body><table>
-<tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
-${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\n')}
-</table></body></html>`;
-            const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            Object.assign(document.createElement('a'), { href: url, download: `movimientos_${fecha}.xls` }).click();
-            URL.revokeObjectURL(url);
-        }
+        exportMovimientos(movimientos, format, `movimientos_${fecha}`);
     };
 
     const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: setDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
@@ -855,7 +1036,21 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
                     onNavigate={handleTabChange}
-                    onNuevoFlujo={() => navigate('/turno')}
+                    onNuevoFlujo={() => {
+                        if (turnoActivo) {
+                            navigate('/turno', {
+                                state: {
+                                    bloqueId: turnoActivo.bloque,
+                                    puesto: turnoActivo.puesto,
+                                    bloqueIndex: 0,
+                                    totalBloques: 1,
+                                    bloquesConPuestos: [{ bloqueId: turnoActivo.bloque, puesto: turnoActivo.puesto }],
+                                },
+                            });
+                        } else {
+                            navigate('/onboarding');
+                        }
+                    }}
                 />
             )}
 
@@ -1012,7 +1207,7 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
                     <PantallaAvance turnoActivo={turnoActivo} user={user} />
                 )}
 
-                {tabActiva === 'flujos' && <PantallaStub title="Flujos" />}
+                {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} />}
 
                 {tabActiva === 'perfil' && (
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
