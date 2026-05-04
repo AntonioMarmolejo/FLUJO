@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const COLORS = {
     bg: '#111111',
@@ -117,6 +118,14 @@ const Icon = {
             <path d="M5 12l5 5L20 7" stroke={c} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     ),
+    sliders: (s = 16, c = '#fff') => (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+            <path d="M3 7h4M13 7h8M3 12h8M17 12h4M3 17h6M15 17h6" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="8.5" cy="7" r="2.2" stroke={c} strokeWidth="1.8" />
+            <circle cx="14.5" cy="12" r="2.2" stroke={c} strokeWidth="1.8" />
+            <circle cx="11" cy="17" r="2.2" stroke={c} strokeWidth="1.8" />
+        </svg>
+    ),
 };
 
 // ── Datos de ejemplo ────────────────────────────────────
@@ -124,19 +133,19 @@ const WORKERS_ACTIVE = [
     {
         id: 1, role: 'Operador de Planta', name: 'Marcelo Quintero Ríos',
         days: 12, cycle: '15-15', total: 15,
-        in: '21 abr 2026', out: '06 may 2026',
+        in: '21 abr 2026', out: '06 may 2026', inDateISO: '2026-04-21',
         back: 'Rodrigo Salinas Vega',
     },
     {
         id: 2, role: 'Supervisor de Pozo', name: 'Andrea Cifuentes Mora',
         days: 8, cycle: '20-10', total: 20,
-        in: '25 abr 2026', out: '15 may 2026',
+        in: '25 abr 2026', out: '15 may 2026', inDateISO: '2026-04-25',
         back: 'Camila Estévez Ortiz',
     },
     {
         id: 3, role: 'Técnico Electromecánico', name: 'Joaquín Bermúdez Lara',
         days: 18, cycle: '30', total: 30,
-        in: '15 abr 2026', out: '15 may 2026',
+        in: '15 abr 2026', out: '15 may 2026', inDateISO: '2026-04-15',
         back: 'Esteban Calderón Ruiz',
     },
 ];
@@ -145,13 +154,13 @@ const WORKERS_SOON = [
     {
         id: 4, role: 'Operador de Planta', name: 'Federico Lozano Aguilar',
         days: 13, cycle: '15-15', total: 15, remaining: 2,
-        in: '20 abr 2026', out: '05 may 2026',
+        in: '20 abr 2026', out: '05 may 2026', inDateISO: '2026-04-20',
         back: 'Mauricio Tejada Solís',
     },
     {
         id: 5, role: 'Jefe de Turno', name: 'Valentina Aramburu Soto',
         days: 19, cycle: '20-10', total: 20, remaining: 1,
-        in: '14 abr 2026', out: '04 may 2026',
+        in: '14 abr 2026', out: '04 may 2026', inDateISO: '2026-04-14',
         back: 'Diego Maldonado Peña',
     },
 ];
@@ -245,7 +254,7 @@ function ProgressBar({ value, total, color }) {
     );
 }
 
-function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, onSwap }) {
+function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, onSwap, onEdit, onCopy, onShare }) {
     const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
     const [hover, setHover] = useState(false);
 
@@ -272,31 +281,32 @@ function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, 
                 }} />
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
                 <span style={{
                     fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6,
                     color: COLORS.violet, textTransform: 'uppercase',
+                    flex: 1, minWidth: 0,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                     {worker.role}
                 </span>
-                {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
+                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    <span style={{
+                        fontSize: 9.5, color: COLORS.textMute,
+                        fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                        marginRight: 10,
+                    }}>
+                        {worker.in} – {worker.out}
+                    </span>
+                    {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
+                </div>
             </div>
 
             <div style={{
                 fontSize: 17, fontWeight: 700, color: COLORS.text,
-                lineHeight: 1.2, marginBottom: 6, letterSpacing: -0.2,
+                lineHeight: 1.2, marginBottom: 10, letterSpacing: -0.2,
             }}>
                 {worker.name}
-            </div>
-
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                color: COLORS.textMute, fontSize: 11.5, marginBottom: 12,
-                fontVariantNumeric: 'tabular-nums',
-            }}>
-                <span>↗ Ingreso <span style={{ color: '#bdbdbd' }}>{worker.in}</span></span>
-                <span style={{ width: 1, height: 10, background: COLORS.border }} />
-                <span>↙ Salida <span style={{ color: '#bdbdbd' }}>{worker.out}</span></span>
             </div>
 
             <ProgressBar value={worker.days} total={worker.total} color={soon ? COLORS.yellow : COLORS.green} />
@@ -359,19 +369,19 @@ function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, 
                         color={COLORS.blue}
                         bg={{ base: COLORS.blueDim, hover: 'rgba(59,130,246,0.22)', border: 'rgba(59,130,246,0.25)' }}
                         icon={Icon.edit(16, COLORS.blue)} label="Editar"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); onEdit && onEdit(worker); }}
                     />
                     <ActionButton
                         color={COLORS.green}
                         bg={{ base: COLORS.greenDim, hover: 'rgba(74,222,128,0.22)', border: 'rgba(74,222,128,0.25)' }}
                         icon={Icon.copy(16, COLORS.green)} label="Copiar"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); onCopy && onCopy(worker); }}
                     />
                     <ActionButton
                         color={COLORS.violet}
                         bg={{ base: COLORS.violetDim, hover: 'rgba(124,94,245,0.22)', border: 'rgba(124,94,245,0.28)' }}
                         icon={Icon.share(16, COLORS.violet)} label="Compartir"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); onShare && onShare(worker); }}
                     />
                     <ActionButton
                         color={COLORS.red}
@@ -761,135 +771,211 @@ function CountListModal({ open, onClose, kind, items }) {
 }
 
 function ImportModal({ open, onClose, onConfirm }) {
+    const fileRef = useRef(null);
+    const [preview, setPreview] = useState(null);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!open) { setPreview(null); setError(''); }
+    }, [open]);
+
     const cols = [
-        { name: 'nombre_completo', req: true, ex: 'Marcelo Quintero Ríos' },
-        { name: 'cargo', req: true, ex: 'Operador de Planta' },
-        { name: 'fecha_ingreso', req: true, ex: '2026-04-21' },
-        { name: 'ciclo', req: true, ex: '15-15 / 20-10 / 30' },
-        { name: 'back_nombre', req: true, ex: 'Rodrigo Salinas Vega' },
-        { name: 'identificacion', req: false, ex: 'CC 1.234.567' },
+        { name: 'nombre_completo', ex: 'Marcelo Quintero Ríos' },
+        { name: 'cargo',           ex: 'Operador de Planta' },
     ];
+
+    const downloadTemplate = () => {
+        const ws = XLSX.utils.aoa_to_sheet([
+            ['nombre_completo', 'cargo'],
+            ['Marcelo Quintero Ríos', 'Operador de Planta'],
+            ['Andrea Cifuentes Mora', 'Supervisora de Pozo'],
+            ['Joaquín Bermúdez Lara', 'Técnico Electromecánico'],
+        ]);
+        ws['!cols'] = [{ wch: 30 }, { wch: 28 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Funcionarios');
+        XLSX.writeFile(wb, 'plantilla_funcionarios.xlsx');
+    };
+
+    const handleFileChange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        e.target.value = '';
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                const valid = rows.filter(r => r.nombre_completo && r.cargo);
+                if (valid.length === 0) { setError('No se encontraron datos válidos. Verifica los encabezados.'); setPreview(null); }
+                else { setPreview(valid); setError(''); }
+            } catch {
+                setError('No se pudo leer el archivo. Usa la plantilla proporcionada.');
+                setPreview(null);
+            }
+        };
+        reader.readAsArrayBuffer(f);
+    };
+
+    const handleConfirm = () => {
+        if (!preview || preview.length === 0) { fileRef.current?.click(); return; }
+        const todayISO = new Date().toISOString().split('T')[0];
+        const workers = preview.map(row => ({
+            id: Date.now() + Math.random(),
+            name: String(row.nombre_completo).trim(),
+            role: String(row.cargo).trim(),
+            cycle: '15-15', total: 15, days: 1,
+            in: fmtDate(todayISO),
+            out: calcOutDate(todayISO, 15),
+            inDateISO: todayISO,
+            back: 'Pendiente',
+        }));
+        onConfirm(workers);
+    };
 
     return (
         <ModalShell open={open} onClose={onClose}>
             <div style={{
                 background: COLORS.cardElev, borderRadius: 18,
                 border: `1px solid ${COLORS.borderLight}`,
-                padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-                maxHeight: 560, display: 'flex', flexDirection: 'column',
+                padding: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
             }}>
+                {/* Encabezado */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                     <div style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        background: COLORS.greenDim,
-                        border: '1px solid rgba(74,222,128,0.3)',
+                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                        background: COLORS.greenDim, border: '1px solid rgba(74,222,128,0.3)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        {Icon.upload(15, COLORS.green)}
-                    </div>
+                    }}>{Icon.upload(14, COLORS.green)}</div>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Importar funcionarios</div>
-                        <div style={{ fontSize: 11.5, color: COLORS.textMute }}>Excel (.xlsx) o CSV (.csv) — primera fila = encabezados</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>Importar funcionarios</div>
+                        <div style={{ fontSize: 10.5, color: COLORS.textMute }}>Excel .xlsx — primera fila = encabezados</div>
                     </div>
                     <button onClick={onClose} style={{
-                        width: 30, height: 30, borderRadius: 8,
-                        background: 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${COLORS.border}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer',
-                    }}>
-                        {Icon.close(12, COLORS.textMute)}
-                    </button>
+                        width: 28, height: 28, borderRadius: 7,
+                        background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                    }}>{Icon.close(11, COLORS.textMute)}</button>
                 </div>
-                <div style={{ overflowY: 'auto', flex: 1, marginRight: -4, paddingRight: 4 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, color: COLORS.textMute, marginBottom: 8 }}>
-                        COLUMNAS REQUERIDAS
-                    </div>
+
+                {/* Columnas */}
+                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.6, color: COLORS.textMute, marginBottom: 6 }}>COLUMNAS REQUERIDAS</div>
+                <div style={{
+                    background: 'rgba(255,255,255,0.02)', border: `1px solid ${COLORS.border}`,
+                    borderRadius: 10, overflow: 'hidden', marginBottom: 10,
+                }}>
+                    {cols.map((c, i) => (
+                        <div key={c.name} style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 10px',
+                            borderTop: i === 0 ? 0 : `1px solid ${COLORS.border}`,
+                        }}>
+                            <span style={{
+                                fontFamily: 'ui-monospace, monospace', fontSize: 10.5, fontWeight: 600,
+                                color: COLORS.violet, background: 'rgba(124,94,245,0.12)',
+                                padding: '2px 6px', borderRadius: 4,
+                                border: '1px solid rgba(124,94,245,0.22)', whiteSpace: 'nowrap', flexShrink: 0,
+                            }}>{c.name}</span>
+                            <span style={{
+                                flex: 1, textAlign: 'right', fontSize: 10.5, color: '#bdbdbd',
+                                fontFamily: 'ui-monospace, monospace',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>{c.ex}</span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Nota */}
+                <div style={{
+                    fontSize: 10.5, color: COLORS.textMute, lineHeight: 1.5, marginBottom: 12,
+                    padding: '8px 10px', borderRadius: 9,
+                    background: 'rgba(239,159,39,0.05)', border: '1px solid rgba(239,159,39,0.2)',
+                }}>
+                    Ciclo por defecto <b style={{ color: '#fff' }}>15-15</b>. Fecha de ingreso = hoy.
+                    El back se asigna después editando cada registro.
+                </div>
+
+                {/* Zona de archivo o vista previa */}
+                <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleFileChange} />
+                {preview ? (
                     <div style={{
-                        background: 'rgba(255,255,255,0.025)',
-                        border: `1px solid ${COLORS.border}`,
-                        borderRadius: 12, overflow: 'hidden', marginBottom: 12,
+                        background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.25)',
+                        borderRadius: 10, padding: '9px 12px', marginBottom: 10,
                     }}>
-                        {cols.map((c, i) => (
-                            <div key={c.name} style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                padding: '10px 12px',
-                                borderTop: i === 0 ? 0 : `1px solid ${COLORS.border}`,
+                        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.green, letterSpacing: 0.5, marginBottom: 5 }}>
+                            {preview.length} REGISTRO{preview.length !== 1 ? 'S' : ''} LISTOS PARA IMPORTAR
+                        </div>
+                        {preview.slice(0, 3).map((r, i) => (
+                            <div key={i} style={{
+                                fontSize: 11, color: '#d4d4d4', padding: '2px 0',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                             }}>
-                                <span style={{
-                                    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
-                                    fontSize: 11.5, fontWeight: 600,
-                                    color: c.req ? COLORS.violet : '#bdbdbd',
-                                    background: c.req ? 'rgba(124,94,245,0.12)' : 'rgba(255,255,255,0.04)',
-                                    padding: '3px 7px', borderRadius: 5,
-                                    border: `1px solid ${c.req ? 'rgba(124,94,245,0.25)' : COLORS.border}`,
-                                    whiteSpace: 'nowrap',
-                                }}>
-                                    {c.name}
-                                </span>
-                                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.4, color: c.req ? COLORS.green : COLORS.textDim }}>
-                                    {c.req ? 'OBLIG.' : 'OPCIONAL'}
-                                </span>
-                                <span style={{
-                                    flex: 1, textAlign: 'right',
-                                    fontSize: 11, color: COLORS.textMute,
-                                    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
-                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                }}>
-                                    {c.ex}
-                                </span>
+                                {r.nombre_completo} — {r.cargo}
                             </div>
                         ))}
+                        {preview.length > 3 && (
+                            <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 3 }}>+{preview.length - 3} más…</div>
+                        )}
+                        <button onClick={() => { setPreview(null); fileRef.current?.click(); }}
+                            style={{
+                                marginTop: 8, fontSize: 10.5, color: COLORS.textMute,
+                                background: 'none', border: 0, cursor: 'pointer',
+                                fontFamily: 'inherit', padding: 0, textDecoration: 'underline',
+                            }}>Cambiar archivo</button>
                     </div>
-                    <div style={{
-                        background: 'rgba(239,159,39,0.06)',
-                        border: '1px solid rgba(239,159,39,0.25)',
-                        borderRadius: 12, padding: '10px 12px', marginBottom: 14,
-                        display: 'flex', gap: 10, alignItems: 'flex-start',
-                    }}>
-                        {Icon.alert(13, COLORS.yellow)}
-                        <div style={{ fontSize: 11.5, color: '#dcdcdc', lineHeight: 1.5 }}>
-                            <div style={{ color: COLORS.yellow, fontWeight: 700, marginBottom: 3, fontSize: 11 }}>Antes de importar</div>
-                            Fechas en formato <span style={{ fontFamily: 'monospace', color: '#fff' }}>YYYY-MM-DD</span>.
-                            Ciclo válido: <span style={{ fontFamily: 'monospace', color: '#fff' }}>15-15</span>,{' '}
-                            <span style={{ fontFamily: 'monospace', color: '#fff' }}>20-10</span> o{' '}
-                            <span style={{ fontFamily: 'monospace', color: '#fff' }}>30</span>.
-                            Cada funcionario debe tener su back asignado.
-                        </div>
-                    </div>
-                    <button style={{
-                        width: '100%', height: 40, borderRadius: 10,
-                        background: 'rgba(255,255,255,0.04)',
-                        border: `1px dashed ${COLORS.borderLight}`,
-                        color: '#cfcfcf', fontSize: 12.5, fontWeight: 600,
+                ) : (
+                    <button onClick={() => fileRef.current?.click()} style={{
+                        width: '100%', height: 52, borderRadius: 10, marginBottom: 10,
+                        background: 'rgba(255,255,255,0.03)', border: `1px dashed ${COLORS.borderLight}`,
+                        color: COLORS.textMute, fontSize: 12, fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        marginBottom: 14,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', gap: 5,
                     }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 4v12M12 16l-4-4M12 16l4-4M5 20h14" stroke="#cfcfcf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 16V4M12 4l-4 4M12 4l4 4M5 20h14" stroke={COLORS.textMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        Descargar plantilla .xlsx
+                        Seleccionar archivo .xlsx
                     </button>
-                </div>
-                <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: `1px solid ${COLORS.border}` }}>
+                )}
+                {error && <div style={{ fontSize: 11, color: COLORS.red, marginBottom: 8 }}>{error}</div>}
+
+                {/* Plantilla */}
+                <button onClick={downloadTemplate} style={{
+                    width: '100%', height: 34, borderRadius: 9, marginBottom: 12,
+                    background: 'rgba(255,255,255,0.03)', border: `1px dashed ${COLORS.border}`,
+                    color: COLORS.textMute, fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 4v12M12 16l-4-4M12 16l4-4M5 20h14" stroke={COLORS.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Descargar plantilla .xlsx
+                </button>
+
+                {/* Botones */}
+                <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={onClose} style={{
-                        flex: 1, height: 44, borderRadius: 11,
-                        background: 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${COLORS.border}`,
-                        color: COLORS.text, fontSize: 14, fontWeight: 600,
+                        flex: 1, height: 42, borderRadius: 11,
+                        background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.border}`,
+                        color: COLORS.text, fontSize: 13.5, fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
                     }}>Cancelar</button>
-                    <button onClick={onConfirm} style={{
-                        flex: 1.4, height: 44, borderRadius: 11,
-                        background: COLORS.green, border: '1px solid transparent',
-                        color: '#0a2010', fontSize: 14, fontWeight: 700,
+                    <button onClick={handleConfirm} style={{
+                        flex: 1.4, height: 42, borderRadius: 11,
+                        background: preview ? COLORS.green : 'rgba(74,222,128,0.15)',
+                        border: `1px solid ${preview ? 'transparent' : 'rgba(74,222,128,0.3)'}`,
+                        color: preview ? '#0a2010' : COLORS.green,
+                        fontSize: 13.5, fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                        boxShadow: '0 6px 18px rgba(74,222,128,0.35)',
+                        boxShadow: preview ? '0 6px 18px rgba(74,222,128,0.35)' : 'none',
+                        transition: 'background 200ms ease, box-shadow 200ms ease',
                     }}>
-                        {Icon.upload(13)}
-                        Seleccionar archivo
+                        {Icon.upload(13, preview ? '#0a2010' : COLORS.green)}
+                        {preview ? `Importar ${preview.length}` : 'Seleccionar archivo'}
                     </button>
                 </div>
             </div>
@@ -898,10 +984,10 @@ function ImportModal({ open, onClose, onConfirm }) {
 }
 
 // ── Header ──────────────────────────────────────────────
-function PageHeader({ onBack }) {
+function PageHeader({ onBack, controlsOpen, onToggleControls }) {
     return (
         <div style={{
-            padding: '56px 16px 12px',
+            padding: '10px 16px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: COLORS.bg,
             borderBottom: `1px solid ${COLORS.border}`,
@@ -915,20 +1001,13 @@ function PageHeader({ onBack }) {
                 cursor: 'pointer',
             }}>{Icon.back(16, '#cfcfcf')}</button>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, letterSpacing: 3 }}>FLUJOS</div>
-            <button style={{
+            <button onClick={onToggleControls} title="Controles" style={{
                 width: 36, height: 36, borderRadius: 10,
-                background: 'rgba(124,94,245,0.12)',
-                border: '1px solid rgba(124,94,245,0.3)',
+                background: controlsOpen ? 'rgba(124,94,245,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${controlsOpen ? 'rgba(124,94,245,0.4)' : COLORS.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', position: 'relative',
-            }}>
-                {Icon.user(16, COLORS.violet)}
-                <span style={{
-                    position: 'absolute', top: 4, right: 4,
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: COLORS.green, border: `1.5px solid ${COLORS.bg}`,
-                }} />
-            </button>
+                cursor: 'pointer', transition: 'background 160ms ease, border-color 160ms ease',
+            }}>{Icon.sliders(15, controlsOpen ? COLORS.violet : '#cfcfcf')}</button>
         </div>
     );
 }
@@ -1066,28 +1145,41 @@ const inputSt = {
     outline: 'none', colorScheme: 'dark',
 };
 
-function AddWorkerModal({ open, onClose, onAdd }) {
-    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: '', back: '', days: '1' };
+function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
+    const todayISO = new Date().toISOString().split('T')[0];
+    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: '1' };
     const [form, setForm] = useState(EMPTY);
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (!open) return;
-        setForm(EMPTY);
+        if (editData) {
+            setForm({
+                name: editData.name || '',
+                role: editData.role || '',
+                cycle: editData.cycle || '15-15',
+                inDate: editData.inDateISO || todayISO,
+                back: editData.back || '',
+                days: String(editData.days || 1),
+            });
+        } else {
+            setForm({ ...EMPTY, inDate: new Date().toISOString().split('T')[0] });
+        }
         setError('');
-    }, [open]);
+    }, [open, editData]);
 
     const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
 
-    const handleAdd = () => {
+    const handleSubmit = () => {
         if (!form.name.trim() || !form.role.trim() || !form.inDate || !form.back.trim()) {
             setError('Completa todos los campos obligatorios');
             return;
         }
         const total = CYCLE_TOTAL[form.cycle];
         const days = Math.min(Math.max(parseInt(form.days) || 1, 1), total);
-        onAdd({
-            id: Date.now(),
+        const worker = {
+            ...(editData || {}),
+            id: editData ? editData.id : Date.now(),
             name: form.name.trim(),
             role: form.role.trim(),
             cycle: form.cycle,
@@ -1095,8 +1187,11 @@ function AddWorkerModal({ open, onClose, onAdd }) {
             days,
             in: fmtDate(form.inDate),
             out: calcOutDate(form.inDate, total),
+            inDateISO: form.inDate,
             back: form.back.trim(),
-        });
+        };
+        if (editData) { onEdit && onEdit(worker); }
+        else { onAdd && onAdd(worker); }
     };
 
     const lbl = (t) => (
@@ -1121,8 +1216,8 @@ function AddWorkerModal({ open, onClose, onAdd }) {
                             {Icon.user(16, COLORS.violet)}
                         </div>
                         <div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Nuevo funcionario</div>
-                            <div style={{ fontSize: 11.5, color: COLORS.textMute }}>Agregar a turno activo</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>{editData ? 'Editar funcionario' : 'Nuevo funcionario'}</div>
+                            <div style={{ fontSize: 11.5, color: COLORS.textMute }}>{editData ? 'Actualizar datos del turno' : 'Agregar a turno activo'}</div>
                         </div>
                     </div>
                     <button onClick={onClose} style={{
@@ -1178,13 +1273,13 @@ function AddWorkerModal({ open, onClose, onAdd }) {
                         color: COLORS.text, fontSize: 14, fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
                     }}>Cancelar</button>
-                    <button onClick={handleAdd} style={{
+                    <button onClick={handleSubmit} style={{
                         flex: 1.4, height: 44, borderRadius: 11,
                         background: COLORS.violet, border: '1px solid transparent',
                         color: '#fff', fontSize: 14, fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit',
                         boxShadow: '0 6px 18px rgba(124,94,245,0.4)',
-                    }}>Agregar</button>
+                    }}>{editData ? 'Guardar cambios' : 'Agregar'}</button>
                 </div>
             </div>
         </ModalShell>
@@ -1220,11 +1315,13 @@ const FlujoPersonalPage = () => {
     const [cycleFor, setCycleFor] = useState(null);
     const [importOpen, setImportOpen] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
+    const [editData, setEditData] = useState(null);
     const [countOpen, setCountOpen] = useState(null);
     const [active, setActive] = useState(WORKERS_ACTIVE);
     const [soonList, setSoon] = useState(WORKERS_SOON);
     const [toast, setToast] = useState(null);
     const [fabHover, setFabHover] = useState(false);
+    const [controlsOpen, setControlsOpen] = useState(false);
 
     const showToast = (msg) => {
         setToast(msg);
@@ -1283,6 +1380,46 @@ const FlujoPersonalPage = () => {
         showToast(`${worker.name.split(' ')[0]} agregado`);
     };
 
+    const handleEdit = (updated) => {
+        setActive(a => a.map(w => w.id === updated.id ? updated : w));
+        setSoon(s => s.map(w => w.id === updated.id ? updated : w));
+        setEditData(null);
+        setAddOpen(false);
+        showToast(`${updated.name.split(' ')[0]} actualizado`);
+    };
+
+    const handleCopy = (worker) => {
+        const text = [
+            worker.name,
+            worker.role,
+            `Ingreso: ${worker.in}  ·  Salida: ${worker.out}`,
+            `Ciclo: ${worker.cycle}  ·  Día ${worker.days}/${worker.total}`,
+            `Relevo: ${worker.back}`,
+        ].join('\n');
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('Copiado al portapapeles'))
+            .catch(() => showToast('No se pudo copiar'));
+    };
+
+    const handleShare = (worker) => {
+        const text = `${worker.name} — ${worker.role}\nIngreso: ${worker.in} · Salida: ${worker.out}\nCiclo: ${worker.cycle} · Día ${worker.days}/${worker.total}\nRelevo: ${worker.back}`;
+        if (navigator.share) {
+            navigator.share({ title: worker.name, text }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(text)
+                .then(() => showToast('Copiado al portapapeles'))
+                .catch(() => showToast('No se pudo copiar'));
+        }
+    };
+
+    const openEdit = (worker) => { setEditData(worker); setAddOpen(true); };
+
+    const handleImportConfirm = (newWorkers) => {
+        setActive(a => [...a, ...newWorkers]);
+        setImportOpen(false);
+        showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
+    };
+
     const filteredActive = filter(active);
     const filteredSoon = filter(soonList);
 
@@ -1295,20 +1432,30 @@ const FlujoPersonalPage = () => {
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
         }}>
-            <PageHeader onBack={() => navigate('/workspace')} />
+            <PageHeader
+                onBack={() => navigate('/workspace')}
+                controlsOpen={controlsOpen}
+                onToggleControls={() => setControlsOpen(v => !v)}
+            />
             <Toast open={!!toast} msg={toast || ''} />
 
             <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 100 }}>
                 {/* Centra el contenido igual que WorkspacePage en escritorio */}
                 <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
-                    <SearchBar
-                        value={search} onChange={setSearch}
-                        onImport={() => setImportOpen(true)}
-                        activeCount={active.length}
-                        freeCount={active.length + soonList.length}
-                        onActiveClick={() => setCountOpen('active')}
-                        onFreeClick={() => setCountOpen('free')}
-                    />
+                    <div style={{
+                        maxHeight: controlsOpen ? 80 : 0,
+                        overflow: 'hidden',
+                        transition: 'max-height 220ms cubic-bezier(0.2,0.9,0.3,1)',
+                    }}>
+                        <SearchBar
+                            value={search} onChange={setSearch}
+                            onImport={() => setImportOpen(true)}
+                            activeCount={active.length}
+                            freeCount={active.length + soonList.length}
+                            onActiveClick={() => setCountOpen('active')}
+                            onFreeClick={() => setCountOpen('free')}
+                        />
+                    </div>
                     <div style={{ padding: '0 16px' }}>
                         {filteredSoon.length > 0 && (
                             <>
@@ -1320,6 +1467,9 @@ const FlujoPersonalPage = () => {
                                         onCycleClick={setCycleFor}
                                         onDelete={setDeleteFor}
                                         onSwap={setSwapFor}
+                                        onEdit={openEdit}
+                                        onCopy={handleCopy}
+                                        onShare={handleShare}
                                     />
                                 ))}
                             </>
@@ -1336,6 +1486,9 @@ const FlujoPersonalPage = () => {
                                     onToggle={() => setExpanded(p => p === w.id ? null : w.id)}
                                     onCycleClick={setCycleFor}
                                     onDelete={setDeleteFor}
+                                    onEdit={openEdit}
+                                    onCopy={handleCopy}
+                                    onShare={handleShare}
                                 />
                             ))
                         )}
@@ -1369,8 +1522,8 @@ const FlujoPersonalPage = () => {
             <DeleteModal open={!!deleteFor} worker={deleteFor} onClose={() => setDeleteFor(null)} onConfirm={handleDelete} />
             <SwapModal open={!!swapFor} worker={swapFor} onClose={() => setSwapFor(null)} onConfirm={handleSwap} />
             <CycleModal open={!!cycleFor} worker={cycleFor} onClose={() => setCycleFor(null)} onConfirm={handleCycle} />
-            <AddWorkerModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
-            <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onConfirm={() => { showToast('Importando...'); setImportOpen(false); }} />
+            <AddWorkerModal open={addOpen} onClose={() => { setAddOpen(false); setEditData(null); }} onAdd={handleAdd} editData={editData} onEdit={handleEdit} />
+            <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onConfirm={handleImportConfirm} />
             <CountListModal
                 open={!!countOpen}
                 onClose={() => setCountOpen(null)}
