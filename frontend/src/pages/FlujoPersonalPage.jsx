@@ -673,9 +673,25 @@ function CountListModal({ open, onClose, kind, items }) {
     const accent = isActive ? COLORS.green : COLORS.violet;
     const accentDim = isActive ? COLORS.greenDim : COLORS.violetDim;
     const title = isActive ? 'En turno activo' : 'En descanso o vacaciones';
-    const subtitle = isActive
-        ? 'Funcionarios actualmente en campo'
-        : 'Backs y relevos fuera de turno';
+    const subtitle = isActive ? 'Funcionarios actualmente en campo' : 'Backs y relevos fuera de turno';
+    const [copied, setCopied] = useState(false);
+
+    const handleShare = () => {
+        const header = `${title} (${items.length})`;
+        const body = items.map(p => `• ${p.name}  ·  ${p.role}${p.meta ? `  ·  ${p.meta}` : ''}`).join('\n');
+        const text = `${header}\n\n${body}`;
+        const doShare = () => {
+            if (navigator.share) {
+                navigator.share({ title, text }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(text).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1800);
+                }).catch(() => {});
+            }
+        };
+        doShare();
+    };
 
     return (
         <ModalShell open={open} onClose={onClose}>
@@ -706,6 +722,17 @@ function CountListModal({ open, onClose, kind, items }) {
                     }}>
                         {items.length}
                     </div>
+                    <button onClick={handleShare} title="Compartir lista" style={{
+                        width: 30, height: 30, borderRadius: 8,
+                        background: copied ? `${accent}22` : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${copied ? accent + '55' : COLORS.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', transition: 'background 160ms, border-color 160ms',
+                    }}>
+                        {copied
+                            ? Icon.check(13, accent)
+                            : Icon.share(13, COLORS.textMute)}
+                    </button>
                     <button onClick={onClose} style={{
                         width: 30, height: 30, borderRadius: 8,
                         background: 'rgba(255,255,255,0.05)',
@@ -716,7 +743,7 @@ function CountListModal({ open, onClose, kind, items }) {
                         {Icon.close(12, COLORS.textMute)}
                     </button>
                 </div>
-                <div style={{ overflowY: 'auto', flex: 1, marginRight: -4, paddingRight: 4 }}>
+                <div className="fp-scroll" style={{ overflowY: 'auto', flex: 1, marginRight: -4, paddingRight: 4 }}>
                     {items.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 16px', color: COLORS.textMute, fontSize: 13 }}>
                             No hay funcionarios en esta categoría.
@@ -1415,7 +1442,36 @@ const FlujoPersonalPage = () => {
     const openEdit = (worker) => { setEditData(worker); setAddOpen(true); };
 
     const handleImportConfirm = (newWorkers) => {
-        setActive(a => [...a, ...newWorkers]);
+        let updActive = [...active];
+        let updSoon = [...soonList];
+        const toAdd = [];
+
+        newWorkers.forEach(imported => {
+            const roleKey = imported.role.trim().toLowerCase();
+            // Find existing active worker with the same role
+            const activeIdx = updActive.findIndex(w => w.role.trim().toLowerCase() === roleKey);
+            if (activeIdx !== -1) {
+                const displaced = updActive[activeIdx];
+                updActive = updActive.filter((_, i) => i !== activeIdx);
+                // Also remove from soon if present
+                updSoon = updSoon.filter(w => w.role.trim().toLowerCase() !== roleKey);
+                // Displaced person becomes the imported worker's back
+                toAdd.push({ ...imported, back: displaced.name });
+            } else {
+                // No role match — check soon list too
+                const soonIdx = updSoon.findIndex(w => w.role.trim().toLowerCase() === roleKey);
+                if (soonIdx !== -1) {
+                    const displaced = updSoon[soonIdx];
+                    updSoon = updSoon.filter((_, i) => i !== soonIdx);
+                    toAdd.push({ ...imported, back: displaced.name });
+                } else {
+                    toAdd.push(imported); // truly new role
+                }
+            }
+        });
+
+        setActive([...updActive, ...toAdd]);
+        setSoon(updSoon);
         setImportOpen(false);
         showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
     };
@@ -1432,6 +1488,13 @@ const FlujoPersonalPage = () => {
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
         }}>
+            <style>{`
+                .fp-scroll { scrollbar-width: thin; scrollbar-color: rgba(124,94,245,0.35) transparent; }
+                .fp-scroll::-webkit-scrollbar { width: 5px; }
+                .fp-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 4px; }
+                .fp-scroll::-webkit-scrollbar-thumb { background: rgba(124,94,245,0.35); border-radius: 4px; }
+                .fp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(124,94,245,0.65); }
+            `}</style>
             <PageHeader
                 onBack={() => navigate('/workspace')}
                 controlsOpen={controlsOpen}
@@ -1439,7 +1502,7 @@ const FlujoPersonalPage = () => {
             />
             <Toast open={!!toast} msg={toast || ''} />
 
-            <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 100 }}>
+            <div className="fp-scroll" style={{ flex: 1, overflowY: 'auto', paddingBottom: 100 }}>
                 {/* Centra el contenido igual que WorkspacePage en escritorio */}
                 <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%' }}>
                     <div style={{
