@@ -167,6 +167,25 @@ const SuggestionField = ({ name, label, required, placeholder, value, onChange, 
     </div>
 );
 
+const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, suggestions, onSelect }) => (
+    <div className="modal-field">
+        <label>{label}</label>
+        <div className="placa-wrapper">
+            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus} autoComplete="off" />
+            {suggestions.length > 0 && (
+                <div className="placa-suggestions">
+                    {suggestions.map((s, i) => (
+                        <div key={i} className="placa-suggestion-item" onClick={() => onSelect(s)}>
+                            <div className="placa-suggestion-placa">{s}</div>
+                            <span className="placa-suggestion-badge hoy">Hoy</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    </div>
+);
+
 // ── Menú cajón ────────────────────────────────────────────
 const DRAWER_ITEMS = [
     { label: 'Avance del día', tab: 'avance', icon: <IconClock /> },
@@ -214,6 +233,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const [cedulaSugs, setCedulaSugs] = useState([]);
     const [conductorSugs, setConductorSugs] = useState([]);
     const [autoFilled, setAutoFilled] = useState(!!editData);
+    const [destinoSugs, setDestinoSugs] = useState([]);
+    const [actividadSugs, setActividadSugs] = useState([]);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
@@ -307,6 +328,27 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setAutoFilled(true);
     };
 
+    const recentUnique = (field, val) => {
+        const seen = new Set();
+        return movimientos
+            .filter(m => m[field] && (!val || m[field].toLowerCase().includes(val.toLowerCase())) && !seen.has(m[field]) && seen.add(m[field]))
+            .slice(0, 5).map(m => m[field]);
+    };
+
+    const handleDestinoChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, destino: val }));
+        setError('');
+        setDestinoSugs(val.length >= 1 ? recentUnique('destino', val) : []);
+    };
+
+    const handleActividadChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, actividad: val }));
+        setError('');
+        setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
+    };
+
     const handleSubmit = async () => {
         if (!form.placa) { setError('La placa es obligatoria'); return; }
         setLoading(true);
@@ -322,6 +364,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                 setSuggestions([]);
                 setCedulaSugs([]);
                 setConductorSugs([]);
+                setDestinoSugs([]);
+                setActividadSugs([]);
                 setAutoFilled(false);
                 setError('');
                 setGuardado(true);
@@ -392,8 +436,14 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
                         suggestions={cedulaSugs} onSelect={selectPersonaSug} />
-                    <ModalField name="destino" label="DESTINO" placeholder="Área o lugar" value={form.destino} {...fp} />
-                    <ModalField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..." value={form.actividad} {...fp} />
+                    <TextSugField name="destino" label="DESTINO" placeholder="Área o lugar"
+                        value={form.destino} onChange={handleDestinoChange}
+                        onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
+                        suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
+                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..."
+                        value={form.actividad} onChange={handleActividadChange}
+                        onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
+                        suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }} />
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {guardado && (
