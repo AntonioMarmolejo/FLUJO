@@ -2134,7 +2134,7 @@ const WorkspacePage = () => {
             {showDrawer && (
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
-                    onNavigate={handleTabChange}
+                    onNavigate={tab => tab === 'jefes' ? navigate('/flujos/personal') : handleTabChange(tab)}
                     onNuevoFlujo={() => {
                         if (turnoActivo) {
                             navigate('/turno', {

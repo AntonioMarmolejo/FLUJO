@@ -338,16 +338,17 @@
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
     z-index: 50;
+    padding: 16px;
 }
 
 .modal-card {
     width: 100%;
-    max-width: 430px;
+    max-width: min(92vw, 460px);
     background: #1a1a1a;
-    border-radius: 20px 20px 0 0;
+    border-radius: 20px;
     padding: 24px;
     display: flex;
     flex-direction: column;
@@ -1177,8 +1178,7 @@
     }
     .ws-body { padding: 16px 24px 100px; }
 
-    .modal-overlay { align-items: center; }
-    .modal-card { border-radius: 20px; max-width: 540px; }
+    .modal-card { max-width: 460px; }
 
     .ws-navbar { max-width: 768px; }
 
@@ -1211,7 +1211,7 @@
     .placas-fab    { right: max(16px, calc(50% - 540px + 16px)); }
     .export-menu   { right: max(12px, calc(50% - 540px + 12px)); }
 
-    .modal-card    { max-width: 620px; }
+    .modal-card    { max-width: min(40vw, 520px); }
     .drawer-panel  { width: 340px; }
 
     .placas-table     { font-size: 13px; }

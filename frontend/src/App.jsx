@@ -7,6 +7,7 @@ import WorkspacePage from './pages/WorkspacePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import TurnoPage from './pages/TurnoPage';
 import ConfirmacionTurnoPage from './pages/ConfirmacionTurnoPage';
+import FlujoPersonalPage from './pages/FlujoPersonalPage';
 
 function App() {
     return (
@@ -28,6 +29,9 @@ function App() {
                     } />
                     <Route path="/turno/confirmacion" element={
                         <ProtectedRoute><ConfirmacionTurnoPage /></ProtectedRoute>
+                    } />
+                    <Route path="/flujos/personal" element={
+                        <ProtectedRoute><FlujoPersonalPage /></ProtectedRoute>
                     } />
                 </Routes>
             </AuthProvider>
