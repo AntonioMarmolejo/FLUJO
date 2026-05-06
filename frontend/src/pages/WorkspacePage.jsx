@@ -117,7 +117,7 @@ const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Mot
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
-    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}\nHora: ${m.hora} — ${m.fecha}`;
+    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
 // Tabs que vienen del cajón (tienen botón de regreso)
 const DRAWER_TABS = new Set(['avance', 'placas-db', 'extensiones', 'personas', 'jefes']);
@@ -460,44 +460,44 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
 };
 
 // ── Modal detalle ─────────────────────────────────────────
-const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => {
-    const campos = [
-        ['Marca', mov.marca], ['Color', mov.color], ['Tipo vehículo', mov.tipoVehiculo],
-        ['Empresa', mov.empresa], ['Conductor', mov.conductor], ['Cédula', mov.cedula],
-        ['Destino', mov.destino], ['Actividad', mov.actividad],
-    ].filter(([, v]) => v);
+const DetalleRow = ({ label, value }) =>
+    value ? (
+        <div className="detalle-field">
+            <span className="detalle-label">{label}</span>
+            <span className="detalle-value">{value}</span>
+        </div>
+    ) : null;
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <span className={`detalle-badge ${mov.tipo}`}>{mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
-                    <button className="modal-close" onClick={onClose}>✕</button>
-                </div>
-                <div>
-                    <div className="detalle-placa">{mov.placa}</div>
-                    <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
-                </div>
-                {campos.length > 0 && (
-                    <div className="detalle-fields">
-                        {campos.map(([label, value]) => (
-                            <div key={label} className="detalle-field">
-                                <span className="detalle-label">{label}</span>
-                                <span className="detalle-value">{value}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <div className="detalle-actions">
-                    <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
-                    <button className="detalle-act-btn" onClick={() => onCopy(mov)}><IconCopy /> Copiar</button>
-                    <button className="detalle-act-btn" onClick={() => onShare(mov)}><IconShare /> Compartir</button>
-                    <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /> Eliminar</button>
-                </div>
+const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
+    <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <span className={`detalle-badge ${mov.tipo}`}>{mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            <div>
+                <div className="detalle-placa">{mov.placa}</div>
+                <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
+            </div>
+            <div className="detalle-fields detalle-scroll">
+                <DetalleRow label="Marca"            value={mov.marca} />
+                <DetalleRow label="Color"            value={mov.color} />
+                <DetalleRow label="Tipo vehículo"    value={mov.tipoVehiculo} />
+                <DetalleRow label="Empresa"          value={mov.empresa} />
+                <DetalleRow label="Conductor"        value={mov.conductor} />
+                <DetalleRow label="Cédula"           value={mov.cedula} />
+                <DetalleRow label="Destino"          value={mov.destino || '—'} />
+                <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} />
+            </div>
+            <div className="detalle-actions">
+                <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
+                <button className="detalle-act-btn" onClick={() => onCopy(mov)}><IconCopy /> Copiar</button>
+                <button className="detalle-act-btn" onClick={() => onShare(mov)}><IconShare /> Compartir</button>
+                <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /> Eliminar</button>
             </div>
         </div>
-    );
-};
+    </div>
+);
 
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
@@ -1106,6 +1106,16 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const [search, setSearch] = useState('');
     const [showExport, setShowExport] = useState(false);
 
+    const handleShareFlujo = async () => {
+        const fl = new Date(fecha + 'T12:00:00').toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const text = `FLUJO — ${fl}\nTotal: ${movs.length} movimiento${movs.length !== 1 ? 's' : ''}\n\n` +
+            movs.map((m, i) =>
+                `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n   ${m.conductor || '—'} · ${m.empresa || '—'}\n   → ${m.destino || '—'}  ${m.hora}`
+            ).join('\n\n');
+        if (navigator.share) { await navigator.share({ title: 'FLUJO — ' + fecha, text }).catch(() => {}); }
+        else { navigator.clipboard?.writeText(text); }
+    };
+
     const sq = search.toLowerCase();
     const filtrados = sq
         ? movs.filter(m => m.placa.toLowerCase().includes(sq) || (m.conductor || '').toLowerCase().includes(sq))
@@ -1139,6 +1149,14 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                     <div style={{ fontSize: 13, color: '#aaa', textTransform: 'capitalize' }}>{fechaLarga}</div>
                     <div style={{ fontSize: 11, color: '#555' }}>{movs.length} movimiento{movs.length !== 1 ? 's' : ''}</div>
                 </div>
+                <button className="ws-topbar-btn" style={{ color: '#818cf8', marginRight: 4 }} onClick={handleShareFlujo} title="Compartir">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <circle cx="6" cy="12" r="2.2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="17" cy="6" r="2.2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="17" cy="18" r="2.2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M8 11l7-3.5M8 13l7 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                </button>
                 <button className="ws-topbar-btn" style={{ color: '#4ade80' }} onClick={() => setShowExport(s => !s)} title="Exportar">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -2041,6 +2059,7 @@ const WorkspacePage = () => {
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showShareMenu, setShowShareMenu] = useState(false);
+    const [fabOpen, setFabOpen] = useState(false);
     const [detailMov, setDetailMov] = useState(null);
     const [editMov, setEditMov] = useState(null);
 
@@ -2186,7 +2205,7 @@ const WorkspacePage = () => {
                     {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    {!isDrawerTab && (
+                    {!isDrawerTab && tabActiva !== 'flujos' && (
                         <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                 <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
@@ -2194,7 +2213,7 @@ const WorkspacePage = () => {
                             </svg>
                         </button>
                     )}
-                    {!isDrawerTab && (
+                    {!isDrawerTab && tabActiva !== 'flujos' && (
                         <button className="ws-topbar-btn" onClick={() => handleTabChange('perfil')}>
                             <IconUserCircle active={tabActiva === 'perfil'} />
                         </button>
@@ -2348,7 +2367,7 @@ const WorkspacePage = () => {
             {/* FABs — solo en inicio */}
             {tabActiva === 'inicio' && !selectMode && (
                 <>
-                    {showShareMenu && (
+                    {fabOpen && showShareMenu && (
                         <div className="share-menu">
                             <div className="export-menu-item"
                                 onClick={() => handleShareMovs(movimientos)}>
@@ -2360,17 +2379,9 @@ const WorkspacePage = () => {
                                 </svg>
                                 Todos ({movimientos.length})
                             </div>
-                            <div className={`export-menu-item${selectedIds.size === 0 ? ' share-disabled' : ''}`}
-                                onClick={() => selectedIds.size > 0 && handleShareMovs(movimientos.filter(m => selectedIds.has(m._id)))}>
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke={selectedIds.size > 0 ? '#818cf8' : '#444'} strokeWidth="2"/>
-                                    <path d="M9 12l2 2 4-4" stroke={selectedIds.size > 0 ? '#818cf8' : '#444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                                Solo marcados ({selectedIds.size})
-                            </div>
                         </div>
                     )}
-                    {showExportMenu && (
+                    {fabOpen && showExportMenu && (
                         <div className="export-menu">
                             <div className="export-menu-item" onClick={() => exportData('xls')}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2"/><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2"/><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -2382,20 +2393,38 @@ const WorkspacePage = () => {
                             </div>
                         </div>
                     )}
-                    <button className="ws-fab-share" onClick={() => { setShowShareMenu(s => !s); setShowExportMenu(false); }} title="Compartir movimientos">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="2"/>
-                            <circle cx="17" cy="6" r="2.5" stroke="currentColor" strokeWidth="2"/>
-                            <circle cx="17" cy="18" r="2.5" stroke="currentColor" strokeWidth="2"/>
-                            <path d="M8.3 10.8l5.4-3M8.3 13.2l5.4 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                    </button>
-                    <button className="ws-fab-export" onClick={() => { setShowExportMenu(s => !s); setShowShareMenu(false); }} title="Exportar movimientos">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                    </button>
-                    <button className="ws-fab" onClick={() => { setShowModal(true); setShowExportMenu(false); setShowShareMenu(false); }}>+</button>
+                    <div className="ws-speed-dial">
+                        <div className={`ws-dial-items${fabOpen ? ' open' : ''}`}>
+                            <button className="ws-dial-item ws-dial-share"
+                                onClick={() => { setShowShareMenu(s => !s); setShowExportMenu(false); }}
+                                title="Compartir movimientos">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                                    <circle cx="17" cy="6" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                                    <circle cx="17" cy="18" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                                    <path d="M8.3 10.8l5.4-3M8.3 13.2l5.4 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                </svg>
+                            </button>
+                            <button className="ws-dial-item ws-dial-export"
+                                onClick={() => { setShowExportMenu(s => !s); setShowShareMenu(false); }}
+                                title="Exportar movimientos">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </button>
+                            <button className="ws-dial-item ws-dial-add"
+                                onClick={() => { setShowModal(true); setFabOpen(false); setShowShareMenu(false); setShowExportMenu(false); }}
+                                title="Nuevo movimiento">
+                                +
+                            </button>
+                        </div>
+                        <button className={`ws-dial-trigger${fabOpen ? ' open' : ''}`}
+                            onClick={() => { setFabOpen(s => !s); setShowShareMenu(false); setShowExportMenu(false); }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </>
             )}
 

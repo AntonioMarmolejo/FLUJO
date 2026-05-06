@@ -262,30 +262,81 @@
     padding: 16px 0 4px;
 }
 
-/* FAB */
-.ws-fab {
+/* ── Speed-dial FAB ── */
+@keyframes fab-wheel {
+    0%   { transform: rotate(0deg); }
+    35%  { transform: rotate(240deg); }
+    65%  { transform: rotate(110deg); }
+    85%  { transform: rotate(148deg); }
+    100% { transform: rotate(135deg); }
+}
+
+.ws-speed-dial {
     position: fixed;
-    bottom: 76px;
+    bottom: 80px;
     right: calc(50% - 215px + 16px);
-    width: 52px;
-    height: 52px;
-    background: #1e1e1e;
-    border: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 20;
+}
+
+.ws-dial-trigger {
+    width: 56px;
+    height: 56px;
+    background: #818cf8;
+    border: none;
     border-radius: 16px;
-    color: #ffffff;
-    font-size: 24px;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    transition: background 0.2s;
+    box-shadow: 0 4px 20px rgba(129,140,248,0.4);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
+}
+.ws-dial-trigger.open {
+    animation: fab-wheel 0.5s ease-out both;
+    background: #6366f1;
+}
+.ws-dial-trigger:hover { background: #6d76f0; }
+
+.ws-dial-items {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+}
+.ws-dial-items.open {
+    max-height: 240px;
+    opacity: 1;
 }
 
-.ws-fab:hover {
-    background: #2a2a2a;
+.ws-dial-item {
+    width: 52px;
+    height: 52px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: background 0.2s;
 }
+.ws-dial-item:hover { background: #2a2a2a; }
+.ws-dial-share { color: #818cf8; }
+.ws-dial-export { color: #4ade80; }
+.ws-dial-add { color: #fff; font-size: 26px; font-weight: 300; line-height: 1; }
 
 /* Bottom nav */
 .ws-navbar {
@@ -747,6 +798,20 @@
     overflow: hidden;
 }
 
+.detalle-scroll {
+    overflow-y: auto;
+    max-height: 260px;
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a transparent;
+}
+.detalle-scroll::-webkit-scrollbar { width: 4px; }
+.detalle-scroll::-webkit-scrollbar-track { background: transparent; }
+.detalle-scroll::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+}
+.detalle-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
+
 .detalle-field {
     display: flex;
     justify-content: space-between;
@@ -797,32 +862,10 @@
 .detalle-act-btn.danger { border-color: rgba(248,113,113,0.2); }
 .detalle-act-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; }
 
-/* ── Share FAB ── */
-.ws-fab-share {
-    position: fixed;
-    bottom: 136px;
-    right: calc(50% - 215px + 76px);
-    width: 52px;
-    height: 52px;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 16px;
-    color: #818cf8;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 20;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    transition: background 0.2s;
-}
-.ws-fab-share:hover { background: #2a2a2a; }
-
 .share-menu {
     position: fixed;
-    bottom: 196px;
-    right: calc(50% - 215px + 72px);
+    bottom: 260px;
+    right: calc(50% - 215px + 80px);
     background: #1e1e1e;
     border: 1px solid #2e2e2e;
     border-radius: 12px;
@@ -851,32 +894,10 @@
 }
 .share-selected-btn:hover { background: rgba(129,140,248,0.18); }
 
-/* ── Export FAB ── */
-.ws-fab-export {
-    position: fixed;
-    bottom: 136px;
-    right: calc(50% - 215px + 16px);
-    width: 52px;
-    height: 52px;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 16px;
-    color: #4ade80;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 20;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    transition: background 0.2s;
-}
-.ws-fab-export:hover { background: #2a2a2a; }
-
 .export-menu {
     position: fixed;
-    bottom: 196px;
-    right: calc(50% - 215px + 12px);
+    bottom: 200px;
+    right: calc(50% - 215px + 80px);
     background: #1e1e1e;
     border: 1px solid #2e2e2e;
     border-radius: 12px;
@@ -1236,12 +1257,10 @@
 
     .ws-navbar { max-width: 768px; }
 
-    .ws-fab        { right: max(16px, calc(50% - 384px + 16px)); }
-    .ws-fab-export { right: max(16px, calc(50% - 384px + 16px)); }
-    .ws-fab-share  { right: max(76px, calc(50% - 384px + 76px)); }
+    .ws-speed-dial { right: max(16px, calc(50% - 384px + 16px)); }
     .placas-fab    { right: max(16px, calc(50% - 384px + 16px)); }
-    .export-menu   { right: max(12px, calc(50% - 384px + 12px)); }
-    .share-menu    { right: max(72px, calc(50% - 384px + 72px)); }
+    .export-menu   { right: max(80px, calc(50% - 384px + 80px)); }
+    .share-menu    { right: max(80px, calc(50% - 384px + 80px)); }
 
     .drawer-panel { width: 300px; }
 
@@ -1262,12 +1281,10 @@
     .ws-body    { padding: 20px 32px 100px; }
     .ws-navbar  { max-width: 1080px; }
 
-    .ws-fab        { right: max(16px, calc(50% - 540px + 16px)); }
-    .ws-fab-export { right: max(16px, calc(50% - 540px + 16px)); }
-    .ws-fab-share  { right: max(76px, calc(50% - 540px + 76px)); }
+    .ws-speed-dial { right: max(16px, calc(50% - 540px + 16px)); }
     .placas-fab    { right: max(16px, calc(50% - 540px + 16px)); }
-    .export-menu   { right: max(12px, calc(50% - 540px + 12px)); }
-    .share-menu    { right: max(72px, calc(50% - 540px + 72px)); }
+    .export-menu   { right: max(80px, calc(50% - 540px + 80px)); }
+    .share-menu    { right: max(80px, calc(50% - 540px + 80px)); }
 
     .modal-card    { max-width: min(40vw, 520px); }
     .drawer-panel  { width: 340px; }
