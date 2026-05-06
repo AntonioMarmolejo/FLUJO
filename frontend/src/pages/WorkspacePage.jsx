@@ -2040,6 +2040,7 @@ const WorkspacePage = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showShareMenu, setShowShareMenu] = useState(false);
     const [detailMov, setDetailMov] = useState(null);
     const [editMov, setEditMov] = useState(null);
 
@@ -2124,6 +2125,23 @@ const WorkspacePage = () => {
         exportMovimientos(movimientos, format, `movimientos_${fecha}`);
     };
 
+    const handleShareMovs = async (movsToShare) => {
+        setShowShareMenu(false);
+        if (!movsToShare.length) return;
+        const fechaLarga = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const text = `FLUJO DE VEHÍCULOS — ${fechaLarga}\nTotal: ${movsToShare.length} movimiento${movsToShare.length !== 1 ? 's' : ''}\n\n` +
+            movsToShare.map((m, i) =>
+                `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n` +
+                `   ${m.conductor || '—'} · ${m.empresa || '—'}\n` +
+                `   → ${m.destino || '—'}  ${m.hora}`
+            ).join('\n\n');
+        if (navigator.share) {
+            await navigator.share({ title: 'FLUJO — Movimientos', text }).catch(() => {});
+        } else {
+            navigator.clipboard?.writeText(text);
+        }
+    };
+
     const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: setDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
 
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
@@ -2176,9 +2194,11 @@ const WorkspacePage = () => {
                             </svg>
                         </button>
                     )}
-                    <button className="ws-topbar-btn" onClick={() => handleTabChange('perfil')}>
-                        <IconUserCircle active={tabActiva === 'perfil'} />
-                    </button>
+                    {!isDrawerTab && (
+                        <button className="ws-topbar-btn" onClick={() => handleTabChange('perfil')}>
+                            <IconUserCircle active={tabActiva === 'perfil'} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -2279,9 +2299,15 @@ const WorkspacePage = () => {
                                                 {selectedIds.size === movimientos.length ? 'Ninguno' : 'Todos'} ({selectedIds.size}/{movimientos.length})
                                             </label>
                                             {selectedIds.size > 0 && (
-                                                <button className="delete-selected-btn" onClick={handleBatchDelete}>
-                                                    Eliminar {selectedIds.size}
-                                                </button>
+                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                    <button className="share-selected-btn"
+                                                        onClick={() => handleShareMovs(movimientos.filter(m => selectedIds.has(m._id)))}>
+                                                        Compartir {selectedIds.size}
+                                                    </button>
+                                                    <button className="delete-selected-btn" onClick={handleBatchDelete}>
+                                                        Eliminar {selectedIds.size}
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -2322,6 +2348,28 @@ const WorkspacePage = () => {
             {/* FABs — solo en inicio */}
             {tabActiva === 'inicio' && !selectMode && (
                 <>
+                    {showShareMenu && (
+                        <div className="share-menu">
+                            <div className="export-menu-item"
+                                onClick={() => handleShareMovs(movimientos)}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="6" cy="12" r="2.2" stroke="#818cf8" strokeWidth="2"/>
+                                    <circle cx="17" cy="6" r="2.2" stroke="#818cf8" strokeWidth="2"/>
+                                    <circle cx="17" cy="18" r="2.2" stroke="#818cf8" strokeWidth="2"/>
+                                    <path d="M8 11l7-3.5M8 13l7 3.5" stroke="#818cf8" strokeWidth="1.8" strokeLinecap="round"/>
+                                </svg>
+                                Todos ({movimientos.length})
+                            </div>
+                            <div className={`export-menu-item${selectedIds.size === 0 ? ' share-disabled' : ''}`}
+                                onClick={() => selectedIds.size > 0 && handleShareMovs(movimientos.filter(m => selectedIds.has(m._id)))}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke={selectedIds.size > 0 ? '#818cf8' : '#444'} strokeWidth="2"/>
+                                    <path d="M9 12l2 2 4-4" stroke={selectedIds.size > 0 ? '#818cf8' : '#444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Solo marcados ({selectedIds.size})
+                            </div>
+                        </div>
+                    )}
                     {showExportMenu && (
                         <div className="export-menu">
                             <div className="export-menu-item" onClick={() => exportData('xls')}>
@@ -2334,12 +2382,20 @@ const WorkspacePage = () => {
                             </div>
                         </div>
                     )}
-                    <button className="ws-fab-export" onClick={() => setShowExportMenu(s => !s)} title="Exportar movimientos">
+                    <button className="ws-fab-share" onClick={() => { setShowShareMenu(s => !s); setShowExportMenu(false); }} title="Compartir movimientos">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                            <circle cx="17" cy="6" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                            <circle cx="17" cy="18" r="2.5" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M8.3 10.8l5.4-3M8.3 13.2l5.4 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                    <button className="ws-fab-export" onClick={() => { setShowExportMenu(s => !s); setShowShareMenu(false); }} title="Exportar movimientos">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </button>
-                    <button className="ws-fab" onClick={() => { setShowModal(true); setShowExportMenu(false); }}>+</button>
+                    <button className="ws-fab" onClick={() => { setShowModal(true); setShowExportMenu(false); setShowShareMenu(false); }}>+</button>
                 </>
             )}
 
