@@ -2051,6 +2051,7 @@ const WorkspacePage = () => {
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(false);
     const [movCollapsed, setMovCollapsed] = useState(false);
+    const [chartCollapsed, setChartCollapsed] = useState(true);
 
     const [stats, setStats] = useState(null);
     const [movimientos, setMovimientos] = useState([]);
@@ -2263,24 +2264,41 @@ const WorkspacePage = () => {
                                         ))}
                                     </div>
                                     <div className="ws-chart-card">
-                                        <div className="ws-chart-header">
-                                            <span>Movimiento de vehículos</span>
-                                            <span className="ws-chart-badge">+{stats?.totalFlujos ?? 0} hoy</span>
-                                        </div>
-                                        <ResponsiveContainer width="100%" height={180}>
-                                            <LineChart data={stats?.grafico || []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-                                                <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={5} />
-                                                <YAxis tick={{ fill: '#666', fontSize: 10 }} />
-                                                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#aaa' }} />
-                                                <Line type="monotone" dataKey="ingresos" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} name="Ingresos" />
-                                                <Line type="monotone" dataKey="salidas" stroke="#f87171" strokeWidth={2} dot={{ r: 3 }} name="Salidas" />
-                                            </LineChart>
-                                        </ResponsiveContainer>
-                                        <div className="ws-chart-legend">
-                                            <span><span className="ws-dot" style={{ background: '#818cf8' }} />Ingresos</span>
-                                            <span><span className="ws-dot" style={{ background: '#f87171' }} />Salidas</span>
-                                        </div>
+                                        <button className="ws-chart-toggle" onClick={() => setChartCollapsed(p => !p)}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#818cf8', flexShrink: 0 }}>
+                                                    <path d="M3 3h18v4H3zM3 10h12v4H3zM3 17h7v4H3z" fill="currentColor" opacity="0.8" />
+                                                    <path d="M21 14l-4 4-4-4" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <path d="M17 18V10" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
+                                                </svg>
+                                                <span>Movimiento de vehículos</span>
+                                                <span className="ws-chart-badge">+{stats?.totalFlujos ?? 0} hoy</span>
+                                            </div>
+                                            <svg
+                                                width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                style={{ transition: 'transform 0.25s', transform: chartCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: '#666', flexShrink: 0 }}
+                                            >
+                                                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                        {!chartCollapsed && (
+                                            <>
+                                                <ResponsiveContainer width="100%" height={180}>
+                                                    <LineChart data={stats?.grafico || []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                                                        <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={5} />
+                                                        <YAxis tick={{ fill: '#666', fontSize: 10 }} />
+                                                        <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#aaa' }} />
+                                                        <Line type="monotone" dataKey="ingresos" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} name="Ingresos" />
+                                                        <Line type="monotone" dataKey="salidas" stroke="#f87171" strokeWidth={2} dot={{ r: 3 }} name="Salidas" />
+                                                    </LineChart>
+                                                </ResponsiveContainer>
+                                                <div className="ws-chart-legend">
+                                                    <span><span className="ws-dot" style={{ background: '#818cf8' }} />Ingresos</span>
+                                                    <span><span className="ws-dot" style={{ background: '#f87171' }} />Salidas</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
