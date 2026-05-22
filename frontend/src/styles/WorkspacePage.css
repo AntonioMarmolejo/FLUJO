@@ -607,6 +607,128 @@
     background: rgba(74, 222, 128, 0.05);
 }
 
+/* Quick add banners */
+.quick-add-banner {
+    background: rgba(245, 158, 11, 0.07);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.quick-add-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #f59e0b;
+}
+
+.quick-add-banner-header span:first-child {
+    flex: 1;
+}
+
+.quick-add-toggle-btn {
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 6px;
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.quick-add-toggle-btn:hover {
+    background: rgba(245, 158, 11, 0.24);
+}
+
+.quick-add-form {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quick-add-save-btn {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    border-radius: 8px;
+    color: #f59e0b;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s;
+}
+
+.quick-add-save-btn:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.2);
+}
+
+.quick-add-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Botón QR en header del modal */
+.qr-scan-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(129, 140, 248, 0.12);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    border-radius: 8px;
+    color: #818cf8;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.qr-scan-btn:hover {
+    background: rgba(129, 140, 248, 0.22);
+}
+
+/* Modal del escáner QR */
+.qr-scanner-card {
+    background: #1a1a1a;
+    border-radius: 20px;
+    padding: 20px;
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.qr-video-wrap {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 1;
+}
+
+.qr-video {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.qr-frame {
+    position: absolute;
+    inset: 20%;
+    border: 2px solid #818cf8;
+    border-radius: 10px;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
 .modal-error {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);

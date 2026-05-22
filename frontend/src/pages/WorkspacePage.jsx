@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import '../styles/WorkspacePage.css';
 import * as XLSX from 'xlsx';
+import jsQR from 'jsqr';
 
 // ── Iconos ────────────────────────────────────────────────
 const TruckIcon = ({ color }) => (
@@ -220,6 +221,102 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo }) => (
     </div>
 );
 
+// ── Escáner QR ────────────────────────────────────────────
+const ModalEscanerQR = ({ onScanned, onClose }) => {
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const streamRef = useRef(null);
+    const rafRef = useRef(null);
+    const [camError, setCamError] = useState('');
+    const [hint, setHint] = useState('');
+
+    useEffect(() => {
+        let active = true;
+        const tick = () => {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            if (!video || !canvas || !active) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+                if (code) { active = false; onScanned(code.data); return; }
+            }
+            rafRef.current = requestAnimationFrame(tick);
+        };
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+                streamRef.current = stream;
+                videoRef.current.srcObject = stream;
+                videoRef.current.play();
+                setHint('Apunta al código QR');
+                rafRef.current = requestAnimationFrame(tick);
+            })
+            .catch(() => setCamError('No se pudo acceder a la cámara. Verifica los permisos.'));
+
+        return () => {
+            active = false;
+            cancelAnimationFrame(rafRef.current);
+            streamRef.current?.getTracks().forEach(t => t.stop());
+        };
+    }, [onScanned]);
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="qr-scanner-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
+                            <rect x="14" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
+                            <rect x="15" y="15" width="2" height="2" fill="#818cf8"/>
+                            <rect x="19" y="15" width="2" height="2" fill="#818cf8"/>
+                            <rect x="15" y="19" width="2" height="2" fill="#818cf8"/>
+                            <rect x="19" y="19" width="2" height="2" fill="#818cf8"/>
+                        </svg>
+                        <h3 style={{ margin: 0 }}>Escanear QR</h3>
+                    </div>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                {camError
+                    ? <p className="modal-error" style={{ margin: '16px 0 0' }}>{camError}</p>
+                    : (
+                        <>
+                            <p style={{ fontSize: 12, color: '#666', margin: '8px 0 12px' }}>
+                                {hint || 'Iniciando cámara...'}
+                            </p>
+                            <div className="qr-video-wrap">
+                                <video ref={videoRef} className="qr-video" playsInline muted />
+                                <div className="qr-frame" />
+                            </div>
+                            <canvas ref={canvasRef} style={{ display: 'none' }} />
+                            <p style={{ fontSize: 11, color: '#444', marginTop: 12, textAlign: 'center' }}>
+                                Funciona con QR de vehículos y tarjetas de personas
+                            </p>
+                        </>
+                    )
+                }
+            </div>
+        </div>
+    );
+};
+
+// ── Parser de QR ──────────────────────────────────────────
+const parseQR = raw => {
+    const map = {};
+    raw.split('\n').forEach(line => {
+        const i = line.indexOf(':');
+        if (i > 0) map[line.slice(0, i).trim().toUpperCase()] = line.slice(i + 1).trim();
+    });
+    return map;
+};
+
 // ── Modal formulario (crear + editar) ────────────────────
 const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
@@ -238,6 +335,17 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
+    const [showScanner, setShowScanner] = useState(false);
+    const [personaNotFound, setPersonaNotFound] = useState(false);
+    const [placaNotFound, setPlacaNotFound] = useState(false);
+    const [showAddPersona, setShowAddPersona] = useState(false);
+    const [showAddVehiculo, setShowAddVehiculo] = useState(false);
+    const [quickPersona, setQuickPersona] = useState({ nombres: '', cedula: '', empresa: '' });
+    const [quickPersonaLoading, setQuickPersonaLoading] = useState(false);
+    const [quickPersonaError, setQuickPersonaError] = useState('');
+    const [quickVehiculo, setQuickVehiculo] = useState({ placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '' });
+    const [quickVehiculoLoading, setQuickVehiculoLoading] = useState(false);
+    const [quickVehiculoError, setQuickVehiculoError] = useState('');
 
     const handleChange = e => {
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -249,6 +357,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setForm(f => ({ ...f, placa: val }));
         setAutoFilled(false);
         setError('');
+        setPlacaNotFound(false);
+        setShowAddVehiculo(false);
         if (val.length < 3) { setSuggestions([]); return; }
 
         const seen = new Set();
@@ -262,7 +372,9 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         searchTimer.current = setTimeout(async () => {
             try {
                 const { data } = await api.get(`/vehiculos/search?placa=${val}`);
-                setSuggestions(data.vehiculos.map(v => ({ ...v, _source: 'db' })));
+                const results = data.vehiculos.map(v => ({ ...v, _source: 'db' }));
+                setSuggestions(results);
+                setPlacaNotFound(results.length === 0);
             } catch { setSuggestions([]); }
         }, 300);
     };
@@ -273,12 +385,16 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setCedulaSugs([]);
         setConductorSugs([]);
         setAutoFilled(true);
+        setPlacaNotFound(false);
+        setShowAddVehiculo(false);
     };
 
     const handleCedulaChange = e => {
         const val = e.target.value;
         setForm(f => ({ ...f, cedula: val }));
         setError('');
+        setPersonaNotFound(false);
+        setShowAddPersona(false);
         if (val.length < 3) { setCedulaSugs([]); return; }
 
         const seen = new Set();
@@ -293,7 +409,9 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         cedulaTimer.current = setTimeout(async () => {
             try {
                 const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
-                setCedulaSugs(data.personas.map(p => ({ ...p, _source: 'db' })));
+                const results = data.personas.map(p => ({ ...p, _source: 'db' }));
+                setCedulaSugs(results);
+                if (results.length === 0) setPersonaNotFound(true);
             } catch { setCedulaSugs([]); }
         }, 300);
     };
@@ -302,6 +420,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         const val = e.target.value;
         setForm(f => ({ ...f, conductor: val }));
         setError('');
+        setPersonaNotFound(false);
+        setShowAddPersona(false);
         if (val.length < 3) { setConductorSugs([]); return; }
 
         const seen = new Set();
@@ -316,16 +436,20 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         conductorTimer.current = setTimeout(async () => {
             try {
                 const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
-                setConductorSugs(data.personas.map(p => ({ ...p, _source: 'db' })));
+                const results = data.personas.map(p => ({ ...p, _source: 'db' }));
+                setConductorSugs(results);
+                if (results.length === 0) setPersonaNotFound(true);
             } catch { setConductorSugs([]); }
         }, 300);
     };
 
     const selectPersonaSug = sug => {
-        setForm(f => ({ ...f, conductor: sug.nombres || '', cedula: sug.cedula || '' }));
+        setForm(f => ({ ...f, conductor: sug.nombres || '', cedula: sug.cedula || '', empresa: sug.empresa || f.empresa }));
         setCedulaSugs([]);
         setConductorSugs([]);
         setAutoFilled(true);
+        setPersonaNotFound(false);
+        setShowAddPersona(false);
     };
 
     const recentUnique = (field, val) => {
@@ -347,6 +471,51 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setForm(f => ({ ...f, actividad: val }));
         setError('');
         setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
+    };
+
+    const handleQRScanned = data => {
+        const q = parseQR(data);
+        setForm(f => ({
+            ...f,
+            ...(q.PLACA      && { placa: q.PLACA }),
+            ...(q.MARCA      && { marca: q.MARCA }),
+            ...(q.COLOR      && { color: q.COLOR }),
+            ...(q.TIPO       && { tipoVehiculo: q.TIPO }),
+            ...(q.EMPRESA    && { empresa: q.EMPRESA }),
+            ...(q.CONDUCTOR  && { conductor: q.CONDUCTOR }),
+            ...(q.CEDULA     && { cedula: q.CEDULA }),
+            ...((q.NOMBRES || q.NOMBRE) && { conductor: q.NOMBRES || q.NOMBRE }),
+        }));
+        setAutoFilled(true);
+        setPersonaNotFound(false);
+        setPlacaNotFound(false);
+        setShowScanner(false);
+    };
+
+    const handleSavePersonaRapida = async () => {
+        if (!quickPersona.cedula || !quickPersona.nombres) { setQuickPersonaError('Nombre y cédula son requeridos'); return; }
+        setQuickPersonaLoading(true);
+        try {
+            await api.post('/personas', quickPersona);
+            setPersonaNotFound(false);
+            setShowAddPersona(false);
+            setQuickPersonaError('');
+        } catch (err) {
+            setQuickPersonaError(err.response?.data?.message || 'Error al guardar');
+        } finally { setQuickPersonaLoading(false); }
+    };
+
+    const handleSaveVehiculoRapido = async () => {
+        if (!quickVehiculo.placa) { setQuickVehiculoError('La placa es requerida'); return; }
+        setQuickVehiculoLoading(true);
+        try {
+            await api.post('/vehiculos', quickVehiculo);
+            setPlacaNotFound(false);
+            setShowAddVehiculo(false);
+            setQuickVehiculoError('');
+        } catch (err) {
+            setQuickVehiculoError(err.response?.data?.message || 'Error al guardar');
+        } finally { setQuickVehiculoLoading(false); }
     };
 
     const handleSubmit = async () => {
@@ -382,10 +551,32 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
 
     return (
         <div className="modal-overlay" onClick={onClose}>
+            {showScanner && (
+                <ModalEscanerQR
+                    onScanned={handleQRScanned}
+                    onClose={() => setShowScanner(false)}
+                />
+            )}
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {!editData && (
+                            <button className="qr-scan-btn" title="Llenar con QR" onClick={() => setShowScanner(true)}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                </svg>
+                                Escanear QR
+                            </button>
+                        )}
+                        <button className="modal-close" onClick={onClose}>✕</button>
+                    </div>
                 </div>
                 <div className="modal-tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
@@ -422,6 +613,35 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                             )}
                         </div>
                     </div>
+                    {placaNotFound && form.placa.length >= 3 && (
+                        <div className="quick-add-banner">
+                            <div className="quick-add-banner-header">
+                                <span>⚠ Placa <strong>{form.placa}</strong> no está en la BD de vehículos</span>
+                                <button className="quick-add-toggle-btn" onClick={() => {
+                                    if (!showAddVehiculo) setQuickVehiculo({ placa: form.placa, marca: form.marca, color: form.color, tipoVehiculo: form.tipoVehiculo, empresa: form.empresa });
+                                    setShowAddVehiculo(p => !p);
+                                }}>
+                                    {showAddVehiculo ? 'Cancelar' : 'Agregar +'}
+                                </button>
+                            </div>
+                            {showAddVehiculo && (
+                                <div className="quick-add-form">
+                                    <div className="modal-fields-row">
+                                        <ModalField name="placa" label="PLACA" value={quickVehiculo.placa} onChange={e => setQuickVehiculo(f => ({ ...f, placa: e.target.value.toUpperCase() }))} autoFilled={false} />
+                                        <ModalField name="marca" label="MARCA" value={quickVehiculo.marca} onChange={e => setQuickVehiculo(f => ({ ...f, marca: e.target.value }))} autoFilled={false} />
+                                    </div>
+                                    <div className="modal-fields-row">
+                                        <ModalField name="color" label="COLOR" value={quickVehiculo.color} onChange={e => setQuickVehiculo(f => ({ ...f, color: e.target.value }))} autoFilled={false} />
+                                        <ModalField name="empresa" label="EMPRESA" value={quickVehiculo.empresa} onChange={e => setQuickVehiculo(f => ({ ...f, empresa: e.target.value }))} autoFilled={false} />
+                                    </div>
+                                    {quickVehiculoError && <p className="modal-error">{quickVehiculoError}</p>}
+                                    <button className="quick-add-save-btn" onClick={handleSaveVehiculoRapido} disabled={quickVehiculoLoading}>
+                                        {quickVehiculoLoading ? 'Guardando...' : '+ Guardar en BD de vehículos'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="modal-fields-row">
                         <ModalField name="marca" label="MARCA" placeholder="Toyota" value={form.marca} {...fp} />
                         <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
@@ -436,6 +656,30 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
                         suggestions={cedulaSugs} onSelect={selectPersonaSug} />
+                    {personaNotFound && (
+                        <div className="quick-add-banner">
+                            <div className="quick-add-banner-header">
+                                <span>⚠ Persona no encontrada en la BD</span>
+                                <button className="quick-add-toggle-btn" onClick={() => {
+                                    if (!showAddPersona) setQuickPersona({ nombres: form.conductor, cedula: form.cedula, empresa: form.empresa });
+                                    setShowAddPersona(p => !p);
+                                }}>
+                                    {showAddPersona ? 'Cancelar' : 'Agregar +'}
+                                </button>
+                            </div>
+                            {showAddPersona && (
+                                <div className="quick-add-form">
+                                    <ModalField name="nombres" label="NOMBRE COMPLETO" placeholder="Nombre completo" value={quickPersona.nombres} onChange={e => setQuickPersona(f => ({ ...f, nombres: e.target.value }))} autoFilled={false} />
+                                    <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={quickPersona.cedula} onChange={e => setQuickPersona(f => ({ ...f, cedula: e.target.value }))} autoFilled={false} />
+                                    <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={quickPersona.empresa} onChange={e => setQuickPersona(f => ({ ...f, empresa: e.target.value }))} autoFilled={false} />
+                                    {quickPersonaError && <p className="modal-error">{quickPersonaError}</p>}
+                                    <button className="quick-add-save-btn" onClick={handleSavePersonaRapida} disabled={quickPersonaLoading}>
+                                        {quickPersonaLoading ? 'Guardando...' : '+ Guardar en BD de personas'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <TextSugField name="destino" label="DESTINO" placeholder="Área o lugar"
                         value={form.destino} onChange={handleDestinoChange}
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
