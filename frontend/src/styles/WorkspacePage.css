@@ -489,9 +489,32 @@
 }
 
 .modal-field label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: 13px;
     color: #888;
     font-weight: 600;
+}
+
+.qr-field-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: rgba(129, 140, 248, 0.12);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    border-radius: 6px;
+    color: #818cf8;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.qr-field-btn:hover {
+    background: rgba(129, 140, 248, 0.22);
 }
 
 .modal-field input {
@@ -694,6 +717,25 @@
     background: rgba(129, 140, 248, 0.22);
 }
 
+.qr-scan-btn-sm {
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+.qr-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0 4px;
+}
+
+.qr-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #666;
+}
+
 /* Modal del escáner QR */
 .qr-scanner-card {
     background: #1a1a1a;
@@ -727,6 +769,34 @@
     border-radius: 10px;
     box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.45);
     pointer-events: none;
+}
+
+.qr-img-divider {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin: 14px 0 10px;
+}
+
+.qr-img-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 14px;
+    background: rgba(129, 140, 248, 0.12);
+    border: 1px solid rgba(129, 140, 248, 0.35);
+    border-radius: 8px;
+    color: #818cf8;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.qr-img-btn:hover {
+    background: rgba(129, 140, 248, 0.22);
 }
 
 .modal-error {

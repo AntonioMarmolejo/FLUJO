@@ -142,9 +142,9 @@ const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFi
     </div>
 );
 
-const SuggestionField = ({ name, label, required, placeholder, value, onChange, autoFilled, suggestions, onSelect }) => (
+const SuggestionField = ({ name, label, required, placeholder, value, onChange, autoFilled, suggestions, onSelect, labelAction }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
-        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}</label>
+        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}{labelAction}</label>
         <div className="placa-wrapper">
             <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off" />
             {suggestions.length > 0 && (
@@ -227,8 +227,10 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
     const canvasRef = useRef(null);
     const streamRef = useRef(null);
     const rafRef = useRef(null);
+    const fileInputRef = useRef(null);
     const [camError, setCamError] = useState('');
     const [hint, setHint] = useState('');
+    const [imgError, setImgError] = useState('');
 
     useEffect(() => {
         let active = true;
@@ -266,6 +268,33 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
         };
     }, [onScanned]);
 
+    const handleImageFile = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setImgError('');
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const image = new Image();
+            image.onload = () => {
+                const canvas = canvasRef.current;
+                canvas.width = image.width;
+                canvas.height = image.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(image, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code) {
+                    onScanned(code.data);
+                } else {
+                    setImgError('No se detectó ningún QR en la imagen.');
+                }
+            };
+            image.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="qr-scanner-card" onClick={e => e.stopPropagation()}>
@@ -295,13 +324,24 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
                                 <video ref={videoRef} className="qr-video" playsInline muted />
                                 <div className="qr-frame" />
                             </div>
-                            <canvas ref={canvasRef} style={{ display: 'none' }} />
                             <p style={{ fontSize: 11, color: '#444', marginTop: 12, textAlign: 'center' }}>
                                 Funciona con QR de vehículos y tarjetas de personas
                             </p>
                         </>
                     )
                 }
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div className="qr-img-divider">— o selecciona una imagen —</div>
+                <button className="qr-img-btn" onClick={() => fileInputRef.current.click()}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Elegir imagen
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageFile} />
+                {imgError && <p style={{ color: '#ef4444', fontSize: 11, marginTop: 8, textAlign: 'center' }}>{imgError}</p>}
             </div>
         </div>
     );
@@ -336,6 +376,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
     const [showScanner, setShowScanner] = useState(false);
+    const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
     const [placaNotFound, setPlacaNotFound] = useState(false);
     const [showAddPersona, setShowAddPersona] = useState(false);
@@ -475,21 +516,43 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
 
     const handleQRScanned = data => {
         const q = parseQR(data);
+        const placa     = q.PLACA || q.PLA;
+        const marca     = q.MARCA || q.MARC;
+        const color     = q.COLOR || q.COL;
+        const tipo      = q.TIPO  || q.TIP;
+        const empresa   = q.EMPRESA || q.CIA;
+        const cedula    = q.CEDULA || q.CED || q.CC;
+        const conductor = q.CONDUCTOR || q.NOMBRES || q.NOMBRE || q.NOM;
         setForm(f => ({
             ...f,
-            ...(q.PLACA      && { placa: q.PLACA }),
-            ...(q.MARCA      && { marca: q.MARCA }),
-            ...(q.COLOR      && { color: q.COLOR }),
-            ...(q.TIPO       && { tipoVehiculo: q.TIPO }),
-            ...(q.EMPRESA    && { empresa: q.EMPRESA }),
-            ...(q.CONDUCTOR  && { conductor: q.CONDUCTOR }),
-            ...(q.CEDULA     && { cedula: q.CEDULA }),
-            ...((q.NOMBRES || q.NOMBRE) && { conductor: q.NOMBRES || q.NOMBRE }),
+            ...(placa     && { placa }),
+            ...(marca     && { marca }),
+            ...(color     && { color }),
+            ...(tipo      && { tipoVehiculo: tipo }),
+            ...(empresa   && { empresa }),
+            ...(conductor && { conductor }),
+            ...(cedula    && { cedula }),
         }));
         setAutoFilled(true);
         setPersonaNotFound(false);
         setPlacaNotFound(false);
         setShowScanner(false);
+    };
+
+    const handlePersonaQRScanned = data => {
+        const q = parseQR(data);
+        const cedula    = q.CEDULA || q.CED || q.CC;
+        const conductor = q.CONDUCTOR || q.NOMBRES || q.NOMBRE || q.NOM;
+        const empresa   = q.EMPRESA || q.CIA;
+        setForm(f => ({
+            ...f,
+            ...(conductor && { conductor }),
+            ...(cedula    && { cedula }),
+            ...(empresa   && { empresa }),
+        }));
+        setPersonaNotFound(false);
+        setShowAddPersona(false);
+        setShowPersonaScanner(false);
     };
 
     const handleSavePersonaRapida = async () => {
@@ -557,26 +620,16 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     onClose={() => setShowScanner(false)}
                 />
             )}
+            {showPersonaScanner && (
+                <ModalEscanerQR
+                    onScanned={handlePersonaQRScanned}
+                    onClose={() => setShowPersonaScanner(false)}
+                />
+            )}
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {!editData && (
-                            <button className="qr-scan-btn" title="Llenar con QR" onClick={() => setShowScanner(true)}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
-                                </svg>
-                                Escanear QR
-                            </button>
-                        )}
-                        <button className="modal-close" onClick={onClose}>✕</button>
-                    </div>
+                    <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
                 <div className="modal-tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
@@ -592,7 +645,22 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                 </div>
                 <div className="modal-fields">
                     <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
-                        <label>PLACAS <span style={{ color: '#f87171' }}>*</span></label>
+                        <label>
+                            <span>PLACAS <span style={{ color: '#f87171' }}>*</span></span>
+                            {!editData && (
+                                <button className="qr-field-btn" title="Escanear QR vehículo" onClick={() => setShowScanner(true)}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                        <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                        <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                        <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                            )}
+                        </label>
                         <div className="placa-wrapper">
                             <input type="text" name="placa" placeholder="Ej: ABC-1234"
                                 value={form.placa} onChange={handlePlacaChange} autoComplete="off" />
@@ -652,7 +720,20 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     </div>
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
-                        suggestions={conductorSugs} onSelect={selectPersonaSug} />
+                        suggestions={conductorSugs} onSelect={selectPersonaSug}
+                        labelAction={!editData && (
+                            <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                </svg>
+                            </button>
+                        )} />
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
                         suggestions={cedulaSugs} onSelect={selectPersonaSug} />
