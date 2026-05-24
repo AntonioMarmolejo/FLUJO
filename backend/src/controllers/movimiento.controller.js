@@ -1,8 +1,8 @@
 import Movimiento from '../models/Movimiento.model.js';
 import Vehiculo from '../models/Vehiculo.model.js';
 
-const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false });
-const getFecha = () => new Date().toISOString().split('T')[0];
+const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
+const getFecha = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
 
 const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula }) =>
     ({ marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '' });

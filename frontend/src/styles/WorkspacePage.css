@@ -633,6 +633,15 @@
 }
 
 /* Quick add banners */
+.quick-info-banner {
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 12px;
+    color: #818cf8;
+}
+
 .quick-add-banner {
     background: rgba(245, 158, 11, 0.07);
     border: 1px solid rgba(245, 158, 11, 0.22);
@@ -1632,6 +1641,9 @@
    RESPONSIVE — Móvil <= 480px
 ══════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
+    .ws-wrapper, .ws-navbar {
+        max-width: 100%;
+    }
     .modal-fields-row {
         grid-template-columns: 1fr;
     }
