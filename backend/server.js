@@ -24,7 +24,8 @@ app.use(cors({
     credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -36,7 +37,7 @@ app.use('/api/extensiones', extensionRoutes);
 app.use('/api/personas', personaRoutes);
 
 // Health check
-app.get('/', (req, res) => res.json({ message: '🚀 Flujo API corriendo' }));
+app.get('/', (_req, res) => res.json({ message: '🚀 Flujo API corriendo' }));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));

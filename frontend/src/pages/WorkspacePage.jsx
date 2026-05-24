@@ -113,12 +113,12 @@ const IconMoon = ({ size = 14 }) => (
 );
 
 // ── Helpers ───────────────────────────────────────────────
-const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
+const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', guia: '', documento: '', documentoNombre: '', documentoTipo: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
-    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
+    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}${m.guia ? '\nGuía: ' + m.guia : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
 // Tabs que vienen del cajón (tienen botón de regreso)
 const DRAWER_TABS = new Set(['avance', 'placas-db', 'extensiones', 'personas', 'jefes']);
@@ -168,11 +168,12 @@ const SuggestionField = ({ name, label, required, placeholder, value, onChange, 
     </div>
 );
 
-const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, suggestions, onSelect }) => (
+const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, suggestions, onSelect }) => (
     <div className="modal-field">
         <label>{label}</label>
         <div className="placa-wrapper">
-            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus} autoComplete="off" />
+            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
+                onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
             {suggestions.length > 0 && (
                 <div className="placa-suggestions">
                     {suggestions.map((s, i) => (
@@ -360,7 +361,7 @@ const parseQR = raw => {
 // ── Modal formulario (crear + editar) ────────────────────
 const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
-        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
+        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', guia: editData.guia || '', documento: editData.documento || '', documentoNombre: editData.documentoNombre || '', documentoTipo: editData.documentoTipo || '' }
         : EMPTY_FORM
     );
     const [loading, setLoading] = useState(false);
@@ -378,6 +379,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
+    const docInputRef = useRef(null);
     const [showScanner, setShowScanner] = useState(false);
     const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
@@ -533,6 +535,15 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         const val = e.target.value;
         setForm(f => ({ ...f, empresa: val }));
         setEmpresaSugs(val.length >= 1 ? recentUnique('empresa', val) : []);
+    };
+
+    const handleDocFile = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => setForm(f => ({ ...f, documento: ev.target.result, documentoNombre: file.name, documentoTipo: file.type }));
+        reader.readAsDataURL(file);
+        e.target.value = '';
     };
 
     const handleQRScanned = data => {
@@ -735,10 +746,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         <TextSugField name="marca" label="MARCA" placeholder="Toyota"
                             value={form.marca} onChange={handleMarcaChange}
                             onFocus={() => setMarcaSugs(recentUnique('marca', form.marca))}
+                            onClearSugs={() => setMarcaSugs([])}
                             suggestions={marcaSugs} onSelect={s => { setForm(f => ({ ...f, marca: s })); setMarcaSugs([]); }} />
                         <TextSugField name="color" label="COLOR" placeholder="Blanco"
                             value={form.color} onChange={handleColorChange}
                             onFocus={() => setColorSugs(recentUnique('color', form.color))}
+                            onClearSugs={() => setColorSugs([])}
                             suggestions={colorSugs} onSelect={s => { setForm(f => ({ ...f, color: s })); setColorSugs([]); }} />
                     </div>
                     <div className="modal-fields-row">
@@ -746,23 +759,33 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         <TextSugField name="empresa" label="EMPRESA" placeholder="Empresa S.A."
                             value={form.empresa} onChange={handleEmpresaChange}
                             onFocus={() => setEmpresaSugs(recentUnique('empresa', form.empresa))}
+                            onClearSugs={() => setEmpresaSugs([])}
                             suggestions={empresaSugs} onSelect={s => { setForm(f => ({ ...f, empresa: s })); setEmpresaSugs([]); }} />
                     </div>
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
                         suggestions={conductorSugs} onSelect={selectPersonaSug}
                         labelAction={!editData && (
-                            <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
-                                </svg>
-                            </button>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                                <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                        <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                        <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                        <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                        <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                                <button className="qr-field-btn" title="Adjuntar documento (PDF o imagen)" onClick={() => docInputRef.current.click()}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                        <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                </button>
+                                <input ref={docInputRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={handleDocFile} />
+                            </div>
                         )} />
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
@@ -794,11 +817,29 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                     <TextSugField name="destino" label="DESTINO" placeholder="Área o lugar"
                         value={form.destino} onChange={handleDestinoChange}
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
+                        onClearSugs={() => setDestinoSugs([])}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
                     <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..."
                         value={form.actividad} onChange={handleActividadChange}
                         onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
+                        onClearSugs={() => setActividadSugs([])}
                         suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }} />
+                    <ModalField name="guia" label="N° GUÍA / REFERENCIA" placeholder="Ej: GU-2024-001" value={form.guia}
+                        onChange={e => setForm(f => ({ ...f, guia: e.target.value }))} autoFilled={false} />
+                    {form.documento && (
+                        <div className="doc-preview-form">
+                            {form.documentoTipo?.startsWith('image/') ? (
+                                <img src={form.documento} alt="doc" className="doc-thumb-form" />
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                </svg>
+                            )}
+                            <span className="doc-preview-name">{form.documentoNombre}</span>
+                            <button className="doc-preview-remove" onClick={() => setForm(f => ({ ...f, documento: '', documentoNombre: '', documentoTipo: '' }))}>✕</button>
+                        </div>
+                    )}
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {guardado && (
@@ -843,6 +884,27 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
                 <DetalleRow label="Cédula"           value={mov.cedula} />
                 <DetalleRow label="Destino"          value={mov.destino || '—'} />
                 <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} />
+                <DetalleRow label="N° Guía"          value={mov.guia} />
+                {mov.documento && (
+                    <div className="detalle-doc-section">
+                        {mov.documentoTipo?.startsWith('image/') ? (
+                            <img src={mov.documento} alt="documento" className="detalle-doc-thumb" />
+                        ) : (
+                            <div className="detalle-doc-pdf">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                    <path d="M9 13h6M9 17h4" stroke="#818cf8" strokeWidth="2" strokeLinecap="round"/>
+                                </svg>
+                                <span>{mov.documentoNombre}</span>
+                            </div>
+                        )}
+                        <a href={mov.documento} download={mov.documentoNombre} className="detalle-doc-btn">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            Ver / Descargar
+                        </a>
+                    </div>
+                )}
             </div>
             <div className="detalle-actions">
                 <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
@@ -876,12 +938,20 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
             )}
         </div>
         {!selectMode && (
-            <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
-                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
-                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
-                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
-            </div>
+            <>
+                {(m.guia || m.documento) && (
+                    <span className="mov-guia-tag" onClick={e => e.stopPropagation()}>
+                        {m.guia && <span>{m.guia}</span>}
+                        {m.documento && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ marginLeft: m.guia ? 3 : 0 }}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>}
+                    </span>
+                )}
+                <div className="mov-actions" onClick={e => e.stopPropagation()}>
+                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
+                    <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
+                    <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
+                    <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
+                </div>
+            </>
         )}
     </div>
 );
@@ -2488,7 +2558,16 @@ const WorkspacePage = () => {
 
     const handleShare = async m => {
         if (navigator.share) {
-            await navigator.share({ title: 'Movimiento FLUJO', text: movToText(m) }).catch(() => { });
+            const shareData = { title: 'Movimiento FLUJO', text: movToText(m) };
+            if (m.documento && m.documentoNombre) {
+                try {
+                    const res = await fetch(m.documento);
+                    const blob = await res.blob();
+                    const file = new File([blob], m.documentoNombre, { type: m.documentoTipo || blob.type });
+                    if (navigator.canShare?.({ files: [file] })) shareData.files = [file];
+                } catch (_) { /* compartir sin archivo si falla */ }
+            }
+            await navigator.share(shareData).catch(() => { });
         } else handleCopy(m);
     };
 

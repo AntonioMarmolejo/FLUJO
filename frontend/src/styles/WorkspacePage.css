@@ -421,6 +421,8 @@
     gap: 16px;
     max-height: 88vh;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 .modal-header {
@@ -1050,6 +1052,108 @@
     gap: 8px;
 }
 
+/* Guía tag en mov-card */
+.mov-guia-tag {
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+    color: #818cf8;
+    background: rgba(129, 140, 248, 0.1);
+    border: 1px solid rgba(129, 140, 248, 0.25);
+    border-radius: 5px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Preview doc en formulario */
+.doc-preview-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(129, 140, 248, 0.08);
+    border: 1px solid rgba(129, 140, 248, 0.2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 4px;
+}
+
+.doc-thumb-form {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.doc-preview-name {
+    flex: 1;
+    font-size: 11px;
+    color: #aaa;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-preview-remove {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+    flex-shrink: 0;
+}
+
+.doc-preview-remove:hover { color: #f87171; }
+
+/* Sección doc en ModalDetalle */
+.detalle-doc-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(129, 140, 248, 0.06);
+    border: 1px solid rgba(129, 140, 248, 0.18);
+    border-radius: 10px;
+}
+
+.detalle-doc-thumb {
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.detalle-doc-pdf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.detalle-doc-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background: rgba(129, 140, 248, 0.15);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    border-radius: 8px;
+    color: #818cf8;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.detalle-doc-btn:hover { background: rgba(129, 140, 248, 0.25); }
+
 .detalle-act-btn {
     display: flex;
     align-items: center;
@@ -1448,6 +1552,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — Móvil <= 480px
+══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+    .modal-fields-row {
+        grid-template-columns: 1fr;
+    }
+    .modal-overlay {
+        padding: 8px;
+        align-items: flex-end;
+    }
+    .modal-card {
+        max-height: 92vh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        padding: 20px 16px;
+    }
 }
 
 /* ══════════════════════════════════════════════════════════
