@@ -372,6 +372,9 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const [autoFilled, setAutoFilled] = useState(!!editData);
     const [destinoSugs, setDestinoSugs] = useState([]);
     const [actividadSugs, setActividadSugs] = useState([]);
+    const [marcaSugs, setMarcaSugs] = useState([]);
+    const [colorSugs, setColorSugs] = useState([]);
+    const [empresaSugs, setEmpresaSugs] = useState([]);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
@@ -512,6 +515,24 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setForm(f => ({ ...f, actividad: val }));
         setError('');
         setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
+    };
+
+    const handleMarcaChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, marca: val }));
+        setMarcaSugs(val.length >= 1 ? recentUnique('marca', val) : []);
+    };
+
+    const handleColorChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, color: val }));
+        setColorSugs(val.length >= 1 ? recentUnique('color', val) : []);
+    };
+
+    const handleEmpresaChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, empresa: val }));
+        setEmpresaSugs(val.length >= 1 ? recentUnique('empresa', val) : []);
     };
 
     const handleQRScanned = data => {
@@ -711,12 +732,21 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         </div>
                     )}
                     <div className="modal-fields-row">
-                        <ModalField name="marca" label="MARCA" placeholder="Toyota" value={form.marca} {...fp} />
-                        <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
+                        <TextSugField name="marca" label="MARCA" placeholder="Toyota"
+                            value={form.marca} onChange={handleMarcaChange}
+                            onFocus={() => setMarcaSugs(recentUnique('marca', form.marca))}
+                            suggestions={marcaSugs} onSelect={s => { setForm(f => ({ ...f, marca: s })); setMarcaSugs([]); }} />
+                        <TextSugField name="color" label="COLOR" placeholder="Blanco"
+                            value={form.color} onChange={handleColorChange}
+                            onFocus={() => setColorSugs(recentUnique('color', form.color))}
+                            suggestions={colorSugs} onSelect={s => { setForm(f => ({ ...f, color: s })); setColorSugs([]); }} />
                     </div>
                     <div className="modal-fields-row">
                         <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV, Sedán..." value={form.tipoVehiculo} {...fp} />
-                        <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
+                        <TextSugField name="empresa" label="EMPRESA" placeholder="Empresa S.A."
+                            value={form.empresa} onChange={handleEmpresaChange}
+                            onFocus={() => setEmpresaSugs(recentUnique('empresa', form.empresa))}
+                            suggestions={empresaSugs} onSelect={s => { setForm(f => ({ ...f, empresa: s })); setEmpresaSugs([]); }} />
                     </div>
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
