@@ -916,45 +916,91 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
     </div>
 );
 
-// ── Tarjeta de movimiento ─────────────────────────────────
-const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
-    <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
-        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
-        {selectMode && (
-            <input type="checkbox" className="mov-check" checked={selected}
-                onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
-        )}
-        <div className={`mov-icon ${m.tipo}`}>
-            <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
-            <span className="mov-hora-small">{m.hora}</span>
-        </div>
-        <div className="mov-info">
-            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-            {(m.empresa || m.destino) && (
-                <span className="mov-detalle" style={{ fontSize: 11 }}>
-                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
-                </span>
+// ── Modal ver documento ───────────────────────────────────
+const ModalVerDocumento = ({ documento, documentoTipo, documentoNombre, onClose }) => (
+    <div className="modal-overlay" onClick={onClose}>
+        <div className="doc-viewer-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <span style={{ fontSize: 13, color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentoNombre}</span>
+                <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            {documentoTipo?.startsWith('image/') ? (
+                <img src={documento} alt={documentoNombre} className="doc-viewer-img" />
+            ) : (
+                <iframe src={documento} title={documentoNombre} className="doc-viewer-iframe" />
             )}
+            <a href={documento} download={documentoNombre} className="detalle-doc-btn" style={{ marginTop: 8 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Descargar
+            </a>
         </div>
-        {!selectMode && (
-            <>
-                {(m.guia || m.documento) && (
-                    <span className="mov-guia-tag" onClick={e => e.stopPropagation()}>
-                        {m.guia && <span>{m.guia}</span>}
-                        {m.documento && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ marginLeft: m.guia ? 3 : 0 }}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>}
-                    </span>
-                )}
-                <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
-                    <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
-                    <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
-                    <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
-                </div>
-            </>
-        )}
     </div>
 );
+
+// ── Tarjeta de movimiento ─────────────────────────────────
+const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
+    const [showDoc, setShowDoc] = useState(false);
+    return (
+        <>
+            {showDoc && (
+                <ModalVerDocumento
+                    documento={m.documento} documentoTipo={m.documentoTipo}
+                    documentoNombre={m.documentoNombre} onClose={() => setShowDoc(false)}
+                />
+            )}
+            <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
+                onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
+                {selectMode && (
+                    <input type="checkbox" className="mov-check" checked={selected}
+                        onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
+                )}
+                <div className={`mov-icon ${m.tipo}`}>
+                    <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
+                    <span className="mov-hora-small">{m.hora}</span>
+                </div>
+                <div className="mov-info">
+                    <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                    <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                    {(m.empresa || m.destino) && (
+                        <span className="mov-detalle" style={{ fontSize: 11 }}>
+                            {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                        </span>
+                    )}
+                </div>
+                {!selectMode && (
+                    <>
+                        {(m.guia || m.documento) && (
+                            <div className="mov-doc-col" onClick={e => e.stopPropagation()}>
+                                {m.guia && <span className="mov-guia-tag">{m.guia}</span>}
+                                {m.documento && (
+                                    <button className="mov-doc-thumb-btn" title="Ver documento" onClick={() => setShowDoc(true)}>
+                                        {m.documentoTipo?.startsWith('image/') ? (
+                                            <img src={m.documento} alt="doc" className="mov-doc-thumb" />
+                                        ) : (
+                                            <div className="mov-doc-thumb mov-doc-thumb-pdf">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
+                                                </svg>
+                                                <span>PDF</span>
+                                            </div>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        <div className="mov-actions" onClick={e => e.stopPropagation()}>
+                            <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
+                            <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
+                            <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
+                            <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </>
+    );
+};
 
 // ── Avance del día (timer + progreso del turno) ───────────
 const PantallaAvance = ({ turnoActivo, user }) => {
