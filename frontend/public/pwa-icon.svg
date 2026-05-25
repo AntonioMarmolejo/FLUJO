@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0a0a0a"/>
+  <rect x="30" y="30" width="452" height="452" rx="60" fill="#111111"/>
+  <!-- Letra F principal -->
+  <rect x="140" y="120" width="232" height="48" rx="12" fill="#aa3bff"/>
+  <rect x="140" y="120" width="48" height="272" rx="12" fill="#aa3bff"/>
+  <rect x="140" y="228" width="180" height="44" rx="12" fill="#aa3bff"/>
+  <!-- Punto de seguridad -->
+  <circle cx="350" cy="340" r="38" fill="#aa3bff" opacity="0.2"/>
+  <circle cx="350" cy="340" r="22" fill="#aa3bff"/>
+</svg>
