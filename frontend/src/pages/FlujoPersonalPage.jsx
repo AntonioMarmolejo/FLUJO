@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import api from '../api/axios';
 
 const COLORS = {
     bg: '#111111',
@@ -128,42 +129,13 @@ const Icon = {
     ),
 };
 
-// ── Datos de ejemplo ────────────────────────────────────
-const WORKERS_ACTIVE = [
-    {
-        id: 1, role: 'Operador de Planta', name: 'Marcelo Quintero Ríos',
-        days: 12, cycle: '15-15', total: 15,
-        in: '21 abr 2026', out: '06 may 2026', inDateISO: '2026-04-21',
-        back: 'Rodrigo Salinas Vega',
-    },
-    {
-        id: 2, role: 'Supervisor de Pozo', name: 'Andrea Cifuentes Mora',
-        days: 8, cycle: '20-10', total: 20,
-        in: '25 abr 2026', out: '15 may 2026', inDateISO: '2026-04-25',
-        back: 'Camila Estévez Ortiz',
-    },
-    {
-        id: 3, role: 'Técnico Electromecánico', name: 'Joaquín Bermúdez Lara',
-        days: 18, cycle: '30', total: 30,
-        in: '15 abr 2026', out: '15 may 2026', inDateISO: '2026-04-15',
-        back: 'Esteban Calderón Ruiz',
-    },
-];
-
-const WORKERS_SOON = [
-    {
-        id: 4, role: 'Operador de Planta', name: 'Federico Lozano Aguilar',
-        days: 13, cycle: '15-15', total: 15, remaining: 2,
-        in: '20 abr 2026', out: '05 may 2026', inDateISO: '2026-04-20',
-        back: 'Mauricio Tejada Solís',
-    },
-    {
-        id: 5, role: 'Jefe de Turno', name: 'Valentina Aramburu Soto',
-        days: 19, cycle: '20-10', total: 20, remaining: 1,
-        in: '14 abr 2026', out: '04 may 2026', inDateISO: '2026-04-14',
-        back: 'Diego Maldonado Peña',
-    },
-];
+// Convierte un worker de la API al formato que usa el componente
+const fromApi = (w) => ({
+    ...w,
+    id: w._id,
+    in: fmtDate(w.inDateISO),
+    out: calcOutDate(w.inDateISO, w.total),
+});
 
 // ── Subcomponentes ──────────────────────────────────────
 function CyclePill({ cycle, onClick }) {
@@ -1344,9 +1316,20 @@ const FlujoPersonalPage = () => {
     const [addOpen, setAddOpen] = useState(false);
     const [editData, setEditData] = useState(null);
     const [countOpen, setCountOpen] = useState(null);
-    const [active, setActive] = useState(WORKERS_ACTIVE);
-    const [soonList, setSoon] = useState(WORKERS_SOON);
+    const [active, setActive] = useState([]);
+    const [soonList, setSoon] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
+
+    useEffect(() => {
+        api.get('/flujo-workers')
+            .then(res => {
+                setActive(res.data.active.map(fromApi));
+                setSoon(res.data.soon.map(fromApi));
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
     const [fabHover, setFabHover] = useState(false);
     const [controlsOpen, setControlsOpen] = useState(false);
 
@@ -1361,58 +1344,104 @@ const FlujoPersonalPage = () => {
         w.role.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deleteFor) return;
-        setActive(a => a.filter(w => w.id !== deleteFor.id));
-        setSoon(s => s.filter(w => w.id !== deleteFor.id));
-        showToast(`${deleteFor.name.split(' ')[0]} eliminado`);
+        try {
+            await api.delete(`/flujo-workers/${deleteFor.id}`);
+            setActive(a => a.filter(w => w.id !== deleteFor.id));
+            setSoon(s => s.filter(w => w.id !== deleteFor.id));
+            showToast(`${deleteFor.name.split(' ')[0]} eliminado`);
+        } catch {
+            showToast('Error al eliminar');
+        }
         setDeleteFor(null);
     };
 
-    const handleSwap = (mode) => {
+    const handleSwap = async (mode) => {
         if (mode === 'full') {
-            // Swap completo: el saliente sale, el back entra al activo con día 1
-            const back = swapFor.back;
             const total = CYCLE_TOTAL[swapFor.cycle];
-            setSoon(s => s.filter(w => w.id !== swapFor.id));
-            setActive(a => [...a, {
-                id: Date.now(),
-                name: back,
-                role: swapFor.role,
-                cycle: swapFor.cycle,
-                total,
-                days: 1,
-                in: fmtDate(new Date().toISOString().split('T')[0]),
-                out: calcOutDate(new Date().toISOString().split('T')[0], total),
-                back: swapFor.name,
-            }]);
-            showToast(`Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
+            const todayISO = new Date().toISOString().split('T')[0];
+            try {
+                await api.delete(`/flujo-workers/${swapFor.id}`);
+                const res = await api.post('/flujo-workers', {
+                    name: swapFor.back,
+                    role: swapFor.role,
+                    cycle: swapFor.cycle,
+                    total,
+                    days: 1,
+                    inDateISO: todayISO,
+                    back: swapFor.name,
+                    status: 'active',
+                });
+                setSoon(s => s.filter(w => w.id !== swapFor.id));
+                setActive(a => [...a, fromApi(res.data.worker)]);
+                showToast(`Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
+            } catch {
+                showToast('Error al realizar el cambio');
+            }
         } else {
             showToast('Ingreso del back registrado');
         }
         setSwapFor(null);
     };
 
-    const handleCycle = (cycle) => {
+    const handleCycle = async (cycle) => {
         const total = CYCLE_TOTAL[cycle];
-        setActive(a => a.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
-        setSoon(s => s.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
-        showToast(`Ciclo actualizado a ${cycle}`);
+        const worker = [...active, ...soonList].find(w => w.id === cycleFor.id);
+        if (!worker) { setCycleFor(null); return; }
+        try {
+            await api.put(`/flujo-workers/${cycleFor.id}`, { ...worker, cycle, total });
+            setActive(a => a.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
+            setSoon(s => s.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
+            showToast(`Ciclo actualizado a ${cycle}`);
+        } catch {
+            showToast('Error al actualizar ciclo');
+        }
         setCycleFor(null);
     };
 
-    const handleAdd = (worker) => {
-        setActive(a => [...a, worker]);
-        setAddOpen(false);
-        showToast(`${worker.name.split(' ')[0]} agregado`);
+    const handleAdd = async (worker) => {
+        try {
+            const res = await api.post('/flujo-workers', {
+                name: worker.name,
+                role: worker.role,
+                cycle: worker.cycle,
+                total: worker.total,
+                days: worker.days,
+                inDateISO: worker.inDateISO,
+                back: worker.back,
+                status: 'active',
+            });
+            setActive(a => [...a, fromApi(res.data.worker)]);
+            setAddOpen(false);
+            showToast(`${worker.name.split(' ')[0]} agregado`);
+        } catch {
+            showToast('Error al guardar');
+        }
     };
 
-    const handleEdit = (updated) => {
-        setActive(a => a.map(w => w.id === updated.id ? updated : w));
-        setSoon(s => s.map(w => w.id === updated.id ? updated : w));
-        setEditData(null);
-        setAddOpen(false);
-        showToast(`${updated.name.split(' ')[0]} actualizado`);
+    const handleEdit = async (updated) => {
+        try {
+            const res = await api.put(`/flujo-workers/${updated.id}`, {
+                name: updated.name,
+                role: updated.role,
+                cycle: updated.cycle,
+                total: updated.total,
+                days: updated.days,
+                inDateISO: updated.inDateISO,
+                back: updated.back,
+                status: updated.status || 'active',
+                remaining: updated.remaining ?? null,
+            });
+            const saved = fromApi(res.data.worker);
+            setActive(a => a.map(w => w.id === saved.id ? saved : w));
+            setSoon(s => s.map(w => w.id === saved.id ? saved : w));
+            setEditData(null);
+            setAddOpen(false);
+            showToast(`${saved.name.split(' ')[0]} actualizado`);
+        } catch {
+            showToast('Error al actualizar');
+        }
     };
 
     const handleCopy = (worker) => {
@@ -1441,39 +1470,41 @@ const FlujoPersonalPage = () => {
 
     const openEdit = (worker) => { setEditData(worker); setAddOpen(true); };
 
-    const handleImportConfirm = (newWorkers) => {
+    const handleImportConfirm = async (newWorkers) => {
         let updActive = [...active];
         let updSoon = [...soonList];
         const toAdd = [];
 
         newWorkers.forEach(imported => {
             const roleKey = imported.role.trim().toLowerCase();
-            // Find existing active worker with the same role
             const activeIdx = updActive.findIndex(w => w.role.trim().toLowerCase() === roleKey);
             if (activeIdx !== -1) {
                 const displaced = updActive[activeIdx];
                 updActive = updActive.filter((_, i) => i !== activeIdx);
-                // Also remove from soon if present
                 updSoon = updSoon.filter(w => w.role.trim().toLowerCase() !== roleKey);
-                // Displaced person becomes the imported worker's back
-                toAdd.push({ ...imported, back: displaced.name });
+                toAdd.push({ ...imported, back: displaced.name, status: 'active' });
             } else {
-                // No role match — check soon list too
                 const soonIdx = updSoon.findIndex(w => w.role.trim().toLowerCase() === roleKey);
                 if (soonIdx !== -1) {
                     const displaced = updSoon[soonIdx];
                     updSoon = updSoon.filter((_, i) => i !== soonIdx);
-                    toAdd.push({ ...imported, back: displaced.name });
+                    toAdd.push({ ...imported, back: displaced.name, status: 'active' });
                 } else {
-                    toAdd.push(imported); // truly new role
+                    toAdd.push({ ...imported, status: 'active' });
                 }
             }
         });
 
-        setActive([...updActive, ...toAdd]);
-        setSoon(updSoon);
-        setImportOpen(false);
-        showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
+        try {
+            await api.post('/flujo-workers/bulk', { workers: toAdd });
+            const res = await api.get('/flujo-workers');
+            setActive(res.data.active.map(fromApi));
+            setSoon(res.data.soon.map(fromApi));
+            setImportOpen(false);
+            showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
+        } catch {
+            showToast('Error al importar');
+        }
     };
 
     const filteredActive = filter(active);
@@ -1520,7 +1551,12 @@ const FlujoPersonalPage = () => {
                         />
                     </div>
                     <div style={{ padding: '0 16px' }}>
-                        {filteredSoon.length > 0 && (
+                        {loading && (
+                            <div style={{ textAlign: 'center', padding: '40px 16px', color: COLORS.textMute, fontSize: 13 }}>
+                                Cargando funcionarios…
+                            </div>
+                        )}
+                        {!loading && filteredSoon.length > 0 && (
                             <>
                                 <SectionHeader label="Próximos a salir" count={filteredSoon.length} dot={COLORS.yellow} alert />
                                 {filteredSoon.map(w => (
@@ -1537,7 +1573,7 @@ const FlujoPersonalPage = () => {
                                 ))}
                             </>
                         )}
-                        <SectionHeader label="En turno activo" count={filteredActive.length} dot={COLORS.green} />
+                        {!loading && <SectionHeader label="En turno activo" count={filteredActive.length} dot={COLORS.green} />}
                         {filteredActive.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '40px 16px', color: COLORS.textMute, fontSize: 13 }}>
                                 {search ? 'Sin resultados para la búsqueda.' : 'Sin funcionarios en turno activo.'}
