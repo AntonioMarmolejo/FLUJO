@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import TurnoPage from './pages/TurnoPage';
 import ConfirmacionTurnoPage from './pages/ConfirmacionTurnoPage';
 import FlujoPersonalPage from './pages/FlujoPersonalPage';
+import CalendarioPage from './pages/CalendarioPage';
 
 function App() {
     return (
@@ -32,6 +33,9 @@ function App() {
                     } />
                     <Route path="/flujos/personal" element={
                         <ProtectedRoute><FlujoPersonalPage /></ProtectedRoute>
+                    } />
+                    <Route path="/calendario" element={
+                        <ProtectedRoute><CalendarioPage /></ProtectedRoute>
                     } />
                 </Routes>
             </AuthProvider>

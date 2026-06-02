@@ -8,7 +8,7 @@ const BLOQUES = [
     { id: '12', nombre: 'Bloque 12', codigo: 'EDY', color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },
     { id: '31', nombre: 'Bloque 31', codigo: 'ZECH', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
     { id: '43', nombre: 'Bloque 43', codigo: 'ZEMI', color: '#fb923c', bg: 'rgba(251,146,60,0.15)' },
-    { id: '15', nombre: 'Bloque 15', codigo: 'ITAYA', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' },
+    { id: '13', nombre: 'Bloque 13', codigo: 'ITAYA', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' },
 ];
 
 const getInitials = (name) =>

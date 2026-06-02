@@ -112,6 +112,13 @@ const IconMoon = ({ size = 14 }) => (
     </svg>
 );
 
+const IconCalendar = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────
 const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', guia: '', documento: '', documentoNombre: '', documentoTipo: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
@@ -195,6 +202,7 @@ const DRAWER_ITEMS = [
     { label: 'Extensiones', tab: 'extensiones', icon: <IconPhone /> },
     { label: 'Personas', tab: 'personas', icon: <IconPerson /> },
     { label: 'Jefes Inmediatos', tab: 'jefes', icon: <IconBriefcase /> },
+    { label: 'Calendario', tab: 'calendario', icon: <IconCalendar /> },
 ];
 
 const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo }) => (
@@ -2599,7 +2607,7 @@ const WorkspacePage = () => {
             {showDrawer && (
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
-                    onNavigate={tab => tab === 'jefes' ? navigate('/flujos/personal') : handleTabChange(tab)}
+                    onNavigate={tab => tab === 'calendario' ? navigate('/calendario') : tab === 'jefes' ? navigate('/flujos/personal') : handleTabChange(tab)}
                     onNuevoFlujo={() => {
                         if (turnoActivo) {
                             navigate('/turno', {
