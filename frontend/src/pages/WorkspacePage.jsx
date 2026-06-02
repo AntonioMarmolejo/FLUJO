@@ -2475,7 +2475,7 @@ const WorkspacePage = () => {
     const navigate = useNavigate();
 
     const [tabActiva, setTabActiva] = useState('inicio');
-    const [dashCollapsed, setDashCollapsed] = useState(false);
+    const [dashCollapsed, setDashCollapsed] = useState(true);
     const [movCollapsed, setMovCollapsed] = useState(false);
     const [chartCollapsed, setChartCollapsed] = useState(true);
 

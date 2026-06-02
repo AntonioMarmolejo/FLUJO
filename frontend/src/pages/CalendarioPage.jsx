@@ -437,6 +437,8 @@ const CalendarioPage = () => {
     const [loading, setLoading] = useState(true);
     const [yearAnual, setYearAnual] = useState(now.getFullYear());
     const saveRef = useRef(null);
+    const monthCaptureRef = useRef(null);
+    const yearCaptureRef = useRef(null);
 
     useEffect(() => { localStorage.setItem('flujo_shifts', JSON.stringify(shifts)); }, [shifts]);
 
@@ -512,20 +514,40 @@ const CalendarioPage = () => {
     const prevMonth = () => { if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); };
     const nextMonth = () => { if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
 
-    const handleShare = () => {
-        const lines = [`Calendario ${activeGrupo?.nombre||''} — ${year}`, ''];
-        for(let m=0;m<12;m++){
-            lines.push(MONTHS[m].toUpperCase());
-            const num=daysInMonth(year,m);
-            for(let d=1;d<=num;d++){
-                const iso=isoDate(year,m,d); const s=dias[iso];
-                if(s){ const sh=shifts.find(x=>x.id===s); if(sh) lines.push(`  ${d} ${MONTHS_S[m]}: ${sh.label}`); }
-            }
-            lines.push('');
+    const handleShare = async () => {
+        const isYear = tab === 'año';
+        const captureRef = isYear ? yearCaptureRef : monthCaptureRef;
+        const captureYear = isYear ? yearAnual : year;
+        const filename = `calendario_${(activeGrupo?.nombre||'flujo').replace(/\s+/g,'_')}_${isYear ? captureYear : `${MONTHS[month]}_${captureYear}`}.png`;
+
+        if (captureRef.current) {
+            try {
+                const h2c = (await import('html2canvas')).default;
+                const canvas = await h2c(captureRef.current, {
+                    backgroundColor: '#0a0a0a',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true,
+                });
+                canvas.toBlob(async blob => {
+                    const file = new File([blob], filename, { type: 'image/png' });
+                    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                        await navigator.share({ title: `Calendario — ${activeGrupo?.nombre||'FLUJO'}`, files: [file] }).catch(() => {});
+                    } else {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = filename;
+                        document.body.appendChild(a); a.click();
+                        document.body.removeChild(a); URL.revokeObjectURL(url);
+                    }
+                }, 'image/png');
+                return;
+            } catch { /* fallback a texto */ }
         }
-        const text=lines.join('\n');
-        if(navigator.share) navigator.share({title:'Calendario',text}).catch(()=>{});
-        else navigator.clipboard.writeText(text).catch(()=>{});
+        const text = `Calendario ${activeGrupo?.nombre||''} — ${captureYear}`;
+        if (navigator.share) navigator.share({ title: 'Calendario', text }).catch(() => {});
+        else navigator.clipboard?.writeText(text);
     };
 
     // Al entrar en modo pintar, seleccionar el primer turno por defecto
@@ -609,11 +631,14 @@ const CalendarioPage = () => {
 
                     <div className="cal-scroll" style={{ flex:1, overflowY:'auto', overflowX:'hidden', paddingBottom: tab==='mes' ? (paintMode ? 170 : 90) : 0 }}>
                         {tab==='mes' && (
-                            <div style={{ padding:'0 16px' }}>
+                            <div ref={monthCaptureRef} style={{ padding:'0 16px', background:C.bg }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0 12px' }}>
                                     <button onClick={prevMonth} style={NAV_BTN}>{Ico.left()}</button>
                                     <span style={{ fontSize:16, fontWeight:800, color:C.text, letterSpacing:0.3 }}>{MONTHS[month].toUpperCase()} {year}</span>
-                                    <button onClick={nextMonth} style={NAV_BTN}>{Ico.right()}</button>
+                                    <div style={{ display:'flex', gap:6 }}>
+                                        <button onClick={nextMonth} style={NAV_BTN}>{Ico.right()}</button>
+                                        <button onClick={handleShare} style={{ width:36, height:36, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
+                                    </div>
                                 </div>
                                 <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} />
                                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:16 }}>
@@ -638,8 +663,14 @@ const CalendarioPage = () => {
                                     </div>
                                     <button onClick={() => setYearAnual(y=>y+1)} style={NAV_BTN}>{Ico.right()}</button>
                                 </div>
+                                <div ref={yearCaptureRef} style={{ background:C.bg }}>
+                                    <div style={{ textAlign:'center', padding:'6px 0 14px' }}>
+                                        <div style={{ fontSize:11, fontWeight:700, color:C.violet, letterSpacing:1.5 }}>{activeGrupo?.nombre?.toUpperCase()}</div>
+                                        <div style={{ fontSize:22, fontWeight:800, color:C.text, marginTop:2 }}>{yearAnual}</div>
+                                    </div>
                                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                                     {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} />)}
+                                </div>
                                 </div>
                                 <div style={{ marginTop:16, background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
                                     <div style={{ padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
