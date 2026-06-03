@@ -129,17 +129,34 @@ const Icon = {
     ),
 };
 
+// Días transcurridos desde la fecha de ingreso (incluye el día de hoy)
+const daysSince = (iso) => {
+    if (!iso) return 1;
+    const start = new Date(iso + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.max(1, Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1);
+};
+
 // Convierte un worker de la API al formato que usa el componente
-const fromApi = (w) => ({
-    ...w,
-    id: w._id,
-    in: fmtDate(w.inDateISO),
-    out: calcOutDate(w.inDateISO, w.total),
-});
+const fromApi = (w) => {
+    const total = w.total || CYCLE_TOTAL[w.cycle] || 15;
+    const days  = daysSince(w.inDateISO);
+    return {
+        ...w,
+        id: w._id,
+        in: fmtDate(w.inDateISO),
+        out: calcOutDate(w.inDateISO, total),
+        days,
+        total,
+        remaining: Math.max(0, total - days),
+    };
+};
 
 // ── Subcomponentes ──────────────────────────────────────
 function CyclePill({ cycle, onClick }) {
-    const label = cycle === '15-15' ? '15·15' : cycle === '20-10' ? '20·10' : '30 d';
+    const PILL_LABELS = { '14-7': '14·7', '14-14': '14·14', '15-15': '15·15', '20-10': '20·10', '30': '30 d' };
+    const label = PILL_LABELS[cycle] || cycle;
     return (
         <button onClick={(e) => { e.stopPropagation(); onClick && onClick(); }}
             style={{
@@ -584,9 +601,11 @@ function CycleModal({ open, worker, onClose, onConfirm }) {
     if (!worker) return <ModalShell open={open} onClose={onClose}><div /></ModalShell>;
 
     const opts = [
+        { id: '14-7',  label: '14 / 7 días',  desc: '14 días en campo, 7 de descanso' },
+        { id: '14-14', label: '14 / 14 días', desc: '14 días en campo, 14 de descanso' },
         { id: '15-15', label: '15 / 15 días', desc: '15 días en campo, 15 de descanso' },
         { id: '20-10', label: '20 / 10 días', desc: '20 días en campo, 10 de descanso' },
-        { id: '30', label: '30 días', desc: 'Turno corrido de 30 días' },
+        { id: '30',    label: '30 días',       desc: 'Turno corrido de 30 días' },
     ];
 
     return (
@@ -1135,7 +1154,7 @@ const calcOutDate = (iso, total) => {
     d.setDate(d.getDate() + total - 1);
     return fmtDate(d.toISOString().split('T')[0]);
 };
-const CYCLE_TOTAL = { '15-15': 15, '20-10': 20, '30': 30 };
+const CYCLE_TOTAL = { '14-7': 14, '14-14': 14, '15-15': 15, '20-10': 20, '30': 30 };
 
 const inputSt = {
     width: '100%', height: 40, padding: '0 12px', boxSizing: 'border-box',
@@ -1146,7 +1165,7 @@ const inputSt = {
 
 function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
     const todayISO = new Date().toISOString().split('T')[0];
-    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: '1' };
+    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: String(daysSince(todayISO)) };
     const [form, setForm] = useState(EMPTY);
     const [error, setError] = useState('');
 
@@ -1159,15 +1178,25 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                 cycle: editData.cycle || '15-15',
                 inDate: editData.inDateISO || todayISO,
                 back: editData.back || '',
-                days: String(editData.days || 1),
+                days: String(daysSince(editData.inDateISO) || 1),
             });
         } else {
-            setForm({ ...EMPTY, inDate: new Date().toISOString().split('T')[0] });
+            const today = new Date().toISOString().split('T')[0];
+            setForm({ ...EMPTY, inDate: today, days: String(daysSince(today)) });
         }
         setError('');
     }, [open, editData]);
 
-    const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError(''); };
+    const setF = (k, v) => {
+        setForm(f => {
+            const next = { ...f, [k]: v };
+            if (k === 'inDate' && v) {
+                next.days = String(daysSince(v));
+            }
+            return next;
+        });
+        setError('');
+    };
 
     const handleSubmit = () => {
         if (!form.name.trim() || !form.role.trim() || !form.inDate || !form.back.trim()) {
@@ -1236,11 +1265,18 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                     <input style={inputSt} placeholder="Ej: Operador de Planta"
                         value={form.role} onChange={e => setF('role', e.target.value)} />
                 </div>
+                <div style={{ marginBottom: 12 }}>
+                    {lbl('FECHA DE INGRESO *')}
+                    <input style={inputSt} type="date"
+                        value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
+                </div>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                     <div style={{ flex: 1 }}>
                         {lbl('CICLO *')}
                         <select style={{ ...inputSt, cursor: 'pointer' }}
                             value={form.cycle} onChange={e => setF('cycle', e.target.value)}>
+                            <option value="14-7">14 / 7 días</option>
+                            <option value="14-14">14 / 14 días</option>
                             <option value="15-15">15 / 15 días</option>
                             <option value="20-10">20 / 10 días</option>
                             <option value="30">30 días</option>
@@ -1248,14 +1284,17 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                     </div>
                     <div style={{ flex: 1 }}>
                         {lbl('DÍAS EN TURNO')}
-                        <input style={inputSt} type="number" min="1" placeholder="1"
-                            value={form.days} onChange={e => setF('days', e.target.value)} />
+                        <div style={{ position: 'relative' }}>
+                            <input style={{ ...inputSt, paddingRight: 36 }} type="number" min="1"
+                                placeholder="1"
+                                value={form.days} onChange={e => setF('days', e.target.value)} />
+                            <span style={{
+                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                fontSize: 9, color: COLORS.textDim, fontWeight: 700, letterSpacing: 0.3,
+                                pointerEvents: 'none',
+                            }}>AUTO</span>
+                        </div>
                     </div>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    {lbl('FECHA DE INGRESO *')}
-                    <input style={inputSt} type="date"
-                        value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
                 </div>
                 <div style={{ marginBottom: 14 }}>
                     {lbl('NOMBRE DEL RELEVO / BACK *')}

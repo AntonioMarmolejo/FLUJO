@@ -2500,6 +2500,7 @@ const WorkspacePage = () => {
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
+    const [vistaInicio, setVistaInicio] = useState('movimientos');
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -2507,6 +2508,66 @@ const WorkspacePage = () => {
             m.placa.toLowerCase().includes(sq) ||
             (m.conductor || '').toLowerCase().includes(sq))
         : movimientos;
+
+    const bitacora = useMemo(() => {
+        const sorted = [...movimientos].reverse();
+        const openSalidas = {};
+        const pairs = [];
+        for (const mov of sorted) {
+            if (mov.tipo === 'salida') {
+                if (!openSalidas[mov.placa]) openSalidas[mov.placa] = [];
+                openSalidas[mov.placa].push(mov);
+            } else if (mov.tipo === 'ingreso') {
+                if (openSalidas[mov.placa] && openSalidas[mov.placa].length > 0) {
+                    const sal = openSalidas[mov.placa].shift();
+                    const condSal = (sal.conductor || '').trim();
+                    const condIng = (mov.conductor || '').trim();
+                    pairs.push({
+                        placa: mov.placa,
+                        salida: sal,
+                        ingreso: mov,
+                        horaS: sal.hora,
+                        horaI: mov.hora,
+                        conductor: condSal.toLowerCase() === condIng.toLowerCase()
+                            ? (condSal || '—')
+                            : `${condSal || '—'} / ${condIng || '—'}`,
+                        conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
+                        marca: sal.marca || mov.marca,
+                        empresa: sal.empresa || mov.empresa,
+                        tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
+                        destino: sal.destino || mov.destino,
+                        status: 'completo',
+                    });
+                } else {
+                    pairs.push({
+                        placa: mov.placa, salida: null, ingreso: mov,
+                        horaS: '—', horaI: mov.hora,
+                        conductor: mov.conductor || '—', conductorChanged: false,
+                        marca: mov.marca, empresa: mov.empresa,
+                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
+                        status: 'solo-ingreso',
+                    });
+                }
+            }
+        }
+        for (const sals of Object.values(openSalidas)) {
+            for (const s of sals) {
+                pairs.push({
+                    placa: s.placa, salida: s, ingreso: null,
+                    horaS: s.hora, horaI: '—',
+                    conductor: s.conductor || '—', conductorChanged: false,
+                    marca: s.marca, empresa: s.empresa,
+                    tipoVehiculo: s.tipoVehiculo, destino: s.destino,
+                    status: 'en-campo',
+                });
+            }
+        }
+        return pairs.sort((a, b) => {
+            const ta = a.horaS !== '—' ? a.horaS : a.horaI;
+            const tb = b.horaS !== '—' ? b.horaS : b.horaI;
+            return ta.localeCompare(tb);
+        });
+    }, [movimientos]);
 
     useEffect(() => {
         api.get('/turnos/activo')
@@ -2591,6 +2652,29 @@ const WorkspacePage = () => {
         setShowExportMenu(false);
         const fecha = new Date().toISOString().split('T')[0];
         exportMovimientos(movimientos, format, `movimientos_${fecha}`);
+    };
+
+    const exportBitacora = () => {
+        const fecha = new Date().toISOString().split('T')[0];
+        const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino / Actividad', 'Estado'];
+        const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
+        const rows = bitacora.map((b, i) => [
+            i + 1,
+            b.placa,
+            b.tipoVehiculo || '—',
+            b.marca || '—',
+            b.empresa || '—',
+            b.horaS,
+            b.horaI,
+            b.conductor,
+            b.destino || '—',
+            estadoLabel[b.status] || b.status,
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+        ws['!cols'] = [{ wch: 4 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 13 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+        XLSX.writeFile(wb, `bitacora_${fecha}.xlsx`);
     };
 
     const handleShareMovs = async (movsToShare) => {
@@ -2694,6 +2778,84 @@ const WorkspacePage = () => {
 
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
+                    <>
+                    <div className="ws-vista-tabs">
+                        <button className={`ws-vista-tab${vistaInicio === 'movimientos' ? ' active' : ''}`}
+                            onClick={() => setVistaInicio('movimientos')}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                            Movimientos
+                        </button>
+                        <button className={`ws-vista-tab${vistaInicio === 'bitacora' ? ' active' : ''}`}
+                            onClick={() => setVistaInicio('bitacora')}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                                <path d="M3 9h18M9 9v12" stroke="currentColor" strokeWidth="2" />
+                            </svg>
+                            Bitácora
+                        </button>
+                    </div>
+                    {vistaInicio === 'bitacora' && (
+                        <div className="ws-bitacora">
+                            <div className="bit-toolbar">
+                                <span className="bit-toolbar-count">{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</span>
+                                <button className="bit-export-btn" onClick={exportBitacora} disabled={bitacora.length === 0}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
+                                        <path d="M3 9h18M9 9v12" stroke="currentColor" strokeWidth="2" />
+                                    </svg>
+                                    Exportar Excel
+                                </button>
+                            </div>
+                            {bitacora.length === 0 ? (
+                                <p className="ws-empty">Sin movimientos para consolidar</p>
+                            ) : (
+                                <div className="bit-list">
+                                    {bitacora.map((b, i) => (
+                                        <div key={i} className={`bit-row bit-${b.status}`}>
+                                            <div className="bit-row-top">
+                                                <span className="bit-placa">{b.placa}</span>
+                                                {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
+                                                <span className={`bit-badge bit-badge-${b.status}`}>
+                                                    {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
+                                                </span>
+                                            </div>
+                                            <div className="bit-row-times">
+                                                <div className="bit-time bit-time-s">
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    <span className="bit-time-label">Salida</span>
+                                                    <span className="bit-time-val">{b.horaS}</span>
+                                                </div>
+                                                <div className="bit-time-arrow">→</div>
+                                                <div className="bit-time bit-time-i">
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    <span className="bit-time-label">Ingreso</span>
+                                                    <span className="bit-time-val">{b.horaI}</span>
+                                                </div>
+                                            </div>
+                                            <div className="bit-row-bottom">
+                                                <span className={`bit-conductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                    {b.conductorChanged && (
+                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    )}
+                                                    {b.conductor}
+                                                </span>
+                                                {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {vistaInicio === 'movimientos' && (
                     <div className="ws-desktop-grid">
                         <div className="ws-section">
                             <button className="ws-section-header" onClick={() => setDashCollapsed(p => !p)}>
@@ -2818,6 +2980,8 @@ const WorkspacePage = () => {
                             )}
                         </div>
                     </div>
+                    )}
+                    </>
                 )}
 
                 {tabActiva === 'avance' && (
@@ -2836,8 +3000,8 @@ const WorkspacePage = () => {
                 {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
             </div>
 
-            {/* FABs — solo en inicio */}
-            {tabActiva === 'inicio' && !selectMode && (
+            {/* FABs — solo en inicio / movimientos */}
+            {tabActiva === 'inicio' && vistaInicio === 'movimientos' && !selectMode && (
                 <>
                     {fabOpen && showShareMenu && (
                         <div className="share-menu">
