@@ -109,3 +109,42 @@ export const updateBloques = async (req, res) => {
 export const getMe = async (req, res) => {
     res.status(200).json({ user: req.user });
 };
+
+// POST /api/auth/google  { token: "<google_access_token>" }
+export const googleAuth = async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) return res.status(400).json({ message: 'Token requerido' });
+
+        const gRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!gRes.ok) return res.status(401).json({ message: 'Token de Google inválido' });
+
+        const { sub: googleId, email, name } = await gRes.json();
+        if (!email) return res.status(401).json({ message: 'No se pudo obtener el correo de Google' });
+
+        let user = await User.findOne({ $or: [{ googleId }, { email }] });
+        if (!user) {
+            user = await User.create({ googleId, email, name, onboardingCompleto: false });
+        } else if (!user.googleId) {
+            user.googleId = googleId;
+            await user.save();
+        }
+
+        const jwtToken = generateToken(user._id);
+        res.json({
+            token: jwtToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                bloques: user.bloques,
+                puestos: Object.fromEntries(user.puestos || new Map()),
+                onboardingCompleto: user.onboardingCompleto,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error con Google auth', error: error.message });
+    }
+};

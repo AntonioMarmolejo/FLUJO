@@ -17,10 +17,14 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: [true, 'La contraseña es obligatoria'],
             minlength: [6, 'Mínimo 6 caracteres'],
-            select: false, // No se devuelve en consultas por defecto
-        }, puestos: {
+            select: false,
+        },
+        googleId: {
+            type: String,
+            sparse: true,
+        },
+        puestos: {
             type: Map,
             of: [String],
             default: {},
@@ -38,7 +42,7 @@ const userSchema = new mongoose.Schema(
 
 // Encriptar contraseña antes de guardar
 userSchema.pre('save', async function () {
-    if (!this.isModified('password')) return;
+    if (!this.password || !this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 12);
 });
 

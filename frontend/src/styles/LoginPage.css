@@ -220,6 +220,14 @@
     background: #222;
 }
 
+.btn-google-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.btn-google:disabled {
+    cursor: not-allowed;
+}
+
 /* Error */
 .error-msg {
     background: rgba(239, 68, 68, 0.1);

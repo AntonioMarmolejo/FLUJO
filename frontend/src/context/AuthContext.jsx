@@ -6,22 +6,18 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // ← nuevo
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     // Verificar sesión al cargar la app
     useEffect(() => {
         const verifyToken = async () => {
             const token = localStorage.getItem('token');
-            if (!token) {
-                setLoading(false);
-                return;
-            }
+            if (!token) { setLoading(false); return; }
             try {
                 const { data } = await api.get('/auth/me');
                 setUser(data.user);
             } catch {
-                // Token inválido o expirado
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 setUser(null);
@@ -29,9 +25,16 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
             }
         };
-
         verifyToken();
     }, []);
+
+    // Advertencia al intentar salir del navegador / cerrar pestaña
+    useEffect(() => {
+        if (!user) return;
+        const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [user]);
 
     const updateUser = (newUserData) => {
         localStorage.setItem('user', JSON.stringify(newUserData));
@@ -43,12 +46,8 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
-        // ← Redirección inteligente
-        if (data.user.onboardingCompleto) {
-            navigate('/workspace');
-        } else {
-            navigate('/onboarding');
-        }
+        if (data.user.onboardingCompleto) navigate('/workspace');
+        else navigate('/onboarding');
     };
 
     const register = async (name, email, password) => {
@@ -56,7 +55,16 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
-        navigate('/onboarding'); // Siempre va a onboarding al registrarse
+        navigate('/onboarding');
+    };
+
+    const loginWithGoogle = async (accessToken) => {
+        const { data } = await api.post('/auth/google', { token: accessToken });
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        if (data.user.onboardingCompleto) navigate('/workspace');
+        else navigate('/onboarding');
     };
 
     const logout = () => {
@@ -67,7 +75,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
