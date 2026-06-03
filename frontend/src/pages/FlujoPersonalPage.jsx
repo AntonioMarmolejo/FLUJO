@@ -243,20 +243,20 @@ function ProgressBar({ value, total, color }) {
     );
 }
 
-function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, onSwap, onEdit, onCopy, onShare }) {
+function WorkerCard({ worker, soon, onDetail, onCycleClick }) {
     const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
     const [hover, setHover] = useState(false);
 
     return (
         <div
-            onClick={onToggle}
+            onClick={() => onDetail && onDetail(worker)}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
                 background: COLORS.card,
-                border: `1px solid ${expanded || hover ? (soon ? COLORS.yellow : COLORS.borderLight) : borderColor}`,
+                border: `1px solid ${hover ? (soon ? COLORS.yellow : COLORS.borderLight) : borderColor}`,
                 borderRadius: 14,
-                padding: '14px 14px 0',
+                padding: '14px 14px 14px',
                 marginBottom: 10,
                 cursor: 'pointer',
                 transition: 'border-color 160ms ease, background 160ms ease',
@@ -302,7 +302,7 @@ function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, 
 
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 10, marginTop: 12, paddingTop: 12, paddingBottom: 12,
+                gap: 10, marginTop: 12, paddingTop: 12,
                 borderTop: `1px dashed ${COLORS.border}`,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
@@ -313,7 +313,7 @@ function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, 
                         fontSize: 9, fontWeight: 700, color: COLORS.violet,
                         border: '1px solid rgba(124,94,245,0.3)', flexShrink: 0,
                     }}>
-                        {worker.back.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                        {(worker.back || '').split(' ').map(n => n[0]).slice(0, 2).join('')}
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 9.5, color: COLORS.textDim, letterSpacing: 0.5, fontWeight: 600 }}>
@@ -327,60 +327,173 @@ function WorkerCard({ worker, soon, expanded, onToggle, onCycleClick, onDelete, 
                         </div>
                     </div>
                 </div>
-                <CyclePill cycle={worker.cycle} onClick={() => onCycleClick && onCycleClick(worker)} />
-            </div>
-
-            <div style={{
-                maxHeight: expanded ? (soon ? 110 : 56) : 0,
-                opacity: expanded ? 1 : 0,
-                overflow: 'hidden',
-                transition: 'max-height 240ms ease, opacity 200ms ease, margin 240ms ease',
-                marginBottom: expanded ? 12 : 0,
-            }}>
-                {soon && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onSwap && onSwap(worker); }}
-                        style={{
-                            width: '100%', height: 36, borderRadius: 10,
-                            background: COLORS.yellowDim,
-                            border: '1px solid rgba(239,159,39,0.4)',
-                            color: COLORS.yellow, fontWeight: 600, fontSize: 12.5,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                            cursor: 'pointer', marginBottom: 8, fontFamily: 'inherit',
-                            letterSpacing: 0.2,
-                        }}>
-                        {Icon.swap(13, COLORS.yellow)}
-                        Cambiar turno
-                    </button>
-                )}
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <ActionButton
-                        color={COLORS.blue}
-                        bg={{ base: COLORS.blueDim, hover: 'rgba(59,130,246,0.22)', border: 'rgba(59,130,246,0.25)' }}
-                        icon={Icon.edit(16, COLORS.blue)} label="Editar"
-                        onClick={(e) => { e.stopPropagation(); onEdit && onEdit(worker); }}
-                    />
-                    <ActionButton
-                        color={COLORS.green}
-                        bg={{ base: COLORS.greenDim, hover: 'rgba(74,222,128,0.22)', border: 'rgba(74,222,128,0.25)' }}
-                        icon={Icon.copy(16, COLORS.green)} label="Copiar"
-                        onClick={(e) => { e.stopPropagation(); onCopy && onCopy(worker); }}
-                    />
-                    <ActionButton
-                        color={COLORS.violet}
-                        bg={{ base: COLORS.violetDim, hover: 'rgba(124,94,245,0.22)', border: 'rgba(124,94,245,0.28)' }}
-                        icon={Icon.share(16, COLORS.violet)} label="Compartir"
-                        onClick={(e) => { e.stopPropagation(); onShare && onShare(worker); }}
-                    />
-                    <ActionButton
-                        color={COLORS.red}
-                        bg={{ base: COLORS.redDim, hover: 'rgba(226,75,74,0.22)', border: 'rgba(226,75,74,0.28)' }}
-                        icon={Icon.trash(16, COLORS.red)} label="Eliminar"
-                        onClick={(e) => { e.stopPropagation(); onDelete && onDelete(worker); }}
-                    />
-                </div>
+                <CyclePill cycle={worker.cycle} onClick={(e) => { onCycleClick && onCycleClick(worker); }} />
             </div>
         </div>
+    );
+}
+
+function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSwap, onCopy, onShare, onCycleClick }) {
+    if (!worker) return <ModalShell open={open} onClose={onClose}><div /></ModalShell>;
+    const accentColor = soon ? COLORS.yellow : COLORS.green;
+    const accentDim   = soon ? COLORS.yellowDim : COLORS.greenDim;
+    const initials = worker.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const backInitials = (worker.back || '').split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const pct = Math.min(100, (worker.days / worker.total) * 100);
+
+    const Row = ({ label, value, valueColor }) => (
+        <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 0', borderBottom: `1px solid ${COLORS.border}`,
+        }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textDim, letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: valueColor || COLORS.text, textAlign: 'right' }}>{value}</span>
+        </div>
+    );
+
+    return (
+        <ModalShell open={open} onClose={onClose}>
+            <div style={{
+                background: COLORS.cardElev, borderRadius: 20,
+                border: `1px solid ${COLORS.borderLight}`,
+                overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+            }}>
+                {/* Banda de color superior */}
+                <div style={{
+                    height: 4,
+                    background: `linear-gradient(90deg, ${accentColor}, ${accentColor}55)`,
+                }} />
+
+                <div style={{ padding: '18px 20px 0' }}>
+                    {/* Cabecera */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+                        <div style={{
+                            width: 52, height: 52, borderRadius: 15, flexShrink: 0,
+                            background: `${accentColor}1a`,
+                            border: `1.5px solid ${accentColor}55`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 16, fontWeight: 800, color: accentColor,
+                            letterSpacing: 0.5,
+                        }}>
+                            {initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                                fontSize: 10, fontWeight: 700, color: COLORS.violet,
+                                letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 3,
+                            }}>{worker.role}</div>
+                            <div style={{
+                                fontSize: 18, fontWeight: 800, color: COLORS.text,
+                                lineHeight: 1.15, letterSpacing: -0.3,
+                            }}>{worker.name}</div>
+                        </div>
+                        <button onClick={onClose} style={{
+                            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                            background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.border}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        }}>{Icon.close(12, COLORS.textMute)}</button>
+                    </div>
+
+                    {/* Barra de progreso + badge */}
+                    <div style={{ marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            {soon
+                                ? <RemainingBadge remaining={worker.remaining} />
+                                : <DaysBadge days={worker.days} total={worker.total} />
+                            }
+                            <span style={{ fontSize: 10, color: COLORS.textDim, fontVariantNumeric: 'tabular-nums' }}>
+                                {pct.toFixed(0)}% del ciclo
+                            </span>
+                        </div>
+                        <div style={{ height: 6, width: '100%', borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                            <div style={{
+                                height: '100%', width: `${pct}%`, borderRadius: 3,
+                                background: `linear-gradient(90deg, ${accentColor}, ${accentColor}bb)`,
+                                transition: 'width 400ms ease',
+                            }} />
+                        </div>
+                    </div>
+
+                    {/* Filas de info */}
+                    <div style={{ marginBottom: 4 }}>
+                        <Row label="Ingreso" value={worker.in} />
+                        <Row label="Salida estimada" value={worker.out} />
+                        <Row label="Ciclo" value={
+                            <button onClick={() => { onClose(); setTimeout(() => onCycleClick && onCycleClick(worker), 180); }}
+                                style={{
+                                    background: 'rgba(255,255,255,0.04)', border: `1px solid ${COLORS.border}`,
+                                    borderRadius: 8, padding: '2px 10px', color: COLORS.text,
+                                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                                }}>
+                                {worker.cycle}
+                                {Icon.chevDown(8, COLORS.textMute)}
+                            </button>
+                        } />
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 0',
+                        }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textDim, letterSpacing: 0.5, textTransform: 'uppercase' }}>Back / Relevo</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{
+                                    width: 26, height: 26, borderRadius: '50%',
+                                    background: 'rgba(124,94,245,0.15)',
+                                    border: '1px solid rgba(124,94,245,0.3)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 9, fontWeight: 700, color: COLORS.violet,
+                                }}>{backInitials}</div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{worker.back}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Botón cambio de turno (solo si soon) */}
+                {soon && (
+                    <div style={{ padding: '0 20px 12px' }}>
+                        <button onClick={() => { onClose(); setTimeout(() => onSwap && onSwap(worker), 180); }}
+                            style={{
+                                width: '100%', height: 38, borderRadius: 10,
+                                background: COLORS.yellowDim, border: '1px solid rgba(239,159,39,0.4)',
+                                color: COLORS.yellow, fontWeight: 600, fontSize: 13,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                cursor: 'pointer', fontFamily: 'inherit',
+                            }}>
+                            {Icon.swap(13, COLORS.yellow)}
+                            Cambiar turno
+                        </button>
+                    </div>
+                )}
+
+                {/* Acciones */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                    borderTop: `1px solid ${COLORS.border}`,
+                }}>
+                    {[
+                        { icon: Icon.edit(17, COLORS.blue),   label: 'Editar',     color: COLORS.blue,   action: () => { onClose(); setTimeout(() => onEdit && onEdit(worker), 180); } },
+                        { icon: Icon.copy(17, COLORS.green),  label: 'Copiar',     color: COLORS.green,  action: () => { onCopy && onCopy(worker); } },
+                        { icon: Icon.share(17, COLORS.violet),label: 'Compartir',  color: COLORS.violet, action: () => { onShare && onShare(worker); } },
+                        { icon: Icon.trash(17, COLORS.red),   label: 'Eliminar',   color: COLORS.red,    action: () => { onClose(); setTimeout(() => onDelete && onDelete(worker), 180); } },
+                    ].map(({ icon, label, color, action }) => (
+                        <button key={label} onClick={action} style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            gap: 5, padding: '14px 6px',
+                            background: 'transparent', border: 'none',
+                            borderRight: `1px solid ${COLORS.border}`,
+                            color, cursor: 'pointer', fontFamily: 'inherit',
+                            transition: 'background 140ms ease',
+                        }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            {icon}
+                            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color }}>{label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </ModalShell>
     );
 }
 
@@ -1347,7 +1460,7 @@ const FlujoPersonalPage = () => {
     const navigate = useNavigate();
 
     const [search, setSearch] = useState('');
-    const [expanded, setExpanded] = useState(null);
+    const [detailWorker, setDetailWorker] = useState(null);
     const [deleteFor, setDeleteFor] = useState(null);
     const [swapFor, setSwapFor] = useState(null);
     const [cycleFor, setCycleFor] = useState(null);
@@ -1600,14 +1713,8 @@ const FlujoPersonalPage = () => {
                                 <SectionHeader label="Próximos a salir" count={filteredSoon.length} dot={COLORS.yellow} alert />
                                 {filteredSoon.map(w => (
                                     <WorkerCard key={w.id} worker={w} soon
-                                        expanded={expanded === w.id}
-                                        onToggle={() => setExpanded(p => p === w.id ? null : w.id)}
+                                        onDetail={setDetailWorker}
                                         onCycleClick={setCycleFor}
-                                        onDelete={setDeleteFor}
-                                        onSwap={setSwapFor}
-                                        onEdit={openEdit}
-                                        onCopy={handleCopy}
-                                        onShare={handleShare}
                                     />
                                 ))}
                             </>
@@ -1620,13 +1727,8 @@ const FlujoPersonalPage = () => {
                         ) : (
                             filteredActive.map(w => (
                                 <WorkerCard key={w.id} worker={w}
-                                    expanded={expanded === w.id}
-                                    onToggle={() => setExpanded(p => p === w.id ? null : w.id)}
+                                    onDetail={setDetailWorker}
                                     onCycleClick={setCycleFor}
-                                    onDelete={setDeleteFor}
-                                    onEdit={openEdit}
-                                    onCopy={handleCopy}
-                                    onShare={handleShare}
                                 />
                             ))
                         )}
@@ -1657,6 +1759,18 @@ const FlujoPersonalPage = () => {
                 {Icon.plus(24, '#fff')}
             </button>
 
+            <WorkerDetailModal
+                open={!!detailWorker}
+                worker={detailWorker}
+                soon={detailWorker ? soonList.some(w => w.id === detailWorker.id) : false}
+                onClose={() => setDetailWorker(null)}
+                onEdit={w => { setDetailWorker(null); setTimeout(() => openEdit(w), 180); }}
+                onDelete={w => { setDetailWorker(null); setTimeout(() => setDeleteFor(w), 180); }}
+                onSwap={w => { setDetailWorker(null); setTimeout(() => setSwapFor(w), 180); }}
+                onCopy={handleCopy}
+                onShare={handleShare}
+                onCycleClick={w => { setDetailWorker(null); setTimeout(() => setCycleFor(w), 180); }}
+            />
             <DeleteModal open={!!deleteFor} worker={deleteFor} onClose={() => setDeleteFor(null)} onConfirm={handleDelete} />
             <SwapModal open={!!swapFor} worker={swapFor} onClose={() => setSwapFor(null)} onConfirm={handleSwap} />
             <CycleModal open={!!cycleFor} worker={cycleFor} onClose={() => setCycleFor(null)} onConfirm={handleCycle} />
