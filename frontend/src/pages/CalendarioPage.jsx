@@ -2,13 +2,51 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
-// ── Paleta ───────────────────────────────────────────────
+// ── Paleta por defecto (tema oscuro) ─────────────────────
 const C = {
     bg: '#0a0a0a', card: '#111111', cardElev: '#1a1a1a',
     border: '#2a2a2a', borderLight: '#333',
     text: '#ffffff', mute: '#8a8a8a', dim: '#4a4a4a',
     violet: '#7c5ef5', violetDim: 'rgba(124,94,245,0.14)',
     red: '#E24B4A', redDim: 'rgba(226,75,74,0.14)',
+    dayEmpty: 'rgba(255,255,255,0.90)', dayText: '#444', navBg: 'rgba(255,255,255,0.05)',
+};
+
+// ── Temas ─────────────────────────────────────────────────
+const THEMES = {
+    oscuro: { ...C },
+    claro: {
+        bg: '#eef1f6', card: '#ffffff', cardElev: '#f5f7fb',
+        border: '#d4d9e5', borderLight: '#bcc4d4',
+        text: '#111827', mute: '#6b7280', dim: '#9ca3af',
+        violet: '#6d28d9', violetDim: 'rgba(109,40,217,0.10)',
+        red: '#dc2626', redDim: 'rgba(220,38,38,0.10)',
+        dayEmpty: '#ffffff', dayText: '#374151', navBg: 'rgba(0,0,0,0.06)',
+    },
+    marino: {
+        bg: '#0b1a2e', card: '#102240', cardElev: '#163054',
+        border: '#1e3a5f', borderLight: '#2a4f7c',
+        text: '#e0eeff', mute: '#6a90bc', dim: '#2a4a70',
+        violet: '#4f8ef5', violetDim: 'rgba(79,142,245,0.15)',
+        red: '#f56565', redDim: 'rgba(245,101,101,0.14)',
+        dayEmpty: 'rgba(210,232,255,0.88)', dayText: '#1a2a40', navBg: 'rgba(255,255,255,0.06)',
+    },
+    bosque: {
+        bg: '#091410', card: '#0e1f18', cardElev: '#142a20',
+        border: '#1c3a28', borderLight: '#264d34',
+        text: '#d8f0e2', mute: '#5e9970', dim: '#274535',
+        violet: '#3ab56a', violetDim: 'rgba(58,181,106,0.15)',
+        red: '#f56565', redDim: 'rgba(245,101,101,0.14)',
+        dayEmpty: 'rgba(208,245,220,0.88)', dayText: '#1a2e1d', navBg: 'rgba(255,255,255,0.06)',
+    },
+};
+
+const THEME_LABELS = { oscuro: 'Oscuro', claro: 'Claro', marino: 'Marino', bosque: 'Bosque' };
+const THEME_PREVIEWS = {
+    oscuro:  { bg: '#0a0a0a', accent: '#7c5ef5' },
+    claro:   { bg: '#eef1f6', accent: '#6d28d9' },
+    marino:  { bg: '#0b1a2e', accent: '#4f8ef5' },
+    bosque:  { bg: '#091410', accent: '#3ab56a' },
 };
 
 // ── Turnos por defecto ───────────────────────────────────
@@ -47,11 +85,12 @@ const Ico = {
     close:  () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>,
     eraser: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 20H7L3 16l11-11 6 6-4 4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M6.5 17.5l4-4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>,
     share:  () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    gear:   () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#fff" strokeWidth="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 12a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="#fff" strokeWidth="1.8"/></svg>,
+    gear:    () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#fff" strokeWidth="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06-.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 12a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="#fff" strokeWidth="1.8"/></svg>,
+    palette: (c='#fff') => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10 1.1 0 2-.9 2-2 0-.52-.2-1-.52-1.36-.31-.36-.49-.83-.49-1.32 0-1.1.9-2 2-2h2.36c3.1 0 5.64-2.54 5.64-5.64C23 6.18 18.04 2 12 2z" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7.5" cy="11.5" r="1.5" fill={c}/><circle cx="12" cy="7" r="1.5" fill={c}/><circle cx="16.5" cy="11.5" r="1.5" fill={c}/></svg>,
 };
 
-// ── DayCell (fondo blanco por defecto) ───────────────────
-function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
+// ── DayCell ───────────────────────────────────────────────
+function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts, C }) {
     const shift = shiftId ? shifts.find(s => s.id === shiftId) : null;
     const [press, setPress] = useState(false);
     return (
@@ -62,8 +101,8 @@ function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
             onPointerLeave={() => setPress(false)}
             style={{
                 minHeight: 54, borderRadius: 2,
-                background: shift ? shift.bg : 'rgba(255,255,255,0.90)',
-                border: `1px solid ${isToday ? C.violet : (shift ? shift.bg + 'aa' : 'rgba(200,200,200,0.3)')}`,
+                background: shift ? shift.bg : C.dayEmpty,
+                border: `1px solid ${isToday ? C.violet : (shift ? shift.bg + 'aa' : C.border)}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: paintMode ? 'pointer' : 'default',
                 transform: press ? 'scale(0.92)' : 'scale(1)',
@@ -75,7 +114,7 @@ function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
             {isToday && (
                 <div style={{ position:'absolute', top:3, left:4, width:4, height:4, borderRadius:'50%', background: shift ? shift.text : C.violet }} />
             )}
-            <span style={{ position:'absolute', top:3, right:4, fontSize:11, fontWeight: isToday?800:600, color: shift?shift.text:(isToday?C.violet:'#444'), lineHeight:1 }}>
+            <span style={{ position:'absolute', top:3, right:4, fontSize:11, fontWeight: isToday?800:600, color: shift?shift.text:(isToday?C.violet:C.dayText), lineHeight:1 }}>
                 {day}
             </span>
             {shift && (
@@ -88,7 +127,7 @@ function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
 }
 
 // ── MonthGrid ────────────────────────────────────────────
-function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shifts }) {
+function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shifts, C }) {
     const today = todayISO();
     const numDays = daysInMonth(year, month);
     const startDay = startDow(year, month);
@@ -99,13 +138,13 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
             <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0, marginBottom:2 }}>
                 {DAYS_H.map(d => <div key={d} style={{ textAlign:'center', fontSize:10, fontWeight:700, color:C.dim, padding:'4px 0' }}>{d}</div>)}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:1 }}>
                 {cells.map((day, idx) => {
                     if (!day) return <div key={idx} style={{ minHeight:54 }} />;
                     const iso = isoDate(year, month, day);
                     return (
                         <DayCell key={idx} day={day} shiftId={dias[iso]||null}
-                            isToday={iso===today} paintMode={paintMode} shifts={shifts}
+                            isToday={iso===today} paintMode={paintMode} shifts={shifts} C={C}
                             onClick={() => paintMode && onDayTap(iso, selectedShift)}
                         />
                     );
@@ -116,7 +155,7 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
 }
 
 // ── MiniMonth ────────────────────────────────────────────
-function MiniMonth({ year, month, dias, shifts }) {
+function MiniMonth({ year, month, dias, shifts, C }) {
     const numDays = daysInMonth(year, month);
     const startDay = startDow(year, month);
     const cells = [...Array(startDay).fill(null), ...Array.from({length:numDays},(_,i)=>i+1)];
@@ -135,8 +174,8 @@ function MiniMonth({ year, month, dias, shifts }) {
                     const iso = isoDate(year, month, day);
                     const s = dias[iso] ? shifts.find(sh => sh.id === dias[iso]) : null;
                     return (
-                        <div key={idx} style={{ aspectRatio:'1', borderRadius:3, background: s ? s.bg : 'rgba(255,255,255,0.75)', border:`1px solid ${s ? s.bg+'88' : 'rgba(180,180,180,0.3)'}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                            <span style={{ fontSize:6, color: s ? s.text : '#666', fontWeight:600 }}>{day}</span>
+                        <div key={idx} style={{ aspectRatio:'1', borderRadius:3, background: s ? s.bg : C.dayEmpty, border:`1px solid ${s ? s.bg+'88' : C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                            <span style={{ fontSize:6, color: s ? s.text : C.dayText, fontWeight:600 }}>{day}</span>
                         </div>
                     );
                 })}
@@ -146,7 +185,8 @@ function MiniMonth({ year, month, dias, shifts }) {
 }
 
 // ── StatsView ────────────────────────────────────────────
-function StatsView({ dias, shifts }) {
+function StatsView({ dias, shifts, C }) {
+    const navBtn = { ...NAV_BTN, border: `1px solid ${C.border}`, background: C.navBg };
     const now = new Date();
     const [period, setPeriod] = useState('mes');
     const [year, setYear] = useState(now.getFullYear());
@@ -178,9 +218,9 @@ function StatsView({ dias, shifts }) {
                 ))}
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, marginBottom:20 }}>
-                <button onClick={prevPeriod} style={NAV_BTN}>{Ico.left()}</button>
+                <button onClick={prevPeriod} style={navBtn}>{Ico.left()}</button>
                 <span style={{ fontSize:14, fontWeight:700, color:C.text, minWidth:160, textAlign:'center' }}>{periodLabel}</span>
-                <button onClick={nextPeriod} style={NAV_BTN}>{Ico.right()}</button>
+                <button onClick={nextPeriod} style={navBtn}>{Ico.right()}</button>
             </div>
             <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 60px 70px', padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
@@ -421,6 +461,11 @@ const CalendarioPage = () => {
     const navigate = useNavigate();
     const now = new Date();
 
+    const [themeKey, setThemeKey] = useState(() => localStorage.getItem('cal_theme') || 'oscuro');
+    const [themeOpen, setThemeOpen] = useState(false);
+    const C = THEMES[themeKey] || THEMES.oscuro;
+    const navBtn = { ...NAV_BTN, border: `1px solid ${C.border}`, background: C.navBg };
+
     const [shifts, setShifts] = useState(loadShifts);
     const [grupos, setGrupos] = useState([]);
     const [activeGrupo, setActiveGrupo] = useState(null);
@@ -440,6 +485,12 @@ const CalendarioPage = () => {
     const pendingRef = useRef({});
     const monthCaptureRef = useRef(null);
     const yearCaptureRef = useRef(null);
+
+    const changeTheme = (key) => {
+        setThemeKey(key);
+        localStorage.setItem('cal_theme', key);
+        setThemeOpen(false);
+    };
 
     useEffect(() => { localStorage.setItem('flujo_shifts', JSON.stringify(shifts)); }, [shifts]);
 
@@ -530,7 +581,7 @@ const CalendarioPage = () => {
             try {
                 const h2c = (await import('html2canvas')).default;
                 const canvas = await h2c(captureRef.current, {
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: C.bg,
                     scale: 2,
                     useCORS: true,
                     logging: false,
@@ -580,14 +631,44 @@ const CalendarioPage = () => {
 
             {/* Header */}
             <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${C.border}`, background:C.bg, flexShrink:0 }}>
-                <button onClick={() => navigate('/workspace')} style={{ width:36,height:36,borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+                <button onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })} style={{ width:36,height:36,borderRadius:10,background:C.navBg,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
                     {Ico.back()}
                 </button>
                 <span style={{ fontSize:14, fontWeight:700, letterSpacing:3, color:C.text }}>CALENDARIO</span>
-                <button onClick={() => { setEditingGrupo(null); setGroupModal(true); }} style={{ width:36,height:36,borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
-                    {Ico.plus()}
-                </button>
+                <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={() => setThemeOpen(v => !v)} style={{ width:36,height:36,borderRadius:10,background:themeOpen?`${C.violet}22`:C.navBg,border:`1px solid ${themeOpen?C.violet:C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+                        {Ico.palette(themeOpen ? C.violet : C.mute)}
+                    </button>
+                    <button onClick={() => { setEditingGrupo(null); setGroupModal(true); }} style={{ width:36,height:36,borderRadius:10,background:C.navBg,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+                        {Ico.plus()}
+                    </button>
+                </div>
             </div>
+
+            {/* Selector de tema */}
+            {themeOpen && (
+                <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.card, flexShrink:0 }}>
+                    <p style={{ fontSize:10, fontWeight:700, color:C.mute, letterSpacing:0.8, margin:'0 0 8px' }}>TEMA</p>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+                        {Object.entries(THEME_LABELS).map(([key, label]) => {
+                            const prev = THEME_PREVIEWS[key];
+                            const active = themeKey === key;
+                            return (
+                                <button key={key} onClick={() => changeTheme(key)} style={{
+                                    height:56, borderRadius:12, background:prev.bg,
+                                    border:`2px solid ${active ? prev.accent : C.border}`,
+                                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
+                                    cursor:'pointer', fontFamily:'inherit', transition:'border 120ms ease',
+                                    boxShadow: active ? `0 0 0 1px ${prev.accent}` : 'none',
+                                }}>
+                                    <div style={{ width:16, height:16, borderRadius:'50%', background:prev.accent }} />
+                                    <span style={{ fontSize:9, fontWeight:700, color:active?prev.accent:'#888', letterSpacing:0.4 }}>{label.toUpperCase()}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Group selector */}
             {!loading && grupos.length > 0 && (
@@ -639,14 +720,14 @@ const CalendarioPage = () => {
                         {tab==='mes' && (
                             <div ref={monthCaptureRef} style={{ padding:'0 16px', background:C.bg }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0 12px' }}>
-                                    <button onClick={prevMonth} style={NAV_BTN}>{Ico.left()}</button>
+                                    <button onClick={prevMonth} style={navBtn}>{Ico.left()}</button>
                                     <span style={{ fontSize:16, fontWeight:800, color:C.text, letterSpacing:0.3 }}>{MONTHS[month].toUpperCase()} {year}</span>
                                     <div style={{ display:'flex', gap:6 }}>
-                                        <button onClick={nextMonth} style={NAV_BTN}>{Ico.right()}</button>
+                                        <button onClick={nextMonth} style={navBtn}>{Ico.right()}</button>
                                         <button onClick={handleShare} style={{ width:36, height:36, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
                                     </div>
                                 </div>
-                                <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} />
+                                <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} C={C} />
                                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:16 }}>
                                     {shifts.map(s => (
                                         <div key={s.id} style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:8, padding:'4px 8px' }}>
@@ -662,12 +743,12 @@ const CalendarioPage = () => {
                         {tab==='año' && (
                             <div style={{ padding:'12px 16px 120px' }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-                                    <button onClick={() => setYearAnual(y=>y-1)} style={NAV_BTN}>{Ico.left()}</button>
+                                    <button onClick={() => setYearAnual(y=>y-1)} style={navBtn}>{Ico.left()}</button>
                                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                                         <span style={{ fontSize:16, fontWeight:800, color:C.text }}>{yearAnual}</span>
                                         <button onClick={handleShare} style={{ width:34, height:34, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
                                     </div>
-                                    <button onClick={() => setYearAnual(y=>y+1)} style={NAV_BTN}>{Ico.right()}</button>
+                                    <button onClick={() => setYearAnual(y=>y+1)} style={navBtn}>{Ico.right()}</button>
                                 </div>
                                 <div ref={yearCaptureRef} style={{ background:C.bg }}>
                                     <div style={{ textAlign:'center', padding:'6px 0 14px' }}>
@@ -675,7 +756,7 @@ const CalendarioPage = () => {
                                         <div style={{ fontSize:22, fontWeight:800, color:C.text, marginTop:2 }}>{yearAnual}</div>
                                     </div>
                                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                                    {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} />)}
+                                    {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} C={C} />)}
                                 </div>
                                 </div>
                                 <div style={{ marginTop:16, background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
@@ -700,7 +781,7 @@ const CalendarioPage = () => {
                             </div>
                         )}
 
-                        {tab==='resumen' && <StatsView dias={dias} shifts={shifts} />}
+                        {tab==='resumen' && <StatsView dias={dias} shifts={shifts} C={C} />}
                     </div>
 
                     {/* Botón PINTAR (cuando no está en modo pintar) */}

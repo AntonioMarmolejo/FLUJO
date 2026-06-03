@@ -1527,7 +1527,7 @@ const FlujoPersonalPage = () => {
                 .fp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(124,94,245,0.65); }
             `}</style>
             <PageHeader
-                onBack={() => navigate('/workspace')}
+                onBack={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'jefes' } })}
                 controlsOpen={controlsOpen}
                 onToggleControls={() => setControlsOpen(v => !v)}
             />

@@ -1430,6 +1430,20 @@
     color: #818cf8;
 }
 
+.drawer-item-active {
+    background: rgba(99, 130, 255, 0.12);
+    color: #6382ff;
+}
+
+.drawer-item-active .drawer-item-icon {
+    color: #6382ff;
+}
+
+.drawer-item-active:hover {
+    background: rgba(99, 130, 255, 0.18);
+    color: #6382ff;
+}
+
 /* ── Barra de búsqueda ── */
 .ws-search-bar {
     display: flex;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
@@ -205,7 +205,7 @@ const DRAWER_ITEMS = [
     { label: 'Calendario', tab: 'calendario', icon: <IconCalendar /> },
 ];
 
-const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo }) => (
+const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab }) => (
     <div className="drawer-overlay" onClick={onClose}>
         <div className="drawer-panel" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
@@ -214,7 +214,9 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo }) => (
             </div>
             <div className="drawer-nav">
                 {DRAWER_ITEMS.map(item => (
-                    <button key={item.tab} className="drawer-item" onClick={() => { onNavigate(item.tab); onClose(); }}>
+                    <button key={item.tab}
+                        className={`drawer-item ${item.tab === activeTab ? 'drawer-item-active' : ''}`}
+                        onClick={() => { onNavigate(item.tab); onClose(); }}>
                         <span className="drawer-item-icon">{item.icon}</span>
                         <span className="drawer-item-label">{item.label}</span>
                         <IconChevronRight />
@@ -2473,6 +2475,7 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 const WorkspacePage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(true);
@@ -2491,6 +2494,7 @@ const WorkspacePage = () => {
     const [editMov, setEditMov] = useState(null);
 
     const [showDrawer, setShowDrawer] = useState(false);
+    const [lastDrawerTab, setLastDrawerTab] = useState(null);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -2525,7 +2529,16 @@ const WorkspacePage = () => {
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
 
+    useEffect(() => {
+        if (location.state?.openDrawer) {
+            setLastDrawerTab(location.state.activeTab || null);
+            setShowDrawer(true);
+            window.history.replaceState({}, '');
+        }
+    }, []);
+
     const handleTabChange = tab => {
+        if (DRAWER_TABS.has(tab)) setLastDrawerTab(tab);
         setTabActiva(tab);
         setShowSearch(false);
         setSearchQuery('');
@@ -2607,7 +2620,13 @@ const WorkspacePage = () => {
             {showDrawer && (
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
-                    onNavigate={tab => tab === 'calendario' ? navigate('/calendario') : tab === 'jefes' ? navigate('/flujos/personal') : handleTabChange(tab)}
+                    activeTab={lastDrawerTab}
+                    onNavigate={tab => {
+                        setLastDrawerTab(tab);
+                        if (tab === 'calendario') navigate('/calendario');
+                        else if (tab === 'jefes') navigate('/flujos/personal');
+                        else handleTabChange(tab);
+                    }}
                     onNuevoFlujo={() => {
                         if (turnoActivo) {
                             navigate('/turno', {
@@ -2630,7 +2649,7 @@ const WorkspacePage = () => {
             {/* Top bar */}
             <div className="ws-topbar">
                 <button className="ws-topbar-btn"
-                    onClick={isDrawerTab ? () => handleTabChange('inicio') : () => setShowDrawer(true)}>
+                    onClick={isDrawerTab ? () => { handleTabChange('inicio'); setShowDrawer(true); } : () => setShowDrawer(true)}>
                     {isDrawerTab ? <IconArrowLeft /> : (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                             <path d="M3 6h18M3 12h18M3 18h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
@@ -2641,7 +2660,7 @@ const WorkspacePage = () => {
                     {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    {!isDrawerTab && tabActiva !== 'flujos' && (
+                    {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && (
                         <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                 <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
