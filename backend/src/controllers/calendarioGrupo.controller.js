@@ -50,14 +50,11 @@ export const updateDia = async (req, res) => {
     try {
         const { date, shift } = req.body;
         if (!date) return res.status(400).json({ message: 'Fecha requerida' });
-        const grupo = await CalendarioGrupo.findById(req.params.id);
+        const updateOp = shift
+            ? { $set: { [`dias.${date}`]: shift } }
+            : { $unset: { [`dias.${date}`]: '' } };
+        const grupo = await CalendarioGrupo.findByIdAndUpdate(req.params.id, updateOp, { new: true });
         if (!grupo) return res.status(404).json({ message: 'Grupo no encontrado' });
-        if (shift) {
-            grupo.dias.set(date, shift);
-        } else {
-            grupo.dias.delete(date);
-        }
-        await grupo.save();
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ message: e.message });

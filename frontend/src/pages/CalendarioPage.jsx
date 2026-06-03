@@ -72,9 +72,9 @@ const NAV_BTN = { width:36,height:36,borderRadius:9,background:'rgba(255,255,255
 
 // ── Iconos ───────────────────────────────────────────────
 const Ico = {
-    back:   () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    left:   () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    right:  () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    back:   (c='#fff') => <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    left:   (c='#fff') => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    right:  (c='#fff') => <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     up:     (c='#fff') => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M18 15l-6-6-6 6" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     down:   (c='#fff') => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke={c} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     plus:   (c='#fff',s=16) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke={c} strokeWidth="2.2" strokeLinecap="round"/></svg>,
@@ -218,9 +218,9 @@ function StatsView({ dias, shifts, C }) {
                 ))}
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, marginBottom:20 }}>
-                <button onClick={prevPeriod} style={navBtn}>{Ico.left()}</button>
+                <button onClick={prevPeriod} style={navBtn}>{Ico.left(C.text)}</button>
                 <span style={{ fontSize:14, fontWeight:700, color:C.text, minWidth:160, textAlign:'center' }}>{periodLabel}</span>
-                <button onClick={nextPeriod} style={navBtn}>{Ico.right()}</button>
+                <button onClick={nextPeriod} style={navBtn}>{Ico.right(C.text)}</button>
             </div>
             <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 60px 70px', padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
@@ -632,7 +632,7 @@ const CalendarioPage = () => {
             {/* Header */}
             <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${C.border}`, background:C.bg, flexShrink:0 }}>
                 <button onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })} style={{ width:36,height:36,borderRadius:10,background:C.navBg,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
-                    {Ico.back()}
+                    {Ico.back(C.text)}
                 </button>
                 <span style={{ fontSize:14, fontWeight:700, letterSpacing:3, color:C.text }}>CALENDARIO</span>
                 <div style={{ display:'flex', gap:6 }}>
@@ -720,10 +720,10 @@ const CalendarioPage = () => {
                         {tab==='mes' && (
                             <div ref={monthCaptureRef} style={{ padding:'0 16px', background:C.bg }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0 12px' }}>
-                                    <button onClick={prevMonth} style={navBtn}>{Ico.left()}</button>
+                                    <button onClick={prevMonth} style={navBtn}>{Ico.left(C.text)}</button>
                                     <span style={{ fontSize:16, fontWeight:800, color:C.text, letterSpacing:0.3 }}>{MONTHS[month].toUpperCase()} {year}</span>
                                     <div style={{ display:'flex', gap:6 }}>
-                                        <button onClick={nextMonth} style={navBtn}>{Ico.right()}</button>
+                                        <button onClick={nextMonth} style={navBtn}>{Ico.right(C.text)}</button>
                                         <button onClick={handleShare} style={{ width:36, height:36, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
                                     </div>
                                 </div>
@@ -743,12 +743,12 @@ const CalendarioPage = () => {
                         {tab==='año' && (
                             <div style={{ padding:'12px 16px 120px' }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-                                    <button onClick={() => setYearAnual(y=>y-1)} style={navBtn}>{Ico.left()}</button>
+                                    <button onClick={() => setYearAnual(y=>y-1)} style={navBtn}>{Ico.left(C.text)}</button>
                                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                                         <span style={{ fontSize:16, fontWeight:800, color:C.text }}>{yearAnual}</span>
                                         <button onClick={handleShare} style={{ width:34, height:34, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
                                     </div>
-                                    <button onClick={() => setYearAnual(y=>y+1)} style={navBtn}>{Ico.right()}</button>
+                                    <button onClick={() => setYearAnual(y=>y+1)} style={navBtn}>{Ico.right(C.text)}</button>
                                 </div>
                                 <div ref={yearCaptureRef} style={{ background:C.bg }}>
                                     <div style={{ textAlign:'center', padding:'6px 0 14px' }}>
