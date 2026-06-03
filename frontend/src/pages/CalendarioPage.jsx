@@ -61,25 +61,25 @@ function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
             onPointerUp={() => setPress(false)}
             onPointerLeave={() => setPress(false)}
             style={{
-                minHeight: 54, borderRadius: 8,
+                minHeight: 54, borderRadius: 2,
                 background: shift ? shift.bg : 'rgba(255,255,255,0.90)',
-                border: `1.5px solid ${isToday ? C.violet : (shift ? shift.bg + 'aa' : 'rgba(200,200,200,0.4)')}`,
+                border: `1px solid ${isToday ? C.violet : (shift ? shift.bg + 'aa' : 'rgba(200,200,200,0.3)')}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: paintMode ? 'pointer' : 'default',
-                transform: press ? 'scale(0.88)' : 'scale(1)',
+                transform: press ? 'scale(0.92)' : 'scale(1)',
                 transition: 'transform 60ms ease',
-                padding: '4px 2px', userSelect: 'none', WebkitUserSelect: 'none',
-                position: 'relative', gap: 2,
+                userSelect: 'none', WebkitUserSelect: 'none',
+                position: 'relative',
             }}
         >
             {isToday && (
-                <div style={{ position:'absolute',top:3,left:'50%',transform:'translateX(-50%)',width:4,height:4,borderRadius:'50%',background:shift?shift.text:C.violet }} />
+                <div style={{ position:'absolute', top:3, left:4, width:4, height:4, borderRadius:'50%', background: shift ? shift.text : C.violet }} />
             )}
-            <span style={{ fontSize:12, fontWeight: isToday?800:600, color: shift?shift.text:(isToday?C.violet:'#444'), lineHeight:1, marginTop: isToday?4:0 }}>
+            <span style={{ position:'absolute', top:3, right:4, fontSize:11, fontWeight: isToday?800:600, color: shift?shift.text:(isToday?C.violet:'#444'), lineHeight:1 }}>
                 {day}
             </span>
             {shift && (
-                <span style={{ fontSize:7.5, color:shift.text, fontWeight:700, opacity:0.85, textAlign:'center', lineHeight:1.2 }}>
+                <span style={{ fontSize:7.5, color:shift.text, fontWeight:700, opacity:0.85, textAlign:'center', lineHeight:1.2, marginTop:10 }}>
                     {shift.time || shift.short}
                 </span>
             )}
@@ -96,10 +96,10 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
     while (cells.length % 7 !== 0) cells.push(null);
     return (
         <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3, marginBottom:6 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0, marginBottom:2 }}>
                 {DAYS_H.map(d => <div key={d} style={{ textAlign:'center', fontSize:10, fontWeight:700, color:C.dim, padding:'4px 0' }}>{d}</div>)}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0 }}>
                 {cells.map((day, idx) => {
                     if (!day) return <div key={idx} style={{ minHeight:54 }} />;
                     const iso = isoDate(year, month, day);
@@ -437,6 +437,7 @@ const CalendarioPage = () => {
     const [loading, setLoading] = useState(true);
     const [yearAnual, setYearAnual] = useState(now.getFullYear());
     const saveRef = useRef(null);
+    const pendingRef = useRef({});
     const monthCaptureRef = useRef(null);
     const yearCaptureRef = useRef(null);
 
@@ -459,10 +460,15 @@ const CalendarioPage = () => {
         if (!activeGrupo) return;
         const next = dias[iso] === shift ? null : shift;
         setDias(prev => { const d={...prev}; if(next) d[iso]=next; else delete d[iso]; return d; });
+        pendingRef.current[iso] = next;
         clearTimeout(saveRef.current);
         saveRef.current = setTimeout(() => {
-            api.patch(`/calendarios/${activeGrupo._id}/dia`, { date:iso, shift:next }).catch(()=>{});
-        }, 350);
+            const changes = { ...pendingRef.current };
+            pendingRef.current = {};
+            Object.entries(changes).forEach(([date, s]) => {
+                api.patch(`/calendarios/${activeGrupo._id}/dia`, { date, shift: s }).catch(() => {});
+            });
+        }, 400);
     };
 
     const handleSaveGrupo = async (nombre) => {

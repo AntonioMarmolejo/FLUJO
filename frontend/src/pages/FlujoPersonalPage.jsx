@@ -1098,7 +1098,7 @@ function SearchBar({ value, onChange, onImport, activeCount = 0, freeCount = 0, 
 function BottomNav({ onHome }) {
     return (
         <div style={{
-            position: 'absolute', left: 0, right: 0, bottom: 0,
+            position: 'fixed', left: 0, right: 0, bottom: 0,
             paddingBottom: 28, paddingTop: 10,
             background: 'linear-gradient(180deg, rgba(17,17,17,0) 0%, rgba(17,17,17,0.9) 35%, #111 70%)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-around',
