@@ -15,9 +15,14 @@ export const AuthProvider = ({ children }) => {
             const token = localStorage.getItem('token');
             if (!token) { setLoading(false); return; }
             try {
-                const { data } = await api.get('/auth/me');
+                const { data } = await api.get('/auth/me', { timeout: 8000 });
                 setUser(data.user);
             } catch {
+                // Si hay token guardado localmente, úsalo como fallback mientras no haya red
+                const cached = localStorage.getItem('user');
+                if (cached) {
+                    try { setUser(JSON.parse(cached)); return; } catch { /* ignorar */ }
+                }
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 setUser(null);

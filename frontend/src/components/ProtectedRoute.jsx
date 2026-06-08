@@ -12,10 +12,21 @@ const ProtectedRoute = ({ children }) => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 minHeight: '100vh',
-                color: '#666',
-                fontSize: '14px'
+                backgroundColor: '#0a0a0a',
+                color: '#ffffff',
+                fontSize: '14px',
+                gap: '12px',
+                flexDirection: 'column',
             }}>
-                Cargando...
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #333',
+                    borderTop: '3px solid #ffffff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
