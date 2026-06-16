@@ -120,12 +120,44 @@ const IconCalendar = () => (
 );
 
 // ── Helpers ───────────────────────────────────────────────
-const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', guia: '', documento: '', documentoNombre: '', documentoTipo: '' };
-const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Bus', 'Moto', 'Otro'];
+const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', guia: '', guias: [], quienAutoriza: '', empresaAutoriza: '', documento: '', documentoNombre: '', documentoTipo: '' };
+const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
-    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}${m.guia ? '\nGuía: ' + m.guia : ''}\nHora: ${m.hora} — ${m.fecha}`;
+    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}${m.guia ? '\nGuía: ' + m.guia : ''}${m.quienAutoriza ? '\nAutoriza: ' + m.quienAutoriza : ''}${m.empresaAutoriza ? '\nEmpresa autoriza: ' + m.empresaAutoriza : ''}\nHora: ${m.hora} — ${m.fecha}`;
+
+const REGISTRO_CONFIG_KEY = 'ws_registro_config';
+const getRegistroConfig = () => {
+    try { return JSON.parse(localStorage.getItem(REGISTRO_CONFIG_KEY) || '{}'); } catch { return {}; }
+};
+const generarNarrativa = (mov, cfg = {}) => {
+    const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza } = mov;
+    const ubiIngreso = cfg.ubicacion || 'EPF';
+    const accion = tipo === 'ingreso' ? `Ingresa al ${ubiIngreso}` : `Sale al ${destino || 'destino'}`;
+    const dir = tipo === 'ingreso' ? 'trayendo' : 'llevando';
+    let descripcion;
+    const guiasValidas = (guias || []).filter(g => g.numero?.trim());
+    if (guiasValidas.length === 1) {
+        const g = guiasValidas[0];
+        const emp = g.empresa || empresaAutoriza || cfg.empresaAutoriza || 'EP Petroecuador';
+        descripcion = `${dir} materiales con guía N°: (${g.numero})${g.items ? ' de ' + g.items + ' item' : ''} de ${emp}${quienAutoriza ? ` autoriza ${quienAutoriza}` : ''}.`;
+    } else if (guiasValidas.length > 1) {
+        const partes = guiasValidas.map(g => {
+            const emp = g.empresa || cfg.empresaAutoriza || '';
+            return `n° ${g.numero}${g.items ? ' de ' + g.items + ' item' : ''}${emp ? ' de ' + emp : ''}`;
+        });
+        descripcion = `${dir} materiales con varias guías ${partes.join(', ')}${quienAutoriza ? `, autoriza ${quienAutoriza}` : ''}.`;
+    } else if (guia && guia.trim()) {
+        const emp = empresaAutoriza || cfg.empresaAutoriza || 'EP Petroecuador';
+        descripcion = `${dir} materiales con guía N°: (${guia}) de ${emp}${quienAutoriza ? ` autoriza ${quienAutoriza}` : ''}.`;
+    } else if (!actividad || /^vac[ií]o$/i.test(actividad.trim())) {
+        descripcion = 'vacía';
+    } else {
+        descripcion = actividad.trim();
+    }
+    return `${hora} ${accion} el Sr. ${conductor || '—'} cc: ${cedula || '—'} de ${empresa || '—'} conduciendo la ${tipoVehiculo || 'vehículo'} de Placas ${placa} ${descripcion}`;
+};
 
 // Tabs que vienen del cajón (tienen botón de regreso)
 const DRAWER_TABS = new Set(['avance', 'placas-db', 'extensiones', 'personas', 'jefes']);
@@ -175,12 +207,18 @@ const SuggestionField = ({ name, label, required, placeholder, value, onChange, 
     </div>
 );
 
-const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, suggestions, onSelect }) => (
+const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, suggestions, onSelect, multiline }) => (
     <div className="modal-field">
         <label>{label}</label>
         <div className="placa-wrapper">
-            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
-                onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
+            {multiline ? (
+                <textarea name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
+                    onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off"
+                    rows={3} style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 1.5 }} />
+            ) : (
+                <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
+                    onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
+            )}
             {suggestions.length > 0 && (
                 <div className="placa-suggestions">
                     {suggestions.map((s, i) => (
@@ -384,7 +422,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 // ── Modal formulario (crear + editar) ────────────────────
 const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
-        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', guia: editData.guia || '', documento: editData.documento || '', documentoNombre: editData.documentoNombre || '', documentoTipo: editData.documentoTipo || '' }
+        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', guia: editData.guia || '', guias: editData.guias || [], quienAutoriza: editData.quienAutoriza || '', empresaAutoriza: editData.empresaAutoriza || '', documento: editData.documento || '', documentoNombre: editData.documentoNombre || '', documentoTipo: editData.documentoTipo || '' }
         : EMPTY_FORM
     );
     const [loading, setLoading] = useState(false);
@@ -776,13 +814,42 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
                         onClearSugs={() => setDestinoSugs([])}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
-                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="Descripción..."
+                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="VACIO · con 2 pax a... · llevando materiales con varias guías..."
                         value={form.actividad} onChange={handleActividadChange}
                         onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
                         onClearSugs={() => setActividadSugs([])}
-                        suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }} />
-                    <ModalField name="guia" label="N° GUÍA / REFERENCIA" placeholder="Ej: GU-2024-001" value={form.guia}
-                        onChange={e => setForm(f => ({ ...f, guia: e.target.value }))} autoFilled={false} />
+                        suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}
+                        multiline />
+                    <div className="guias-block">
+                        <div className="guias-block-header">
+                            <span className="guias-block-label">GUÍAS DE MATERIALES</span>
+                            <button type="button" className="guias-add-btn"
+                                onClick={() => setForm(f => ({ ...f, guias: [...(f.guias || []), { numero: '', items: '', empresa: '' }] }))}>
+                                + Agregar guía
+                            </button>
+                        </div>
+                        {(form.guias || []).map((g, i) => (
+                            <div key={i} className="guia-row">
+                                <div className="guia-row-head">
+                                    <span className="guia-row-num">Guía #{i + 1}</span>
+                                    <button type="button" className="guia-remove-btn"
+                                        onClick={() => setForm(f => ({ ...f, guias: f.guias.filter((_, idx) => idx !== i) }))}>✕</button>
+                                </div>
+                                <div className="guia-row-fields">
+                                    <input className="guia-input guia-input-num" placeholder="N° de guía" value={g.numero}
+                                        onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, numero: e.target.value } : x) }))} />
+                                    <input className="guia-input guia-input-items" placeholder="Ítems" value={g.items}
+                                        onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, items: e.target.value } : x) }))} />
+                                </div>
+                                <input className="guia-input guia-input-empresa" placeholder="Empresa (EP Petroecuador, Sertecpet...)" value={g.empresa}
+                                    onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, empresa: e.target.value } : x) }))} />
+                            </div>
+                        ))}
+                        {(form.guias || []).length > 0 && (
+                            <ModalField name="quienAutoriza" label="AUTORIZA (persona)" placeholder="Nombre de quien autoriza" value={form.quienAutoriza}
+                                onChange={e => setForm(f => ({ ...f, quienAutoriza: e.target.value }))} autoFilled={false} />
+                        )}
+                    </div>
                     {form.documento && (
                         <div className="doc-preview-form">
                             {form.documentoTipo?.startsWith('image/') ? (
@@ -841,7 +908,21 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
                 <DetalleRow label="Cédula"           value={mov.cedula} />
                 <DetalleRow label="Destino"          value={mov.destino || '—'} />
                 <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} />
-                <DetalleRow label="N° Guía"          value={mov.guia} />
+                <DetalleRow label="N° Guía (legado)"  value={mov.guia} />
+                {mov.guias && mov.guias.filter(g => g.numero).length > 0 && (
+                    <div className="detalle-field">
+                        <span className="detalle-label">Guías de materiales</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {mov.guias.filter(g => g.numero).map((g, i) => (
+                                <span key={i} className="detalle-value" style={{ fontSize: 11 }}>
+                                    #{i+1} · {g.numero}{g.items ? ' · ' + g.items + ' items' : ''}{g.empresa ? ' · ' + g.empresa : ''}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                <DetalleRow label="Empresa autoriza" value={mov.empresaAutoriza} />
+                <DetalleRow label="Autoriza"         value={mov.quienAutoriza} />
                 {mov.documento && (
                     <div className="detalle-doc-section">
                         {mov.documentoTipo?.startsWith('image/') ? (
@@ -893,6 +974,35 @@ const ModalVerDocumento = ({ documento, documentoTipo, documentoNombre, onClose 
         </div>
     </div>
 );
+
+// ── Modal config Registro ─────────────────────────────────
+const ModalRegistroConfig = ({ config, onSave, onClose }) => {
+    const [local, setLocal] = useState({ ubicacion: config.ubicacion || 'EPF', empresaAutoriza: config.empresaAutoriza || 'EP Petroecuador' });
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Configurar Registro</span>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <ModalField name="ubicacion" label="UBICACIÓN (destino del ingreso)" placeholder="Ej: EPF" value={local.ubicacion} autoFilled={false}
+                        onChange={e => setLocal(l => ({ ...l, ubicacion: e.target.value }))} />
+                    <ModalField name="empresaAutoriza" label="EMPRESA AUTORIZANTE (default)" placeholder="Ej: EP Petroecuador" value={local.empresaAutoriza} autoFilled={false}
+                        onChange={e => setLocal(l => ({ ...l, empresaAutoriza: e.target.value }))} />
+                    <p style={{ fontSize: 11, color: '#666', margin: 0, lineHeight: 1.5 }}>
+                        Estos valores se usan para generar la narrativa automática cuando no se especifican en el movimiento individual.
+                    </p>
+                </div>
+                <div style={{ padding: '0 16px 16px' }}>
+                    <button className="modal-btn active" onClick={() => { onSave(local); onClose(); }}>
+                        Guardar configuración
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
@@ -2501,6 +2611,9 @@ const WorkspacePage = () => {
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [vistaInicio, setVistaInicio] = useState('movimientos');
+    const [registroDetailMov, setRegistroDetailMov] = useState(null);
+    const [showRegistroConfig, setShowRegistroConfig] = useState(false);
+    const [registroConfig, setRegistroConfig] = useState(getRegistroConfig);
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -2677,6 +2790,51 @@ const WorkspacePage = () => {
         XLSX.writeFile(wb, `bitacora_${fecha}.xlsx`);
     };
 
+    const handleSaveRegistroConfig = cfg => {
+        localStorage.setItem(REGISTRO_CONFIG_KEY, JSON.stringify(cfg));
+        setRegistroConfig(cfg);
+    };
+
+    const exportRegistroExcel = () => {
+        if (!movimientos.length) return;
+        const fecha = new Date().toISOString().split('T')[0];
+        const cols = ['#', 'Hora', 'Tipo', 'Placa', 'Tipo Vehículo', 'Conductor', 'Cédula', 'Empresa', 'Destino', 'Guía', 'Empresa Autoriza', 'Quién Autoriza', 'Narrativa'];
+        const rows = [...movimientos].map((m, i) => [
+            i + 1,
+            m.hora,
+            m.tipo === 'ingreso' ? 'Ingreso' : 'Salida',
+            m.placa,
+            m.tipoVehiculo || '—',
+            m.conductor || '—',
+            m.cedula || '—',
+            m.empresa || '—',
+            m.destino || '—',
+            m.guia || '—',
+            m.empresaAutoriza || registroConfig.empresaAutoriza || '—',
+            m.quienAutoriza || '—',
+            generarNarrativa(m, registroConfig),
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+        ws['!cols'] = [{ wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 13 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 80 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Registro');
+        XLSX.writeFile(wb, `registro_${fecha}.xlsx`);
+    };
+
+    const exportRegistroWord = () => {
+        if (!movimientos.length) return;
+        const fecha = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const puesto = turnoActivo?.puesto || '';
+        const entradas = [...movimientos].map(m => `<p style="margin:0 0 10pt 0;font-size:12pt;">${generarNarrativa(m, registroConfig)}</p>`).join('');
+        const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Registro</title><style>body{font-family:Arial,sans-serif;margin:2cm;}h2{font-size:14pt;margin-bottom:4pt;}p.sub{font-size:11pt;color:#555;margin:0 0 16pt 0;}hr{border:none;border-top:1px solid #ccc;margin:12pt 0;}</style></head><body><h2>REGISTRO DE MOVIMIENTOS DE VEHÍCULOS</h2><p class="sub">${fecha} &nbsp;·&nbsp; ${puesto}</p><hr/>${entradas}</body></html>`;
+        const blob = new Blob(['﻿', html], { type: 'application/msword' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `registro_${new Date().toISOString().split('T')[0]}.doc`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
     const handleShareMovs = async (movsToShare) => {
         setShowShareMenu(false);
         if (!movsToShare.length) return;
@@ -2795,6 +2953,14 @@ const WorkspacePage = () => {
                             </svg>
                             Bitácora
                         </button>
+                        <button className={`ws-vista-tab${vistaInicio === 'registro' ? ' active' : ''}`}
+                            onClick={() => setVistaInicio('registro')}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                <path d="M14 2v6h6M9 13h6M9 17h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            Registro
+                        </button>
                     </div>
                     {vistaInicio === 'bitacora' && (
                         <div className="ws-bitacora">
@@ -2848,6 +3014,58 @@ const WorkspacePage = () => {
                                                     {b.conductor}
                                                 </span>
                                                 {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {vistaInicio === 'registro' && (
+                        <div className="ws-registro">
+                            <div className="reg-toolbar">
+                                <span className="reg-count">{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</span>
+                                <div className="reg-toolbar-actions">
+                                    <button className="reg-cfg-btn" onClick={() => setShowRegistroConfig(true)}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        Configurar
+                                    </button>
+                                    <button className="reg-export-btn" onClick={exportRegistroExcel} disabled={!movimientos.length}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M3 9h18M9 9v12" stroke="currentColor" strokeWidth="2"/></svg>
+                                        Excel
+                                    </button>
+                                    <button className="reg-export-btn" onClick={exportRegistroWord} disabled={!movimientos.length}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/></svg>
+                                        Word
+                                    </button>
+                                </div>
+                            </div>
+                            {movimientos.length === 0 ? (
+                                <p className="ws-empty">Sin movimientos registrados</p>
+                            ) : (
+                                <div className="reg-list">
+                                    {movimientos.map(mov => (
+                                        <div key={mov._id} className={`reg-entry reg-${mov.tipo}`}>
+                                            <div className="reg-narrativa" onClick={() => setRegistroDetailMov(mov)}>
+                                                <span className={`reg-badge reg-badge-${mov.tipo}`}>{mov.tipo === 'ingreso' ? '↓' : '↑'}</span>
+                                                {generarNarrativa(mov, registroConfig)}
+                                            </div>
+                                            <div className="reg-actions">
+                                                <button className="reg-act-btn" onClick={() => setRegistroDetailMov(mov)} title="Ver detalle">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" stroke="currentColor" strokeWidth="2"/></svg>
+                                                </button>
+                                                <button className="reg-act-btn" onClick={() => handleEdit(mov)} title="Editar">
+                                                    <IconPencil />
+                                                </button>
+                                                <button className="reg-act-btn" onClick={() => { navigator.clipboard?.writeText(generarNarrativa(mov, registroConfig)); }} title="Copiar narrativa">
+                                                    <IconCopy />
+                                                </button>
+                                                <button className="reg-act-btn" onClick={() => handleShare(mov)} title="Compartir">
+                                                    <IconShare />
+                                                </button>
+                                                <button className="reg-act-btn danger" onClick={() => handleDelete(mov._id)} title="Eliminar">
+                                                    <IconMinus />
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
@@ -3076,6 +3294,13 @@ const WorkspacePage = () => {
             {detailMov && (
                 <ModalDetalle mov={detailMov} onClose={() => setDetailMov(null)}
                     onEdit={handleEdit} onDelete={handleDelete} onCopy={handleCopy} onShare={handleShare} />
+            )}
+            {registroDetailMov && (
+                <ModalDetalle mov={registroDetailMov} onClose={() => setRegistroDetailMov(null)}
+                    onEdit={m => { handleEdit(m); setRegistroDetailMov(null); }} onDelete={id => { handleDelete(id); setRegistroDetailMov(null); }} onCopy={handleCopy} onShare={handleShare} />
+            )}
+            {showRegistroConfig && (
+                <ModalRegistroConfig config={registroConfig} onSave={handleSaveRegistroConfig} onClose={() => setShowRegistroConfig(false)} />
             )}
 
             {/* Bottom nav — solo Inicio, Avance, Flujos */}

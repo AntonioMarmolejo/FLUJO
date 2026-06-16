@@ -1230,25 +1230,30 @@ function SearchBar({ value, onChange, onImport, activeCount = 0, freeCount = 0, 
 function BottomNav({ onHome }) {
     return (
         <div style={{
-            position: 'fixed', left: 0, right: 0, bottom: 0,
-            paddingBottom: 28, paddingTop: 10,
-            background: 'linear-gradient(180deg, rgba(17,17,17,0) 0%, rgba(17,17,17,0.9) 35%, #111 70%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+            position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+            bottom: 0, width: '100%', maxWidth: 430,
+            paddingBottom: 12, paddingTop: 8,
+            background: '#111111',
+            borderTop: `1px solid ${COLORS.border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 48,
             zIndex: 30,
         }}>
             <button onClick={onHome} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                background: 'transparent', border: 0, cursor: 'pointer', padding: '6px 24px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                background: 'transparent', border: 0, cursor: 'pointer', padding: '6px 0',
+                color: COLORS.textMute,
             }}>
-                {Icon.home(22, COLORS.textMute)}
-                <span style={{ fontSize: 9.5, fontWeight: 600, color: COLORS.textMute, letterSpacing: 0.3 }}>Inicio</span>
+                {Icon.home(20, COLORS.textMute)}
+                <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.textMute, letterSpacing: 0.3 }}>Inicio</span>
             </button>
             <button style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                background: 'transparent', border: 0, cursor: 'pointer', padding: '6px 24px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                background: 'transparent', border: 0, cursor: 'pointer', padding: '6px 0',
+                color: COLORS.violet,
             }}>
-                {Icon.flow(22, COLORS.violet)}
-                <span style={{ fontSize: 9.5, fontWeight: 700, color: COLORS.violet, letterSpacing: 0.3 }}>Flujos</span>
+                {Icon.flow(20, COLORS.violet)}
+                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.violet, letterSpacing: 0.3 }}>Flujos</span>
             </button>
         </div>
     );

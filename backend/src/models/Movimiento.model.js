@@ -24,6 +24,13 @@ const movimientoSchema = new mongoose.Schema(
         destino: { type: String, trim: true, default: '' },
         actividad: { type: String, trim: true, default: '' },
         guia: { type: String, trim: true, default: '' },
+        guias: [{
+            numero: { type: String, trim: true, default: '' },
+            items:  { type: String, trim: true, default: '' },
+            empresa: { type: String, trim: true, default: '' },
+        }],
+        quienAutoriza: { type: String, trim: true, default: '' },
+        empresaAutoriza: { type: String, trim: true, default: '' },
         documento: { type: String, default: '' },
         documentoNombre: { type: String, trim: true, default: '' },
         documentoTipo: { type: String, trim: true, default: '' },

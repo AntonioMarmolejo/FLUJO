@@ -1917,3 +1917,214 @@
     text-overflow: ellipsis;
     max-width: 140px;
 }
+
+
+/* ── Registro ────────────────────────────────────────────── */
+.ws-registro {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.reg-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #1e1e1e;
+    background: #0d0d0d;
+    flex-shrink: 0;
+}
+.reg-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.reg-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.reg-cfg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    color: #888;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms;
+}
+.reg-cfg-btn:hover { color: #aaa; border-color: #444; }
+.reg-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    color: #818cf8;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms;
+}
+.reg-export-btn:hover:not(:disabled) { background: rgba(129,140,248,0.08); border-color: #818cf8; }
+.reg-export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.reg-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.reg-entry {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.reg-entry.reg-ingreso { border-left: 3px solid #34d399; }
+.reg-entry.reg-salida  { border-left: 3px solid #f87171; }
+.reg-narrativa {
+    font-size: 12.5px;
+    color: #ccc;
+    line-height: 1.55;
+    cursor: pointer;
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+}
+.reg-narrativa:hover { color: #e5e5e5; }
+.reg-badge {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+.reg-badge-ingreso { background: rgba(52,211,153,0.12); color: #34d399; }
+.reg-badge-salida  { background: rgba(248,113,113,0.12); color: #f87171; }
+.reg-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.reg-act-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid #242424;
+    border-radius: 6px;
+    color: #666;
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms;
+}
+.reg-act-btn:hover { color: #aaa; border-color: #444; }
+.reg-act-btn.danger:hover { color: #f87171; border-color: #f87171; }
+
+/* ── UI multi-guías ──────────────────────────────────────── */
+.guias-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+}
+.guias-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.guias-block-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #666;
+    text-transform: uppercase;
+}
+.guias-add-btn {
+    font-size: 11px;
+    font-weight: 600;
+    color: #818cf8;
+    background: transparent;
+    border: 1px solid rgba(129,140,248,0.3);
+    border-radius: 5px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 150ms;
+}
+.guias-add-btn:hover { background: rgba(129,140,248,0.08); }
+.guia-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid #242424;
+    border-radius: 6px;
+}
+.guia-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.guia-row-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: #818cf8;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.guia-remove-btn {
+    font-size: 11px;
+    color: #555;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 150ms;
+}
+.guia-remove-btn:hover { color: #f87171; }
+.guia-row-fields {
+    display: flex;
+    gap: 6px;
+}
+.guia-input {
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    border-radius: 5px;
+    color: #e5e5e5;
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 150ms;
+}
+.guia-input:focus { border-color: #818cf8; }
+.guia-input-num   { flex: 1; min-width: 0; }
+.guia-input-items { width: 60px; flex-shrink: 0; text-align: center; }
+.guia-input-empresa { width: 100%; }

@@ -483,6 +483,7 @@ const CalendarioPage = () => {
     const [yearAnual, setYearAnual] = useState(now.getFullYear());
     const saveRef = useRef(null);
     const pendingRef = useRef({});
+    const activeGrupoIdRef = useRef(null);
     const monthCaptureRef = useRef(null);
     const yearCaptureRef = useRef(null);
 
@@ -494,6 +495,20 @@ const CalendarioPage = () => {
 
     useEffect(() => { localStorage.setItem('flujo_shifts', JSON.stringify(shifts)); }, [shifts]);
 
+    const diasFromApi = (g) => g.dias ? Object.fromEntries(Object.entries(g.dias)) : {};
+
+    const flushPending = () => {
+        clearTimeout(saveRef.current);
+        const pending = { ...pendingRef.current };
+        pendingRef.current = {};
+        const grupoId = activeGrupoIdRef.current;
+        if (Object.keys(pending).length > 0 && grupoId) {
+            Object.entries(pending).forEach(([date, s]) => {
+                api.patch(`/calendarios/${grupoId}/dia`, { date, shift: s }).catch(() => {});
+            });
+        }
+    };
+
     useEffect(() => {
         api.get('/calendarios')
             .then(res => {
@@ -502,13 +517,19 @@ const CalendarioPage = () => {
             })
             .catch(() => {})
             .finally(() => setLoading(false));
+        return () => { flushPending(); };
     }, []);
 
-    const diasFromApi = (g) => g.dias ? Object.fromEntries(Object.entries(g.dias)) : {};
-    const switchGrupoData = (g) => { setActiveGrupo(g); setDias(diasFromApi(g)); setGroupsOpen(false); };
+    const switchGrupoData = (g) => {
+        flushPending();
+        activeGrupoIdRef.current = g._id;
+        setActiveGrupo(g);
+        setDias(diasFromApi(g));
+        setGroupsOpen(false);
+    };
 
     const handleDayTap = (iso, shift) => {
-        if (!activeGrupo) return;
+        if (!activeGrupoIdRef.current) return;
         const next = dias[iso] === shift ? null : shift;
         setDias(prev => { const d={...prev}; if(next) d[iso]=next; else delete d[iso]; return d; });
         pendingRef.current[iso] = next;
@@ -516,8 +537,10 @@ const CalendarioPage = () => {
         saveRef.current = setTimeout(() => {
             const changes = { ...pendingRef.current };
             pendingRef.current = {};
+            const grupoId = activeGrupoIdRef.current;
+            if (!grupoId) return;
             Object.entries(changes).forEach(([date, s]) => {
-                api.patch(`/calendarios/${activeGrupo._id}/dia`, { date, shift: s }).catch(() => {});
+                api.patch(`/calendarios/${grupoId}/dia`, { date, shift: s }).catch(() => {});
             });
         }, 400);
     };
