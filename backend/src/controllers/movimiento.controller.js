@@ -10,7 +10,7 @@ const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula
 // POST /api/movimientos
 export const crearMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, documento, documentoNombre, documentoTipo, puesto, bloque } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque } = req.body;
         if (!tipo || !placa || !puesto || !bloque) return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
 
         const movimiento = await Movimiento.create({
@@ -19,7 +19,8 @@ export const crearMovimiento = async (req, res) => {
             marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '',
             empresa: empresa || '', conductor: conductor || '', cedula: cedula || '',
             destino: destino || '', actividad: actividad || '',
-            guia: guia || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
+            guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '',
+            documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
             hora: getHora(), fecha: getFecha(),
         });
 
@@ -122,10 +123,10 @@ export const getMovimientosTodos = async (req, res) => {
 // PUT /api/movimientos/:id
 export const updateMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, documento, documentoNombre, documentoTipo } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo } = req.body;
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
-            { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' },
+            { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' },
             { new: true }
         );
         if (!mov) return res.status(404).json({ message: 'Movimiento no encontrado' });

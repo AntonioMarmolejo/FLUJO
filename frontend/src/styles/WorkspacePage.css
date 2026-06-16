@@ -2128,3 +2128,61 @@
 .guia-input-num   { flex: 1; min-width: 0; }
 .guia-input-items { width: 60px; flex-shrink: 0; text-align: center; }
 .guia-input-empresa { width: 100%; }
+
+/* ── Guías en MovCard ────────────────────────────────────── */
+.mov-guia-tag-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: rgba(129,140,248,0.1);
+    border: 1px solid rgba(129,140,248,0.25);
+    color: #818cf8;
+    transition: background 150ms;
+}
+.mov-guia-tag-btn.active {
+    background: rgba(129,140,248,0.2);
+    border-color: #818cf8;
+}
+.mov-guias-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 5px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #242424;
+    border-radius: 6px;
+    width: 100%;
+}
+.mov-guia-item {
+    font-size: 10.5px;
+    color: #bbb;
+    line-height: 1.4;
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+}
+.mov-guia-item-num {
+    color: #818cf8;
+    font-weight: 700;
+    font-size: 9px;
+    flex-shrink: 0;
+}
+/* ── Guías en Bitácora ───────────────────────────────────── */
+.bit-guia-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #818cf8;
+    background: rgba(129,140,248,0.08);
+    border: 1px solid rgba(129,140,248,0.2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    white-space: nowrap;
+}

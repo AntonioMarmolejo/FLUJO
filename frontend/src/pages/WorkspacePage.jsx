@@ -1007,6 +1007,10 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
     const [showDoc, setShowDoc] = useState(false);
+    const [showGuias, setShowGuias] = useState(false);
+    const guiasValidas = (m.guias || []).filter(g => g.numero?.trim());
+    const tieneGuias = guiasValidas.length > 0;
+    const tieneGuiaLegacy = !tieneGuias && m.guia;
     return (
         <>
             {showDoc && (
@@ -1033,12 +1037,32 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
                             {[m.empresa, m.destino].filter(Boolean).join(' · ')}
                         </span>
                     )}
+                    {showGuias && tieneGuias && (
+                        <div className="mov-guias-dropdown">
+                            {guiasValidas.map((g, i) => (
+                                <span key={i} className="mov-guia-item">
+                                    <span className="mov-guia-item-num">#{i+1}</span>
+                                    {g.numero}{g.items ? ` · ${g.items} item` : ''}{g.empresa ? ` · ${g.empresa}` : ''}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 {!selectMode && (
                     <>
-                        {(m.guia || m.documento) && (
+                        {(tieneGuias || tieneGuiaLegacy || m.documento) && (
                             <div className="mov-doc-col" onClick={e => e.stopPropagation()}>
-                                {m.guia && <span className="mov-guia-tag">{m.guia}</span>}
+                                {tieneGuias && (
+                                    <button className={`mov-guia-tag mov-guia-tag-btn${showGuias ? ' active' : ''}`}
+                                        onClick={() => setShowGuias(g => !g)}
+                                        title="Ver guías">
+                                        {guiasValidas.length} guía{guiasValidas.length > 1 ? 's' : ''}
+                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 3, transform: showGuias ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
+                                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                    </button>
+                                )}
+                                {tieneGuiaLegacy && <span className="mov-guia-tag">{m.guia}</span>}
                                 {m.documento && (
                                     <button className="mov-doc-thumb-btn" title="Ver documento" onClick={() => setShowDoc(true)}>
                                         {m.documentoTipo?.startsWith('image/') ? (
@@ -3014,6 +3038,19 @@ const WorkspacePage = () => {
                                                     {b.conductor}
                                                 </span>
                                                 {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
+                                                {(() => {
+                                                    const movs = [b.salida, b.ingreso].filter(Boolean);
+                                                    const total = movs.reduce((n, mv) => {
+                                                        const vg = (mv.guias || []).filter(g => g.numero?.trim()).length;
+                                                        return n + (vg > 0 ? vg : (mv.guia ? 1 : 0));
+                                                    }, 0);
+                                                    return total > 0 ? (
+                                                        <span className="bit-guia-badge">
+                                                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/></svg>
+                                                            {total} guía{total > 1 ? 's' : ''}
+                                                        </span>
+                                                    ) : null;
+                                                })()}
                                             </div>
                                         </div>
                                     ))}
