@@ -43,5 +43,21 @@ app.use('/api/calendarios', calendarioGrupoRoutes);
 // Health check
 app.get('/', (_req, res) => res.json({ message: '🚀 Flujo API corriendo' }));
 
+// Middleware global de errores — debe ir después de todas las rutas
+app.use((err, _req, res, _next) => {
+    console.error(`[ERROR] ${err.status || 500} — ${err.message}`);
+    res.status(err.status || 500).json({
+        message: err.message || 'Error interno del servidor',
+    });
+});
+
+// Captura de excepciones no manejadas para evitar caída del proceso
+process.on('unhandledRejection', (reason) => {
+    console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException]', err);
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
