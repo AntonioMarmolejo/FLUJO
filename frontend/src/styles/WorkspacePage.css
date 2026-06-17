@@ -210,9 +210,18 @@
     background: rgba(248, 113, 113, 0.15);
 }
 
+.mov-count {
+    font-size: 15px;
+    font-weight: 700;
+    color: #a5b4fc;
+    line-height: 1;
+}
+
 .mov-hora-small {
-    font-size: 9px;
-    color: #666;
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    line-height: 1;
 }
 
 .mov-info {

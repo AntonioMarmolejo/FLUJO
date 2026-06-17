@@ -1005,7 +1005,7 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 };
 
 // ── Tarjeta de movimiento ─────────────────────────────────
-const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
+const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
     const [showDoc, setShowDoc] = useState(false);
     const [showGuias, setShowGuias] = useState(false);
     const guiasValidas = (m.guias || []).filter(g => g.numero?.trim());
@@ -1026,7 +1026,7 @@ const MovCard = ({ m, selectMode, selected, onToggleSelect, onOpenDetail, onDele
                         onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                 )}
                 <div className={`mov-icon ${m.tipo}`}>
-                    <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
+                    <span className="mov-count">{count}</span>
                     <span className="mov-hora-small">{m.hora}</span>
                 </div>
                 <div className="mov-info">
@@ -1767,10 +1767,13 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
             <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
-                    : filtrados.map(m => (
+                    : (() => {
+                        const counts = {};
+                        filtrados.forEach(m => { counts[m.placa] = (counts[m.placa] || 0) + 1; });
+                        return [...filtrados].reverse().map(m => (
                         <div key={m._id} className="mov-item" style={{ cursor: 'default' }}>
                             <div className={`mov-icon ${m.tipo}`}>
-                                <TruckIcon color={m.tipo === 'ingreso' ? '#818cf8' : '#f87171'} />
+                                <span className="mov-count">{counts[m.placa] || 1}</span>
                                 <span className="mov-hora-small">{m.hora}</span>
                             </div>
                             <div className="mov-info">
@@ -1783,8 +1786,8 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                 )}
                             </div>
                         </div>
-                    ))
-                }
+                        ));
+                    })()}
             </div>
         </div>
     );
@@ -2646,6 +2649,12 @@ const WorkspacePage = () => {
             (m.conductor || '').toLowerCase().includes(sq))
         : movimientos;
 
+    const placaCounts = useMemo(() => {
+        const counts = {};
+        movimientos.forEach(m => { counts[m.placa] = (counts[m.placa] || 0) + 1; });
+        return counts;
+    }, [movimientos]);
+
     const bitacora = useMemo(() => {
         const sorted = [...movimientos].reverse();
         const openSalidas = {};
@@ -3081,7 +3090,7 @@ const WorkspacePage = () => {
                                 <p className="ws-empty">Sin movimientos registrados</p>
                             ) : (
                                 <div className="reg-list">
-                                    {movimientos.map(mov => (
+                                    {[...movimientos].reverse().map(mov => (
                                         <div key={mov._id} className={`reg-entry reg-${mov.tipo}`}>
                                             <div className="reg-narrativa" onClick={() => setRegistroDetailMov(mov)}>
                                                 <span className={`reg-badge reg-badge-${mov.tipo}`}>{mov.tipo === 'ingreso' ? '↓' : '↑'}</span>
@@ -3224,8 +3233,9 @@ const WorkspacePage = () => {
                                             ? <p className="ws-empty">Sin movimientos registrados hoy</p>
                                             : movsFiltrados.length === 0
                                                 ? <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
-                                                : movsFiltrados.map(m => (
+                                                : [...movsFiltrados].reverse().map(m => (
                                                     <MovCard key={m._id} m={m}
+                                                        count={placaCounts[m.placa] || 1}
                                                         selected={selectedIds.has(m._id)}
                                                         {...cardProps} />
                                                 ))
