@@ -654,11 +654,14 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                 } catch { }
             }
             if (editData?._id) {
+                console.log('[handleSubmit edit] guias:', JSON.stringify(form.guias));
                 await api.put(`/movimientos/${editData._id}`, form);
                 onGuardado();
                 onClose();
             } else {
-                await api.post('/movimientos', { ...form, puesto, bloque });
+                const payload = { ...form, puesto, bloque };
+                console.log('[handleSubmit nuevo] guias:', JSON.stringify(payload.guias));
+                await api.post('/movimientos', payload);
                 onGuardado();
                 setForm(EMPTY_FORM);
                 setSuggestions([]);
@@ -837,12 +840,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                                 </div>
                                 <div className="guia-row-fields">
                                     <input className="guia-input guia-input-num" placeholder="N° de guía" value={g.numero}
-                                        onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, numero: e.target.value } : x) }))} />
+                                        onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, numero: v } : x) })); }} />
                                     <input className="guia-input guia-input-items" placeholder="Ítems" value={g.items}
-                                        onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, items: e.target.value } : x) }))} />
+                                        onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, items: v } : x) })); }} />
                                 </div>
                                 <input className="guia-input guia-input-empresa" placeholder="Empresa (EP Petroecuador, Sertecpet...)" value={g.empresa}
-                                    onChange={e => setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, empresa: e.target.value } : x) }))} />
+                                    onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, empresa: v } : x) })); }} />
                             </div>
                         ))}
                         {(form.guias || []).length > 0 && (
@@ -974,6 +977,104 @@ const ModalVerDocumento = ({ documento, documentoTipo, documentoNombre, onClose 
         </div>
     </div>
 );
+
+// ── Modal detalle Bitácora ────────────────────────────────
+const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onDeletePair }) => {
+    const b = bitacora[idx];
+    if (!b) return null;
+    const total = bitacora.length;
+    const hasPrev = idx > 0;
+    const hasNext = idx < total - 1;
+
+    const bToText = entry => [
+        `Bitácora: ${entry.placa}${entry.tipoVehiculo ? ' · ' + entry.tipoVehiculo : ''}`,
+        `Estado: ${entry.status === 'completo' ? 'Completado' : entry.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
+        `Conductor: ${entry.conductor}`,
+        entry.empresa && `Empresa: ${entry.empresa}`,
+        entry.destino && `Destino: ${entry.destino}`,
+        `Salida: ${entry.horaS}  →  Ingreso: ${entry.horaI}`,
+    ].filter(Boolean).join('\n');
+
+    const handleCopy = () => navigator.clipboard?.writeText(bToText(b));
+    const handleShare = async () => {
+        if (navigator.share) {
+            await navigator.share({ title: 'Bitácora FLUJO', text: bToText(b) }).catch(() => {});
+        } else {
+            handleCopy();
+        }
+    };
+
+    const MovSection = ({ mov, label, color }) => {
+        if (!mov) return null;
+        const guiasValidas = (mov.guias || []).filter(g => g.numero?.trim());
+        return (
+            <div className={`bit-det-section bit-det-${color}`}>
+                <div className="bit-det-section-header">
+                    <span className="bit-det-section-label">{label} · {color === 'salida' ? b.horaS : b.horaI}</span>
+                    <button className="bit-det-edit-btn" onClick={() => { onEditMov(mov); onClose(); }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Editar
+                    </button>
+                </div>
+                {mov.conductor && <div className="bit-det-row"><span className="bit-det-lbl">Conductor</span><span className="bit-det-val">{mov.conductor}{mov.cedula ? ' · ' + mov.cedula : ''}</span></div>}
+                {mov.empresa && <div className="bit-det-row"><span className="bit-det-lbl">Empresa</span><span className="bit-det-val">{mov.empresa}</span></div>}
+                {mov.destino && <div className="bit-det-row"><span className="bit-det-lbl">Destino</span><span className="bit-det-val">{mov.destino}</span></div>}
+                {mov.actividad && <div className="bit-det-row"><span className="bit-det-lbl">Actividad</span><span className="bit-det-val">{mov.actividad}</span></div>}
+                {guiasValidas.length > 0 && (
+                    <div className="bit-det-row">
+                        <span className="bit-det-lbl">Guías</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {guiasValidas.map((g, i) => (
+                                <span key={i} className="bit-det-val" style={{ fontSize: 11 }}>
+                                    #{i + 1} · {g.numero}{g.items ? ' · ' + g.items + ' ítems' : ''}{g.empresa ? ' · ' + g.empresa : ''}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {!guiasValidas.length && mov.guia && <div className="bit-det-row"><span className="bit-det-lbl">Guía</span><span className="bit-det-val">{mov.guia}</span></div>}
+                {mov.quienAutoriza && <div className="bit-det-row"><span className="bit-det-lbl">Autoriza</span><span className="bit-det-val">{mov.quienAutoriza}</span></div>}
+            </div>
+        );
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card bit-det-card" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="bit-det-header">
+                    <div className="bit-det-placa-row">
+                        <span className="bit-placa">{b.placa}</span>
+                        {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
+                        <span className={`bit-badge bit-badge-${b.status}`}>
+                            {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
+                        </span>
+                    </div>
+                    <span className="bit-det-counter">{idx + 1} / {total}</span>
+                </div>
+
+                {/* Sections */}
+                <MovSection mov={b.salida} label="↑ SALIDA" color="salida" />
+                <MovSection mov={b.ingreso} label="↓ INGRESO" color="ingreso" />
+
+                {/* Actions */}
+                <div className="bit-det-actions">
+                    <button className="bit-det-act-btn" onClick={handleCopy} title="Copiar"><IconCopy /></button>
+                    <button className="bit-det-act-btn" onClick={handleShare} title="Compartir"><IconShare /></button>
+                    <button className="bit-det-act-btn danger" onClick={() => onDeletePair(b, idx)} title="Eliminar">
+                        <IconMinus />
+                    </button>
+                </div>
+
+                {/* Navigation */}
+                <div className="bit-det-nav">
+                    <button className="bit-det-nav-btn" onClick={() => onChange(idx - 1)} disabled={!hasPrev}>← Anterior</button>
+                    <button className="bit-det-nav-btn" onClick={() => onChange(idx + 1)} disabled={!hasNext}>Siguiente →</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ── Modal config Registro ─────────────────────────────────
 const ModalRegistroConfig = ({ config, onSave, onClose }) => {
@@ -2641,6 +2742,9 @@ const WorkspacePage = () => {
     const [registroDetailMov, setRegistroDetailMov] = useState(null);
     const [showRegistroConfig, setShowRegistroConfig] = useState(false);
     const [registroConfig, setRegistroConfig] = useState(getRegistroConfig);
+    const [bitDetailIdx, setBitDetailIdx] = useState(null);
+    const [swipedRegId, setSwipedRegId] = useState(null);
+    const regSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -2715,6 +2819,12 @@ const WorkspacePage = () => {
         });
     }, [movimientos]);
 
+    const bitPlacaCounts = useMemo(() => {
+        const c = {};
+        bitacora.forEach(b => { c[b.placa] = (c[b.placa] || 0) + 1; });
+        return c;
+    }, [bitacora]);
+
     useEffect(() => {
         api.get('/turnos/activo')
             .then(({ data }) => { if (data.turno) setTurnoActivo(data.turno); })
@@ -2765,6 +2875,18 @@ const WorkspacePage = () => {
 
     const handleDelete = async id => {
         try { await api.delete(`/movimientos/${id}`); cargarDatos(); } catch { }
+    };
+
+    const handleDeleteBitPair = async (b, idx) => {
+        const ids = [b.salida?._id, b.ingreso?._id].filter(Boolean);
+        if (!ids.length) return;
+        const label = ids.length > 1 ? 'los 2 movimientos' : 'el movimiento';
+        if (!window.confirm(`¿Eliminar ${label} de ${b.placa}?`)) return;
+        try {
+            await Promise.all(ids.map(id => api.delete(`/movimientos/${id}`)));
+            setBitDetailIdx(null);
+            cargarDatos();
+        } catch {}
     };
 
     const handleBatchDelete = async () => {
@@ -3011,14 +3133,35 @@ const WorkspacePage = () => {
                                 <p className="ws-empty">Sin movimientos para consolidar</p>
                             ) : (
                                 <div className="bit-list">
-                                    {bitacora.map((b, i) => (
-                                        <div key={i} className={`bit-row bit-${b.status}`}>
+                                    {bitacora.map((b, i) => {
+                                        const bText = [
+                                            `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
+                                            `Estado: ${b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
+                                            `Conductor: ${b.conductor}`,
+                                            b.empresa && `Empresa: ${b.empresa}`,
+                                            b.destino && `Destino: ${b.destino}`,
+                                            `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
+                                        ].filter(Boolean).join('\n');
+                                        return (
+                                        <div key={i} className={`bit-row bit-${b.status}`} onClick={() => setBitDetailIdx(i)} style={{ cursor: 'pointer' }}>
                                             <div className="bit-row-top">
+                                                <span className="bit-count">{bitPlacaCounts[b.placa] || 1}</span>
                                                 <span className="bit-placa">{b.placa}</span>
                                                 {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
                                                 <span className={`bit-badge bit-badge-${b.status}`}>
                                                     {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
                                                 </span>
+                                                <div className="bit-row-actions" onClick={e => e.stopPropagation()}>
+                                                    <button className="bit-act-btn" title="Copiar" onClick={() => navigator.clipboard?.writeText(bText)}><IconCopy /></button>
+                                                    <button className="bit-act-btn" title="Compartir" onClick={async () => {
+                                                        if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); }
+                                                        else navigator.clipboard?.writeText(bText);
+                                                    }}><IconShare /></button>
+                                                    <button className="bit-act-btn" title="Editar" onClick={() => setBitDetailIdx(i)}>
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                    </button>
+                                                    <button className="bit-act-btn danger" title="Eliminar" onClick={() => handleDeleteBitPair(b, i)}><IconMinus /></button>
+                                                </div>
                                             </div>
                                             <div className="bit-row-times">
                                                 <div className="bit-time bit-time-s">
@@ -3062,7 +3205,8 @@ const WorkspacePage = () => {
                                                 })()}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -3091,27 +3235,62 @@ const WorkspacePage = () => {
                             ) : (
                                 <div className="reg-list">
                                     {[...movimientos].reverse().map(mov => (
-                                        <div key={mov._id} className={`reg-entry reg-${mov.tipo}`}>
-                                            <div className="reg-narrativa" onClick={() => setRegistroDetailMov(mov)}>
-                                                <span className={`reg-badge reg-badge-${mov.tipo}`}>{mov.tipo === 'ingreso' ? '↓' : '↑'}</span>
-                                                {generarNarrativa(mov, registroConfig)}
-                                            </div>
-                                            <div className="reg-actions">
-                                                <button className="reg-act-btn" onClick={() => setRegistroDetailMov(mov)} title="Ver detalle">
+                                        <div key={mov._id} className={`reg-entry reg-${mov.tipo}${swipedRegId === mov._id ? ' reg-swiped' : ''}`}>
+                                            <div className="reg-actions" onClick={e => e.stopPropagation()}>
+                                                <button className="reg-act-btn" title="Ver detalle" onClick={() => { setRegistroDetailMov(mov); setSwipedRegId(null); }}>
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" stroke="currentColor" strokeWidth="2"/></svg>
                                                 </button>
-                                                <button className="reg-act-btn" onClick={() => handleEdit(mov)} title="Editar">
+                                                <button className="reg-act-btn" title="Editar" onClick={() => { handleEdit(mov); setSwipedRegId(null); }}>
                                                     <IconPencil />
                                                 </button>
-                                                <button className="reg-act-btn" onClick={() => { navigator.clipboard?.writeText(generarNarrativa(mov, registroConfig)); }} title="Copiar narrativa">
+                                                <button className="reg-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(generarNarrativa(mov, registroConfig)); setSwipedRegId(null); }}>
                                                     <IconCopy />
                                                 </button>
-                                                <button className="reg-act-btn" onClick={() => handleShare(mov)} title="Compartir">
+                                                <button className="reg-act-btn" title="Compartir" onClick={async () => {
+                                                    const text = generarNarrativa(mov, registroConfig);
+                                                    if (navigator.share) { await navigator.share({ title: 'Movimiento FLUJO', text }).catch(() => {}); }
+                                                    else { navigator.clipboard?.writeText(text); }
+                                                    setSwipedRegId(null);
+                                                }}>
                                                     <IconShare />
                                                 </button>
-                                                <button className="reg-act-btn danger" onClick={() => handleDelete(mov._id)} title="Eliminar">
+                                                <button className="reg-act-btn danger" title="Eliminar" onClick={() => { handleDelete(mov._id); setSwipedRegId(null); }}>
                                                     <IconMinus />
                                                 </button>
+                                            </div>
+                                            <div
+                                                className="reg-entry-inner"
+                                                onTouchStart={e => {
+                                                    regSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false };
+                                                }}
+                                                onTouchMove={e => {
+                                                    const dx = e.touches[0].clientX - regSwipeRef.current.startX;
+                                                    const dy = e.touches[0].clientY - regSwipeRef.current.startY;
+                                                    if (!regSwipeRef.current.moved && !regSwipeRef.current.vertScroll) {
+                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                        if (Math.abs(dy) > Math.abs(dx)) { regSwipeRef.current.vertScroll = true; return; }
+                                                        regSwipeRef.current.moved = true;
+                                                    }
+                                                    if (regSwipeRef.current.moved) e.preventDefault();
+                                                }}
+                                                onTouchEnd={e => {
+                                                    if (!regSwipeRef.current.moved) return;
+                                                    const dx = e.changedTouches[0].clientX - regSwipeRef.current.startX;
+                                                    if (swipedRegId === mov._id) {
+                                                        if (dx < -30) setSwipedRegId(null);
+                                                    } else {
+                                                        if (dx > 55) setSwipedRegId(mov._id);
+                                                    }
+                                                }}
+                                                onClick={() => {
+                                                    if (swipedRegId === mov._id) { setSwipedRegId(null); return; }
+                                                    setRegistroDetailMov(mov);
+                                                }}
+                                            >
+                                                <div className="reg-narrativa">
+                                                    <span className={`reg-badge reg-badge-${mov.tipo}`}>{mov.tipo === 'ingreso' ? '↓' : '↑'}</span>
+                                                    {generarNarrativa(mov, registroConfig)}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -3348,6 +3527,16 @@ const WorkspacePage = () => {
             )}
             {showRegistroConfig && (
                 <ModalRegistroConfig config={registroConfig} onSave={handleSaveRegistroConfig} onClose={() => setShowRegistroConfig(false)} />
+            )}
+            {bitDetailIdx !== null && (
+                <ModalBitacoraDetalle
+                    bitacora={bitacora}
+                    idx={bitDetailIdx}
+                    onClose={() => setBitDetailIdx(null)}
+                    onChange={setBitDetailIdx}
+                    onEditMov={m => { handleEdit(m); setBitDetailIdx(null); }}
+                    onDeletePair={handleDeleteBitPair}
+                />
             )}
 
             {/* Bottom nav — solo Inicio, Avance, Flujos */}

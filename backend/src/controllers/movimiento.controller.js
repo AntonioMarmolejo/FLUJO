@@ -11,6 +11,7 @@ const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula
 export const crearMovimiento = async (req, res) => {
     try {
         const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque } = req.body;
+        console.log('[crearMovimiento] guias recibidas:', JSON.stringify(guias), '| quienAutoriza:', quienAutoriza);
         if (!tipo || !placa || !puesto || !bloque) return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
 
         const movimiento = await Movimiento.create({
@@ -124,6 +125,7 @@ export const getMovimientosTodos = async (req, res) => {
 export const updateMovimiento = async (req, res) => {
     try {
         const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo } = req.body;
+        console.log('[updateMovimiento] guias recibidas:', JSON.stringify(guias), '| quienAutoriza:', quienAutoriza);
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
             { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' },
