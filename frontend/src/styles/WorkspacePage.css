@@ -546,6 +546,30 @@
     color: #444;
 }
 
+.modal-textarea {
+    width: 100%;
+    background: #1a1a2e;
+    border: 1px solid rgba(129, 140, 248, 0.2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #e5e5e5;
+    font-size: 13.5px;
+    font-family: inherit;
+    line-height: 1.6;
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 200ms, box-shadow 200ms;
+    box-sizing: border-box;
+}
+.modal-textarea:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+}
+.modal-textarea::placeholder {
+    color: #3d3d5a;
+}
+
 .modal-field select {
     background: #252525;
     border: 1px solid #2e2e2e;
@@ -1069,182 +1093,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
 }
-
-/* Columna guía + miniatura */
-.mov-doc-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-/* Guía tag en mov-card */
-.mov-guia-tag {
-    display: flex;
-    align-items: center;
-    font-size: 10px;
-    color: #818cf8;
-    background: rgba(129, 140, 248, 0.1);
-    border: 1px solid rgba(129, 140, 248, 0.25);
-    border-radius: 5px;
-    padding: 2px 6px;
-    white-space: nowrap;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Botón miniatura documento */
-.mov-doc-thumb-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    border-radius: 6px;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.mov-doc-thumb {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 6px;
-    display: block;
-}
-
-.mov-doc-thumb-pdf {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(129, 140, 248, 0.1);
-    border: 1px solid rgba(129, 140, 248, 0.25);
-    border-radius: 6px;
-    gap: 2px;
-    width: 50px;
-    height: 50px;
-}
-
-.mov-doc-thumb-pdf span {
-    font-size: 9px;
-    color: #818cf8;
-    font-weight: 700;
-}
-
-/* Modal visor de documento */
-.doc-viewer-card {
-    background: #1a1a1a;
-    border-radius: 16px;
-    padding: 16px;
-    width: min(94vw, 540px);
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.doc-viewer-img {
-    width: 100%;
-    max-height: 70vh;
-    object-fit: contain;
-    border-radius: 10px;
-}
-
-.doc-viewer-iframe {
-    width: 100%;
-    height: 70vh;
-    border: none;
-    border-radius: 10px;
-    background: #fff;
-}
-
-/* Preview doc en formulario */
-.doc-preview-form {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(129, 140, 248, 0.08);
-    border: 1px solid rgba(129, 140, 248, 0.2);
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-top: 4px;
-}
-
-.doc-thumb-form {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 6px;
-    flex-shrink: 0;
-}
-
-.doc-preview-name {
-    flex: 1;
-    font-size: 11px;
-    color: #aaa;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.doc-preview-remove {
-    background: none;
-    border: none;
-    color: #666;
-    cursor: pointer;
-    font-size: 13px;
-    padding: 2px 4px;
-    flex-shrink: 0;
-}
-
-.doc-preview-remove:hover { color: #f87171; }
-
-/* Sección doc en ModalDetalle */
-.detalle-doc-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 10px;
-    background: rgba(129, 140, 248, 0.06);
-    border: 1px solid rgba(129, 140, 248, 0.18);
-    border-radius: 10px;
-}
-
-.detalle-doc-thumb {
-    width: 100%;
-    max-height: 180px;
-    object-fit: contain;
-    border-radius: 8px;
-}
-
-.detalle-doc-pdf {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: #aaa;
-}
-
-.detalle-doc-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px;
-    background: rgba(129, 140, 248, 0.15);
-    border: 1px solid rgba(129, 140, 248, 0.3);
-    border-radius: 8px;
-    color: #818cf8;
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.detalle-doc-btn:hover { background: rgba(129, 140, 248, 0.25); }
 
 .detalle-act-btn {
     display: flex;
@@ -2075,149 +1923,6 @@
 }
 .reg-act-btn:hover { color: #aaa; border-color: #444; }
 .reg-act-btn.danger:hover { color: #f87171; border-color: #f87171; }
-
-/* ── UI multi-guías ──────────────────────────────────────── */
-.guias-block {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid #2a2a2a;
-    border-radius: 8px;
-}
-.guias-block-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.guias-block-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #666;
-    text-transform: uppercase;
-}
-.guias-add-btn {
-    font-size: 11px;
-    font-weight: 600;
-    color: #818cf8;
-    background: transparent;
-    border: 1px solid rgba(129,140,248,0.3);
-    border-radius: 5px;
-    padding: 3px 8px;
-    cursor: pointer;
-    transition: background 150ms;
-}
-.guias-add-btn:hover { background: rgba(129,140,248,0.08); }
-.guia-row {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 8px 10px;
-    background: rgba(0,0,0,0.25);
-    border: 1px solid #242424;
-    border-radius: 6px;
-}
-.guia-row-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.guia-row-num {
-    font-size: 10px;
-    font-weight: 700;
-    color: #818cf8;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-}
-.guia-remove-btn {
-    font-size: 11px;
-    color: #555;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: color 150ms;
-}
-.guia-remove-btn:hover { color: #f87171; }
-.guia-row-fields {
-    display: flex;
-    gap: 6px;
-}
-.guia-input {
-    background: #0d0d0d;
-    border: 1px solid #2a2a2a;
-    border-radius: 5px;
-    color: #e5e5e5;
-    font-size: 12px;
-    padding: 5px 8px;
-    outline: none;
-    transition: border-color 150ms;
-}
-.guia-input:focus { border-color: #818cf8; }
-.guia-input-num   { flex: 1; min-width: 0; }
-.guia-input-items { width: 60px; flex-shrink: 0; text-align: center; }
-.guia-input-empresa { width: 100%; }
-
-/* ── Guías en MovCard ────────────────────────────────────── */
-.mov-guia-tag-btn {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 7px;
-    border-radius: 5px;
-    background: rgba(129,140,248,0.1);
-    border: 1px solid rgba(129,140,248,0.25);
-    color: #818cf8;
-    transition: background 150ms;
-}
-.mov-guia-tag-btn.active {
-    background: rgba(129,140,248,0.2);
-    border-color: #818cf8;
-}
-.mov-guias-dropdown {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-top: 5px;
-    padding: 6px 8px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid #242424;
-    border-radius: 6px;
-    width: 100%;
-}
-.mov-guia-item {
-    font-size: 10.5px;
-    color: #bbb;
-    line-height: 1.4;
-    display: flex;
-    gap: 5px;
-    align-items: baseline;
-}
-.mov-guia-item-num {
-    color: #818cf8;
-    font-weight: 700;
-    font-size: 9px;
-    flex-shrink: 0;
-}
-/* ── Guías en Bitácora ───────────────────────────────────── */
-.bit-guia-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 9.5px;
-    font-weight: 700;
-    color: #818cf8;
-    background: rgba(129,140,248,0.08);
-    border: 1px solid rgba(129,140,248,0.2);
-    border-radius: 4px;
-    padding: 2px 6px;
-    white-space: nowrap;
-}
 
 /* ── Bitácora: contador + acciones ──────────────────────── */
 .bit-count {

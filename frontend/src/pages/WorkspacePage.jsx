@@ -120,42 +120,22 @@ const IconCalendar = () => (
 );
 
 // ── Helpers ───────────────────────────────────────────────
-const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', guia: '', guias: [], quienAutoriza: '', empresaAutoriza: '', documento: '', documentoNombre: '', documentoTipo: '' };
+const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
-    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}${m.guia ? '\nGuía: ' + m.guia : ''}${m.quienAutoriza ? '\nAutoriza: ' + m.quienAutoriza : ''}${m.empresaAutoriza ? '\nEmpresa autoriza: ' + m.empresaAutoriza : ''}\nHora: ${m.hora} — ${m.fecha}`;
+    `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
 const REGISTRO_CONFIG_KEY = 'ws_registro_config';
 const getRegistroConfig = () => {
     try { return JSON.parse(localStorage.getItem(REGISTRO_CONFIG_KEY) || '{}'); } catch { return {}; }
 };
 const generarNarrativa = (mov, cfg = {}) => {
-    const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza } = mov;
+    const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad } = mov;
     const ubiIngreso = cfg.ubicacion || 'EPF';
     const accion = tipo === 'ingreso' ? `Ingresa al ${ubiIngreso}` : `Sale al ${destino || 'destino'}`;
-    const dir = tipo === 'ingreso' ? 'trayendo' : 'llevando';
-    let descripcion;
-    const guiasValidas = (guias || []).filter(g => g.numero?.trim());
-    if (guiasValidas.length === 1) {
-        const g = guiasValidas[0];
-        const emp = g.empresa || empresaAutoriza || cfg.empresaAutoriza || 'EP Petroecuador';
-        descripcion = `${dir} materiales con guía N°: (${g.numero})${g.items ? ' de ' + g.items + ' item' : ''} de ${emp}${quienAutoriza ? ` autoriza ${quienAutoriza}` : ''}.`;
-    } else if (guiasValidas.length > 1) {
-        const partes = guiasValidas.map(g => {
-            const emp = g.empresa || cfg.empresaAutoriza || '';
-            return `n° ${g.numero}${g.items ? ' de ' + g.items + ' item' : ''}${emp ? ' de ' + emp : ''}`;
-        });
-        descripcion = `${dir} materiales con varias guías ${partes.join(', ')}${quienAutoriza ? `, autoriza ${quienAutoriza}` : ''}.`;
-    } else if (guia && guia.trim()) {
-        const emp = empresaAutoriza || cfg.empresaAutoriza || 'EP Petroecuador';
-        descripcion = `${dir} materiales con guía N°: (${guia}) de ${emp}${quienAutoriza ? ` autoriza ${quienAutoriza}` : ''}.`;
-    } else if (!actividad || /^vac[ií]o$/i.test(actividad.trim())) {
-        descripcion = 'vacía';
-    } else {
-        descripcion = actividad.trim();
-    }
+    const descripcion = (!actividad || /^vac[ií]o$/i.test(actividad.trim())) ? 'vacía' : actividad.trim();
     return `${hora} ${accion} el Sr. ${conductor || '—'} cc: ${cedula || '—'} de ${empresa || '—'} conduciendo la ${tipoVehiculo || 'vehículo'} de Placas ${placa} ${descripcion}`;
 };
 
@@ -214,7 +194,7 @@ const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onCl
             {multiline ? (
                 <textarea name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off"
-                    rows={3} style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 1.5 }} />
+                    rows={3} className="modal-textarea" />
             ) : (
                 <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
@@ -422,7 +402,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 // ── Modal formulario (crear + editar) ────────────────────
 const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
-        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', guia: editData.guia || '', guias: editData.guias || [], quienAutoriza: editData.quienAutoriza || '', empresaAutoriza: editData.empresaAutoriza || '', documento: editData.documento || '', documentoNombre: editData.documentoNombre || '', documentoTipo: editData.documentoTipo || '' }
+        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
         : EMPTY_FORM
     );
     const [loading, setLoading] = useState(false);
@@ -440,7 +420,6 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
-    const docInputRef = useRef(null);
     const [showScanner, setShowScanner] = useState(false);
     const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
@@ -585,25 +564,6 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setEmpresaSugs(val.length >= 1 ? recentUnique('empresa', val) : []);
     };
 
-    const handleDocFile = async e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        e.target.value = '';
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = async ev => {
-                const compressed = await compressImage(ev.target.result);
-                setForm(f => ({ ...f, documento: compressed, documentoNombre: file.name, documentoTipo: 'image/jpeg' }));
-            };
-            reader.readAsDataURL(file);
-        } else {
-            if (file.size > 5 * 1024 * 1024) { setError('El PDF no debe superar 5 MB'); return; }
-            const reader = new FileReader();
-            reader.onload = ev => setForm(f => ({ ...f, documento: ev.target.result, documentoNombre: file.name, documentoTipo: file.type }));
-            reader.readAsDataURL(file);
-        }
-    };
-
     const handleQRScanned = data => {
         const q = parseQR(data);
         const placa     = q.PLACA || q.PLA;
@@ -654,13 +614,11 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                 } catch { }
             }
             if (editData?._id) {
-                console.log('[handleSubmit edit] guias:', JSON.stringify(form.guias));
                 await api.put(`/movimientos/${editData._id}`, form);
                 onGuardado();
                 onClose();
             } else {
                 const payload = { ...form, puesto, bloque };
-                console.log('[handleSubmit nuevo] guias:', JSON.stringify(payload.guias));
                 await api.post('/movimientos', payload);
                 onGuardado();
                 setForm(EMPTY_FORM);
@@ -783,26 +741,17 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
                         suggestions={conductorSugs} onSelect={selectPersonaSug}
                         labelAction={!editData && (
-                            <div style={{ display: 'flex', gap: 4 }}>
-                                <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                        <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
-                                        <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
-                                        <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
-                                        <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
-                                    </svg>
-                                </button>
-                                <button className="qr-field-btn" title="Adjuntar documento (PDF o imagen)" onClick={() => docInputRef.current.click()}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                                        <path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                </button>
-                                <input ref={docInputRef} type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={handleDocFile} />
-                            </div>
+                            <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                </svg>
+                            </button>
                         )} />
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
@@ -817,56 +766,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
                         onClearSugs={() => setDestinoSugs([])}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
-                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="VACIO · con 2 pax a... · llevando materiales con varias guías..."
+                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="VACIO · con 2 pax a... · llevando materiales..."
                         value={form.actividad} onChange={handleActividadChange}
                         onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
                         onClearSugs={() => setActividadSugs([])}
                         suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}
                         multiline />
-                    <div className="guias-block">
-                        <div className="guias-block-header">
-                            <span className="guias-block-label">GUÍAS DE MATERIALES</span>
-                            <button type="button" className="guias-add-btn"
-                                onClick={() => setForm(f => ({ ...f, guias: [...(f.guias || []), { numero: '', items: '', empresa: '' }] }))}>
-                                + Agregar guía
-                            </button>
-                        </div>
-                        {(form.guias || []).map((g, i) => (
-                            <div key={i} className="guia-row">
-                                <div className="guia-row-head">
-                                    <span className="guia-row-num">Guía #{i + 1}</span>
-                                    <button type="button" className="guia-remove-btn"
-                                        onClick={() => setForm(f => ({ ...f, guias: f.guias.filter((_, idx) => idx !== i) }))}>✕</button>
-                                </div>
-                                <div className="guia-row-fields">
-                                    <input className="guia-input guia-input-num" placeholder="N° de guía" value={g.numero}
-                                        onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, numero: v } : x) })); }} />
-                                    <input className="guia-input guia-input-items" placeholder="Ítems" value={g.items}
-                                        onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, items: v } : x) })); }} />
-                                </div>
-                                <input className="guia-input guia-input-empresa" placeholder="Empresa (EP Petroecuador, Sertecpet...)" value={g.empresa}
-                                    onChange={e => { const v = e.target.value; setForm(f => ({ ...f, guias: f.guias.map((x, idx) => idx === i ? { ...x, empresa: v } : x) })); }} />
-                            </div>
-                        ))}
-                        {(form.guias || []).length > 0 && (
-                            <ModalField name="quienAutoriza" label="AUTORIZA (persona)" placeholder="Nombre de quien autoriza" value={form.quienAutoriza}
-                                onChange={e => setForm(f => ({ ...f, quienAutoriza: e.target.value }))} autoFilled={false} />
-                        )}
-                    </div>
-                    {form.documento && (
-                        <div className="doc-preview-form">
-                            {form.documentoTipo?.startsWith('image/') ? (
-                                <img src={form.documento} alt="doc" className="doc-thumb-form" />
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                </svg>
-                            )}
-                            <span className="doc-preview-name">{form.documentoNombre}</span>
-                            <button className="doc-preview-remove" onClick={() => setForm(f => ({ ...f, documento: '', documentoNombre: '', documentoTipo: '' }))}>✕</button>
-                        </div>
-                    )}
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {guardado && (
@@ -911,41 +816,6 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
                 <DetalleRow label="Cédula"           value={mov.cedula} />
                 <DetalleRow label="Destino"          value={mov.destino || '—'} />
                 <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} />
-                <DetalleRow label="N° Guía (legado)"  value={mov.guia} />
-                {mov.guias && mov.guias.filter(g => g.numero).length > 0 && (
-                    <div className="detalle-field">
-                        <span className="detalle-label">Guías de materiales</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {mov.guias.filter(g => g.numero).map((g, i) => (
-                                <span key={i} className="detalle-value" style={{ fontSize: 11 }}>
-                                    #{i+1} · {g.numero}{g.items ? ' · ' + g.items + ' items' : ''}{g.empresa ? ' · ' + g.empresa : ''}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                <DetalleRow label="Empresa autoriza" value={mov.empresaAutoriza} />
-                <DetalleRow label="Autoriza"         value={mov.quienAutoriza} />
-                {mov.documento && (
-                    <div className="detalle-doc-section">
-                        {mov.documentoTipo?.startsWith('image/') ? (
-                            <img src={mov.documento} alt="documento" className="detalle-doc-thumb" />
-                        ) : (
-                            <div className="detalle-doc-pdf">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                    <path d="M9 13h6M9 17h4" stroke="#818cf8" strokeWidth="2" strokeLinecap="round"/>
-                                </svg>
-                                <span>{mov.documentoNombre}</span>
-                            </div>
-                        )}
-                        <a href={mov.documento} download={mov.documentoNombre} className="detalle-doc-btn">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            Ver / Descargar
-                        </a>
-                    </div>
-                )}
             </div>
             <div className="detalle-actions">
                 <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
@@ -957,26 +827,6 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
     </div>
 );
 
-// ── Modal ver documento ───────────────────────────────────
-const ModalVerDocumento = ({ documento, documentoTipo, documentoNombre, onClose }) => (
-    <div className="modal-overlay" onClick={onClose}>
-        <div className="doc-viewer-card" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-                <span style={{ fontSize: 13, color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentoNombre}</span>
-                <button className="modal-close" onClick={onClose}>✕</button>
-            </div>
-            {documentoTipo?.startsWith('image/') ? (
-                <img src={documento} alt={documentoNombre} className="doc-viewer-img" />
-            ) : (
-                <iframe src={documento} title={documentoNombre} className="doc-viewer-iframe" />
-            )}
-            <a href={documento} download={documentoNombre} className="detalle-doc-btn" style={{ marginTop: 8 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Descargar
-            </a>
-        </div>
-    </div>
-);
 
 // ── Modal detalle Bitácora ────────────────────────────────
 const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onDeletePair }) => {
@@ -1006,7 +856,6 @@ const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onD
 
     const MovSection = ({ mov, label, color }) => {
         if (!mov) return null;
-        const guiasValidas = (mov.guias || []).filter(g => g.numero?.trim());
         return (
             <div className={`bit-det-section bit-det-${color}`}>
                 <div className="bit-det-section-header">
@@ -1020,20 +869,6 @@ const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onD
                 {mov.empresa && <div className="bit-det-row"><span className="bit-det-lbl">Empresa</span><span className="bit-det-val">{mov.empresa}</span></div>}
                 {mov.destino && <div className="bit-det-row"><span className="bit-det-lbl">Destino</span><span className="bit-det-val">{mov.destino}</span></div>}
                 {mov.actividad && <div className="bit-det-row"><span className="bit-det-lbl">Actividad</span><span className="bit-det-val">{mov.actividad}</span></div>}
-                {guiasValidas.length > 0 && (
-                    <div className="bit-det-row">
-                        <span className="bit-det-lbl">Guías</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {guiasValidas.map((g, i) => (
-                                <span key={i} className="bit-det-val" style={{ fontSize: 11 }}>
-                                    #{i + 1} · {g.numero}{g.items ? ' · ' + g.items + ' ítems' : ''}{g.empresa ? ' · ' + g.empresa : ''}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                {!guiasValidas.length && mov.guia && <div className="bit-det-row"><span className="bit-det-lbl">Guía</span><span className="bit-det-val">{mov.guia}</span></div>}
-                {mov.quienAutoriza && <div className="bit-det-row"><span className="bit-det-lbl">Autoriza</span><span className="bit-det-val">{mov.quienAutoriza}</span></div>}
             </div>
         );
     };
@@ -1106,93 +941,36 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 };
 
 // ── Tarjeta de movimiento ─────────────────────────────────
-const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => {
-    const [showDoc, setShowDoc] = useState(false);
-    const [showGuias, setShowGuias] = useState(false);
-    const guiasValidas = (m.guias || []).filter(g => g.numero?.trim());
-    const tieneGuias = guiasValidas.length > 0;
-    const tieneGuiaLegacy = !tieneGuias && m.guia;
-    return (
-        <>
-            {showDoc && (
-                <ModalVerDocumento
-                    documento={m.documento} documentoTipo={m.documentoTipo}
-                    documentoNombre={m.documentoNombre} onClose={() => setShowDoc(false)}
-                />
+const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
+    <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
+        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
+        {selectMode && (
+            <input type="checkbox" className="mov-check" checked={selected}
+                onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
+        )}
+        <div className={`mov-icon ${m.tipo}`}>
+            <span className="mov-count">{count}</span>
+            <span className="mov-hora-small">{m.hora}</span>
+        </div>
+        <div className="mov-info">
+            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+            {(m.empresa || m.destino) && (
+                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                </span>
             )}
-            <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
-                onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
-                {selectMode && (
-                    <input type="checkbox" className="mov-check" checked={selected}
-                        onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
-                )}
-                <div className={`mov-icon ${m.tipo}`}>
-                    <span className="mov-count">{count}</span>
-                    <span className="mov-hora-small">{m.hora}</span>
-                </div>
-                <div className="mov-info">
-                    <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-                    <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-                    {(m.empresa || m.destino) && (
-                        <span className="mov-detalle" style={{ fontSize: 11 }}>
-                            {[m.empresa, m.destino].filter(Boolean).join(' · ')}
-                        </span>
-                    )}
-                    {showGuias && tieneGuias && (
-                        <div className="mov-guias-dropdown">
-                            {guiasValidas.map((g, i) => (
-                                <span key={i} className="mov-guia-item">
-                                    <span className="mov-guia-item-num">#{i+1}</span>
-                                    {g.numero}{g.items ? ` · ${g.items} item` : ''}{g.empresa ? ` · ${g.empresa}` : ''}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                {!selectMode && (
-                    <>
-                        {(tieneGuias || tieneGuiaLegacy || m.documento) && (
-                            <div className="mov-doc-col" onClick={e => e.stopPropagation()}>
-                                {tieneGuias && (
-                                    <button className={`mov-guia-tag mov-guia-tag-btn${showGuias ? ' active' : ''}`}
-                                        onClick={() => setShowGuias(g => !g)}
-                                        title="Ver guías">
-                                        {guiasValidas.length} guía{guiasValidas.length > 1 ? 's' : ''}
-                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 3, transform: showGuias ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
-                                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                    </button>
-                                )}
-                                {tieneGuiaLegacy && <span className="mov-guia-tag">{m.guia}</span>}
-                                {m.documento && (
-                                    <button className="mov-doc-thumb-btn" title="Ver documento" onClick={() => setShowDoc(true)}>
-                                        {m.documentoTipo?.startsWith('image/') ? (
-                                            <img src={m.documento} alt="doc" className="mov-doc-thumb" />
-                                        ) : (
-                                            <div className="mov-doc-thumb mov-doc-thumb-pdf">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                                    <path d="M14 2v6h6" stroke="#818cf8" strokeWidth="2" strokeLinejoin="round"/>
-                                                </svg>
-                                                <span>PDF</span>
-                                            </div>
-                                        )}
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                            <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
-                            <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
-                            <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
-                            <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
-                        </div>
-                    </>
-                )}
+        </div>
+        {!selectMode && (
+            <div className="mov-actions" onClick={e => e.stopPropagation()}>
+                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
+                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
+                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
+                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
             </div>
-        </>
-    );
-};
+        )}
+    </div>
+);
 
 // ── Avance del día (timer + progreso del turno) ───────────
 const PantallaAvance = ({ turnoActivo, user }) => {
@@ -2901,16 +2679,7 @@ const WorkspacePage = () => {
 
     const handleShare = async m => {
         if (navigator.share) {
-            const shareData = { title: 'Movimiento FLUJO', text: movToText(m) };
-            if (m.documento && m.documentoNombre) {
-                try {
-                    const res = await fetch(m.documento);
-                    const blob = await res.blob();
-                    const file = new File([blob], m.documentoNombre, { type: m.documentoTipo || blob.type });
-                    if (navigator.canShare?.({ files: [file] })) shareData.files = [file];
-                } catch (_) { /* compartir sin archivo si falla */ }
-            }
-            await navigator.share(shareData).catch(() => { });
+            await navigator.share({ title: 'Movimiento FLUJO', text: movToText(m) }).catch(() => {});
         } else handleCopy(m);
     };
 
@@ -3190,19 +2959,6 @@ const WorkspacePage = () => {
                                                     {b.conductor}
                                                 </span>
                                                 {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
-                                                {(() => {
-                                                    const movs = [b.salida, b.ingreso].filter(Boolean);
-                                                    const total = movs.reduce((n, mv) => {
-                                                        const vg = (mv.guias || []).filter(g => g.numero?.trim()).length;
-                                                        return n + (vg > 0 ? vg : (mv.guia ? 1 : 0));
-                                                    }, 0);
-                                                    return total > 0 ? (
-                                                        <span className="bit-guia-badge">
-                                                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/></svg>
-                                                            {total} guía{total > 1 ? 's' : ''}
-                                                        </span>
-                                                    ) : null;
-                                                })()}
                                             </div>
                                         </div>
                                         );
