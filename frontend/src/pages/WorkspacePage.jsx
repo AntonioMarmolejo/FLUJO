@@ -123,6 +123,19 @@ const IconCalendar = () => (
 const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
 
+// ── Cola offline ──────────────────────────────────────────
+const OFFLINE_QUEUE_KEY = 'flujo_offline_queue';
+const getOfflineQueue = () => { try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch { return []; } };
+const saveOfflineQueue = q => localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
+const addToOfflineQueue = item => saveOfflineQueue([...getOfflineQueue(), item]);
+const removeFromOfflineQueue = tempId => saveOfflineQueue(getOfflineQueue().filter(i => i.tempId !== tempId));
+const getHoraLocal = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
+const getFechaLocal = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+const personaTagCount = text => (text.match(/\bCI:/gi) || []).length;
+
+// Palabras clave que disparan búsqueda de persona en campo actividad
+const ACTIVIDAD_TRIGGERS = ['llevando al sr', 'lleva al sr', 'lleva a la sr', 'lleva al', 'va con el sr', 'va con la sr', 'va con', 'con el sr', 'con la sr'];
+
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
@@ -400,7 +413,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
         : EMPTY_FORM
@@ -417,9 +430,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
     const [marcaSugs, setMarcaSugs] = useState([]);
     const [colorSugs, setColorSugs] = useState([]);
     const [empresaSugs, setEmpresaSugs] = useState([]);
+    const [actividadPersonaSugs, setActividadPersonaSugs] = useState([]);
+    const actividadRef = useRef(null);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
+    const actividadPersonaTimer = useRef(null);
     const [showScanner, setShowScanner] = useState(false);
     const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
@@ -539,11 +555,58 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
         setDestinoSugs(val.length >= 1 ? recentUnique('destino', val) : []);
     };
 
+    const detectActividadTrigger = (val, cursorPos) => {
+        const before = val.slice(0, cursorPos);
+        const lastComma = before.lastIndexOf(',');
+        const segStart = lastComma === -1 ? 0 : lastComma + 1;
+        const segment = before.slice(segStart);
+        const segLow = segment.toLowerCase().trimStart();
+        const trimOffset = segment.length - segment.trimStart().length;
+        for (const pat of ACTIVIDAD_TRIGGERS) {
+            const idx = segLow.lastIndexOf(pat);
+            if (idx !== -1) {
+                const afterStart = segStart + trimOffset + idx + pat.length;
+                const afterText = val.slice(afterStart, cursorPos);
+                if (/\bCI:/i.test(afterText)) continue;
+                return { searchTerm: afterText.trimStart(), prefixEnd: afterStart };
+            }
+        }
+        return null;
+    };
+
     const handleActividadChange = e => {
         const val = e.target.value;
+        const cursor = e.target.selectionStart;
         setForm(f => ({ ...f, actividad: val }));
         setError('');
         setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
+        const match = detectActividadTrigger(val, cursor);
+        if (match && match.searchTerm.length >= 2 && personaTagCount(val) < 10) {
+            clearTimeout(actividadPersonaTimer.current);
+            actividadPersonaTimer.current = setTimeout(async () => {
+                try {
+                    const { data } = await api.get(`/personas/search?q=${encodeURIComponent(match.searchTerm)}`);
+                    setActividadPersonaSugs(data.personas || []);
+                } catch { setActividadPersonaSugs([]); }
+            }, 250);
+        } else {
+            clearTimeout(actividadPersonaTimer.current);
+            setActividadPersonaSugs([]);
+        }
+    };
+
+    const selectActividadPersona = persona => {
+        if (personaTagCount(form.actividad) >= 10) return;
+        const textarea = actividadRef.current;
+        const cursorPos = textarea ? textarea.selectionStart : form.actividad.length;
+        const match = detectActividadTrigger(form.actividad, cursorPos);
+        if (!match) return;
+        const tag = `${persona.nombres}${persona.cedula ? ' CI: ' + persona.cedula : ''}`;
+        const newVal = form.actividad.slice(0, match.prefixEnd) + tag + ', ' + form.actividad.slice(cursorPos);
+        setForm(f => ({ ...f, actividad: newVal }));
+        setActividadPersonaSugs([]);
+        const newCursor = match.prefixEnd + tag.length + 2;
+        setTimeout(() => { if (textarea) { textarea.focus(); textarea.setSelectionRange(newCursor, newCursor); } }, 0);
     };
 
     const handleMarcaChange = e => {
@@ -606,38 +669,45 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
 
     const handleSubmit = async () => {
         if (!form.placa) { setError('La placa es obligatoria'); return; }
-        setLoading(true);
-        try {
-            if (personaNotFound && form.cedula) {
-                try {
-                    await api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' });
-                } catch { }
-            }
-            if (editData?._id) {
+
+        // Edición: espera respuesta del servidor (comportamiento original)
+        if (editData?._id) {
+            setLoading(true);
+            try {
                 await api.put(`/movimientos/${editData._id}`, form);
                 onGuardado();
                 onClose();
-            } else {
-                const payload = { ...form, puesto, bloque };
-                await api.post('/movimientos', payload);
-                onGuardado();
-                setForm(EMPTY_FORM);
-                setSuggestions([]);
-                setCedulaSugs([]);
-                setConductorSugs([]);
-                setDestinoSugs([]);
-                setActividadSugs([]);
-                setAutoFilled(false);
-                setPersonaNotFound(false);
-                setPlacaNotFound(false);
-                setError('');
-                setGuardado(true);
-                setTimeout(() => setGuardado(false), 2500);
+            } catch (err) {
+                setError(err.response?.data?.message || 'Error al guardar');
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Error al guardar');
-        } finally {
-            setLoading(false);
+            return;
+        }
+
+        // Nuevo movimiento: guardado optimista — aparece en UI de inmediato
+        const tempId = `tmp_${Date.now()}`;
+        const hora = getHoraLocal();
+        const fecha = getFechaLocal();
+        const tempMov = { ...form, _id: tempId, hora, fecha, _pending: true };
+
+        onGuardadoOptimista(tempMov);
+        setForm(EMPTY_FORM);
+        setSuggestions([]); setCedulaSugs([]); setConductorSugs([]);
+        setDestinoSugs([]); setActividadSugs([]); setActividadPersonaSugs([]);
+        setAutoFilled(false); setPersonaNotFound(false); setPlacaNotFound(false); setError('');
+        setGuardado(true);
+        setTimeout(() => setGuardado(false), 2500);
+
+        const payload = { ...form, puesto, bloque };
+        if (personaNotFound && form.cedula) {
+            api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
+        }
+        try {
+            const { data } = await api.post('/movimientos', payload);
+            onMovimientoConfirmado(tempId, data.movimiento);
+        } catch {
+            addToOfflineQueue({ tempId, payload, hora, fecha });
         }
     };
 
@@ -766,12 +836,48 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, movimientos, editDa
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
                         onClearSugs={() => setDestinoSugs([])}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
-                    <TextSugField name="actividad" label="ACTIVIDAD / OBSERVACIÓN" placeholder="VACIO · con 2 pax a... · llevando materiales..."
-                        value={form.actividad} onChange={handleActividadChange}
-                        onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
-                        onClearSugs={() => setActividadSugs([])}
-                        suggestions={actividadSugs} onSelect={s => { setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}
-                        multiline />
+                    <div className="modal-field">
+                        <label>ACTIVIDAD / OBSERVACIÓN</label>
+                        <div className="placa-wrapper">
+                            <textarea
+                                ref={actividadRef}
+                                name="actividad"
+                                placeholder="VACIO · con 2 pax a... · va con el Sr. Juan CI..."
+                                value={form.actividad}
+                                onChange={handleActividadChange}
+                                onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
+                                onBlur={() => setTimeout(() => { setActividadSugs([]); setActividadPersonaSugs([]); }, 200)}
+                                autoComplete="off"
+                                rows={3}
+                                className="modal-textarea"
+                            />
+                            {actividadPersonaSugs.length > 0 ? (
+                                <div className="placa-suggestions">
+                                    <div className="activ-persona-header">
+                                        PERSONAS · {personaTagCount(form.actividad)}/10
+                                    </div>
+                                    {actividadPersonaSugs.map((p, i) => (
+                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectActividadPersona(p); }}>
+                                            <div>
+                                                <div className="placa-suggestion-placa">{p.nombres}</div>
+                                                <div className="placa-suggestion-info">{[p.cedula, p.empresa].filter(Boolean).join(' · ')}</div>
+                                            </div>
+                                            <span className="placa-suggestion-badge db">BD</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : actividadSugs.length > 0 ? (
+                                <div className="placa-suggestions">
+                                    {actividadSugs.map((s, i) => (
+                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}>
+                                            <div className="placa-suggestion-placa">{s}</div>
+                                            <span className="placa-suggestion-badge hoy">Hoy</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {guardado && (
@@ -942,7 +1048,7 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
-    <div className={`mov-item ${selected ? 'mov-selected' : ''}`}
+    <div className={`mov-item ${selected ? 'mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`}
         onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
         {selectMode && (
             <input type="checkbox" className="mov-check" checked={selected}
@@ -961,7 +1067,8 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                 </span>
             )}
         </div>
-        {!selectMode && (
+        {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" />}
+        {!selectMode && !m._pending && (
             <div className="mov-actions" onClick={e => e.stopPropagation()}>
                 <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
                 <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
@@ -2611,18 +2718,51 @@ const WorkspacePage = () => {
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
-        const desde = turnoActivo.createdAt ? `&desde=${encodeURIComponent(turnoActivo.createdAt)}` : '';
         try {
             const [sRes, mRes] = await Promise.all([
-                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}${desde}`),
-                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}${desde}`),
+                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
+                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
             ]);
             setStats(sRes.data);
-            setMovimientos(mRes.data.movimientos);
+            const serverMovs = mRes.data.movimientos;
+            const serverIds = new Set(serverMovs.map(m => m._id));
+            // Fusionar movimientos pendientes offline que aún no llegaron al servidor
+            const pendingItems = getOfflineQueue()
+                .filter(item => !serverIds.has(item.tempId))
+                .map(item => ({ _id: item.tempId, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
+            setMovimientos([...serverMovs, ...pendingItems]);
         } catch { }
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
+
+    // Handlers para guardado optimista (nuevo movimiento aparece al instante)
+    const handleGuardadoOptimista = tempMov => {
+        setMovimientos(prev => [...prev, tempMov]);
+    };
+
+    const handleMovimientoConfirmado = (tempId, realMov) => {
+        setMovimientos(prev => prev.map(m => m._id === tempId ? realMov : m));
+    };
+
+    // Sincronización offline: reintenta la cola cuando vuelve la conexión
+    useEffect(() => {
+        if (!turnoActivo) return;
+        const syncQueue = async () => {
+            const queue = getOfflineQueue();
+            if (!queue.length) return;
+            for (const item of [...queue]) {
+                try {
+                    const { data } = await api.post('/movimientos', item.payload);
+                    removeFromOfflineQueue(item.tempId);
+                    setMovimientos(prev => prev.map(m => m._id === item.tempId ? data.movimiento : m));
+                } catch {}
+            }
+        };
+        if (navigator.onLine) syncQueue();
+        window.addEventListener('online', syncQueue);
+        return () => window.removeEventListener('online', syncQueue);
+    }, [turnoActivo]);
 
     useEffect(() => {
         if (location.state?.openDrawer) {
@@ -3267,7 +3407,11 @@ const WorkspacePage = () => {
             {/* Modales */}
             {showModal && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
-                    onClose={() => setShowModal(false)} onGuardado={cargarDatos} movimientos={movimientos} />
+                    onClose={() => setShowModal(false)}
+                    onGuardado={cargarDatos}
+                    onGuardadoOptimista={handleGuardadoOptimista}
+                    onMovimientoConfirmado={handleMovimientoConfirmado}
+                    movimientos={movimientos} />
             )}
             {editMov && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
