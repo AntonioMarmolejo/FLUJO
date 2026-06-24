@@ -123,10 +123,12 @@ export const getMovimientosTodos = async (req, res) => {
 // PUT /api/movimientos/:id
 export const updateMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, hora } = req.body;
+        const update = { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' };
+        if (hora) update.hora = hora;
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
-            { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' },
+            update,
             { new: true }
         );
         if (!mov) return res.status(404).json({ message: 'Movimiento no encontrado' });

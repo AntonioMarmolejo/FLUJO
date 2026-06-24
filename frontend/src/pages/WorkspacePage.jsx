@@ -964,6 +964,37 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
 );
 
 
+// ── Modal editar hora ─────────────────────────────────────
+const ModalEditHora = ({ mov, onClose, onSave }) => {
+    const [hora, setHora] = useState(mov.hora);
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" style={{ maxWidth: 300 }} onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Editar hora · {mov.placa}</span>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+                <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <input
+                        type="time"
+                        value={hora}
+                        onChange={e => setHora(e.target.value)}
+                        style={{
+                            width: '100%', padding: '12px', background: '#1e1e1e',
+                            border: '1px solid #2e2e2e', borderRadius: 10, color: '#fff',
+                            fontSize: 28, fontWeight: 700, textAlign: 'center',
+                            boxSizing: 'border-box',
+                        }}
+                    />
+                    <button className="modal-btn active" onClick={() => hora && onSave(mov._id, hora)}>
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Modal detalle Bitácora ────────────────────────────────
 const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onDeletePair }) => {
     const b = bitacora[idx];
@@ -1077,37 +1108,76 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 };
 
 // ── Tarjeta de movimiento ─────────────────────────────────
-const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare }) => (
-    <div className={`mov-item ${selected ? 'mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`}
-        onClick={() => selectMode ? onToggleSelect(m._id) : onOpenDetail(m)}>
-        {selectMode && (
-            <input type="checkbox" className="mov-check" checked={selected}
-                onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
-        )}
-        <div className={`mov-icon ${m.tipo}`}>
-            <span className="mov-count">{count}</span>
-            <span className="mov-hora-small">{m.hora}</span>
-        </div>
-        <div className="mov-info">
-            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-            {(m.empresa || m.destino) && (
-                <span className="mov-detalle" style={{ fontSize: 11 }}>
-                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
-                </span>
+const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora }) => {
+    const isSwiped = swipedMovId === m._id;
+    return (
+        <div className={`mov-item${selected ? ' mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`}>
+            {!selectMode && !m._pending && (
+                <div className="mov-actions" onClick={e => e.stopPropagation()}>
+                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => { onDelete(m._id); setSwipedMovId(null); }}><IconMinus /></button>
+                    <button className="mov-act-btn" title="Editar" onClick={() => { onEdit(m); setSwipedMovId(null); }}><IconPencil /></button>
+                    <button className="mov-act-btn" title="Copiar" onClick={() => { onCopy(m); setSwipedMovId(null); }}><IconCopy /></button>
+                    <button className="mov-act-btn" title="Compartir" onClick={() => { onShare(m); setSwipedMovId(null); }}><IconShare /></button>
+                </div>
             )}
-        </div>
-        {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" />}
-        {!selectMode && !m._pending && (
-            <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                <button className="mov-act-btn danger" title="Eliminar" onClick={() => onDelete(m._id)}><IconMinus /></button>
-                <button className="mov-act-btn" title="Editar" onClick={() => onEdit(m)}><IconPencil /></button>
-                <button className="mov-act-btn" title="Copiar" onClick={() => onCopy(m)}><IconCopy /></button>
-                <button className="mov-act-btn" title="Compartir" onClick={() => onShare(m)}><IconShare /></button>
+            <div
+                className={`mov-item-inner${isSwiped ? ' mov-item-swiped' : ''}`}
+                onTouchStart={e => {
+                    movSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false };
+                }}
+                onTouchMove={e => {
+                    const dx = e.touches[0].clientX - movSwipeRef.current.startX;
+                    const dy = e.touches[0].clientY - movSwipeRef.current.startY;
+                    if (!movSwipeRef.current.moved && !movSwipeRef.current.vertScroll) {
+                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                        if (Math.abs(dy) > Math.abs(dx)) { movSwipeRef.current.vertScroll = true; return; }
+                        movSwipeRef.current.moved = true;
+                    }
+                    if (movSwipeRef.current.moved) e.preventDefault();
+                }}
+                onTouchEnd={e => {
+                    if (!movSwipeRef.current.moved) return;
+                    const dx = e.changedTouches[0].clientX - movSwipeRef.current.startX;
+                    if (isSwiped) {
+                        if (dx < -30) setSwipedMovId(null);
+                    } else {
+                        if (dx > 55) setSwipedMovId(m._id);
+                    }
+                }}
+                onClick={() => {
+                    if (isSwiped) { setSwipedMovId(null); return; }
+                    selectMode ? onToggleSelect(m._id) : onOpenDetail(m);
+                }}
+            >
+                {selectMode && (
+                    <input type="checkbox" className="mov-check" checked={selected}
+                        onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
+                )}
+                <div className={`mov-icon ${m.tipo}`}>
+                    <span className="mov-count">{count}</span>
+                    <span className="mov-hora-small">{m.hora}</span>
+                    {!selectMode && !m._pending && (
+                        <button className="mov-hora-edit-btn" title="Editar hora"
+                            onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>✎</button>
+                    )}
+                </div>
+                <div className="mov-info">
+                    <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                    <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                    {(m.empresa || m.destino) && (
+                        <span className="mov-detalle" style={{ fontSize: 11 }}>
+                            {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                        </span>
+                    )}
+                    {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
+                        <span className="mov-actividad">{m.actividad}</span>
+                    )}
+                </div>
+                {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" />}
             </div>
-        )}
-    </div>
-);
+        </div>
+    );
+};
 
 // ── Avance del día (timer + progreso del turno) ───────────
 const PantallaAvance = ({ turnoActivo, user }) => {
@@ -2675,6 +2745,9 @@ const WorkspacePage = () => {
     const regSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [movSort, setMovSort] = useState('desc');
     const [detailMovIdx, setDetailMovIdx] = useState(null);
+    const [swipedMovId, setSwipedMovId] = useState(null);
+    const movSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
+    const [editHoraMov, setEditHoraMov] = useState(null);
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -2831,7 +2904,7 @@ const WorkspacePage = () => {
         setSearchQuery('');
     };
 
-    const toggleSelectMode = () => { setSelectMode(s => !s); setSelectedIds(new Set()); };
+    const toggleSelectMode = () => { setSelectMode(s => !s); setSelectedIds(new Set()); setSwipedMovId(null); };
 
     const toggleSelect = id => setSelectedIds(prev => {
         const next = new Set(prev);
@@ -2876,6 +2949,13 @@ const WorkspacePage = () => {
     };
 
     const handleEdit = m => setEditMov(m);
+
+    const handleEditHora = async (id, newHora) => {
+        setMovimientos(prev => prev.map(m => m._id === id ? { ...m, hora: newHora } : m));
+        setEditHoraMov(null);
+        try { await api.put(`/movimientos/${id}`, { hora: newHora }); }
+        catch { cargarDatos(); }
+    };
 
     const exportData = format => {
         setShowExportMenu(false);
@@ -2974,7 +3054,7 @@ const WorkspacePage = () => {
         setDetailMovIdx(idx);
     };
 
-    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
+    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)) };
 
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
@@ -3376,7 +3456,7 @@ const WorkspacePage = () => {
                                                 ? <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
                                                 : sortedMovs.map(m => (
                                                     <MovCard key={m._id} m={m}
-                                                        count={placaCounts[m.placa] || 1}
+                                                        count={bitPlacaCounts[m.placa] || 1}
                                                         selected={selectedIds.has(m._id)}
                                                         {...cardProps} />
                                                 ))
@@ -3493,6 +3573,13 @@ const WorkspacePage = () => {
                     onPrev={() => { const ni = detailMovIdx - 1; setDetailMovIdx(ni); setDetailMov(sortedMovs[ni]); }}
                     onNext={() => { const ni = detailMovIdx + 1; setDetailMovIdx(ni); setDetailMov(sortedMovs[ni]); }}
                     counter={detailMovIdx !== null ? `${detailMovIdx + 1} / ${sortedMovs.length}` : null}
+                />
+            )}
+            {editHoraMov && (
+                <ModalEditHora
+                    mov={editHoraMov}
+                    onClose={() => setEditHoraMov(null)}
+                    onSave={handleEditHora}
                 />
             )}
             {registroDetailMov && (

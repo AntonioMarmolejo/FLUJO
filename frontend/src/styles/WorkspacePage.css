@@ -183,12 +183,30 @@
 
 /* Movimientos */
 .mov-item {
+    background: #1e1e1e;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.mov-item-inner {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 14px;
+    position: relative;
+    z-index: 1;
     background: #1e1e1e;
     border-radius: 12px;
-    padding: 14px;
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+    cursor: pointer;
+}
+.mov-item-inner:active { background: #242424; }
+.mov-item-inner.mov-item-swiped {
+    transform: translateX(152px);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .mov-icon {
@@ -941,36 +959,70 @@
 }
 
 /* ── Botones de acción en tarjeta ── */
-.mov-item { cursor: pointer; transition: background 0.15s; }
-.mov-item:active { background: #242424; }
 .mov-item.mov-selected {
-    background: rgba(129,140,248,0.08);
     border: 1px solid rgba(129,140,248,0.25);
+}
+.mov-item.mov-selected .mov-item-inner {
+    background: rgba(129,140,248,0.08);
 }
 
 .mov-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3px;
-    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 152px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 0 10px;
+    z-index: 0;
 }
 
 .mov-act-btn {
-    width: 23px;
-    height: 23px;
-    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
     background: transparent;
-    border: none;
+    border: 1px solid #282828;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #555;
+    color: #666;
     transition: all 0.15s;
     padding: 0;
+    flex-shrink: 0;
 }
-.mov-act-btn:hover { color: #ccc; background: #2e2e2e; }
-.mov-act-btn.danger:hover { color: #f87171; background: rgba(248,113,113,0.12); }
+.mov-act-btn:hover { color: #ccc; border-color: #444; }
+.mov-act-btn.danger:hover { color: #f87171; border-color: #f87171; }
+
+/* Actividad / Observación en tarjeta */
+.mov-actividad {
+    font-size: 11px;
+    color: #5a6472;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    font-style: italic;
+}
+
+/* Botón editar hora dentro del ícono */
+.mov-hora-edit-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-top: 1px;
+    cursor: pointer;
+    color: #3a3a3a;
+    font-size: 9px;
+    line-height: 1;
+    transition: color 0.15s;
+    display: block;
+}
+.mov-hora-edit-btn:hover { color: #888; }
 
 /* Movimiento pendiente offline */
 .mov-item.mov-pending {
