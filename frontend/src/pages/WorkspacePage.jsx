@@ -431,6 +431,8 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
     const [colorSugs, setColorSugs] = useState([]);
     const [empresaSugs, setEmpresaSugs] = useState([]);
     const [actividadPersonaSugs, setActividadPersonaSugs] = useState([]);
+    const [tipoSugs, setTipoSugs] = useState([]);
+    const [actividadPersonaNotFound, setActividadPersonaNotFound] = useState(false);
     const actividadRef = useRef(null);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
@@ -555,43 +557,38 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
         setDestinoSugs(val.length >= 1 ? recentUnique('destino', val) : []);
     };
 
-    const detectActividadTrigger = (val, cursorPos) => {
-        const before = val.slice(0, cursorPos);
-        const lastComma = before.lastIndexOf(',');
-        const segStart = lastComma === -1 ? 0 : lastComma + 1;
-        const segment = before.slice(segStart);
-        const segLow = segment.toLowerCase().trimStart();
-        const trimOffset = segment.length - segment.trimStart().length;
-        for (const pat of ACTIVIDAD_TRIGGERS) {
-            const idx = segLow.lastIndexOf(pat);
-            if (idx !== -1) {
-                const afterStart = segStart + trimOffset + idx + pat.length;
-                const afterText = val.slice(afterStart, cursorPos);
-                if (/\bCI:/i.test(afterText)) continue;
-                return { searchTerm: afterText.trimStart(), prefixEnd: afterStart };
-            }
-        }
-        return null;
-    };
-
     const handleActividadChange = e => {
         const val = e.target.value;
         const cursor = e.target.selectionStart;
         setForm(f => ({ ...f, actividad: val }));
         setError('');
-        setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
-        const match = detectActividadTrigger(val, cursor);
-        if (match && match.searchTerm.length >= 2 && personaTagCount(val) < 10) {
-            clearTimeout(actividadPersonaTimer.current);
+        setActividadPersonaNotFound(false);
+
+        // Segmento actual: texto después de la última coma hasta el cursor
+        const before = val.slice(0, cursor);
+        const lastComma = before.lastIndexOf(',');
+        const rawSegStart = lastComma === -1 ? 0 : lastComma + 1;
+        const segment = before.slice(rawSegStart).trimStart();
+
+        clearTimeout(actividadPersonaTimer.current);
+
+        if (segment.length < 2) {
+            setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
+            setActividadPersonaSugs([]);
+            return;
+        }
+
+        // Con 2+ caracteres buscamos personas en BD
+        setActividadSugs([]);
+        if (personaTagCount(val) < 10) {
             actividadPersonaTimer.current = setTimeout(async () => {
                 try {
-                    const { data } = await api.get(`/personas/search?q=${encodeURIComponent(match.searchTerm)}`);
-                    setActividadPersonaSugs(data.personas || []);
+                    const { data } = await api.get(`/personas/search?q=${encodeURIComponent(segment)}`);
+                    const results = data.personas || [];
+                    setActividadPersonaSugs(results);
+                    setActividadPersonaNotFound(results.length === 0 && segment.length >= 3);
                 } catch { setActividadPersonaSugs([]); }
-            }, 250);
-        } else {
-            clearTimeout(actividadPersonaTimer.current);
-            setActividadPersonaSugs([]);
+            }, 300);
         }
     };
 
@@ -599,14 +596,25 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
         if (personaTagCount(form.actividad) >= 10) return;
         const textarea = actividadRef.current;
         const cursorPos = textarea ? textarea.selectionStart : form.actividad.length;
-        const match = detectActividadTrigger(form.actividad, cursorPos);
-        if (!match) return;
+        const before = form.actividad.slice(0, cursorPos);
+        const lastComma = before.lastIndexOf(',');
+        const rawSegStart = lastComma === -1 ? 0 : lastComma + 1;
+        const rawSeg = form.actividad.slice(rawSegStart, cursorPos);
+        const trimOffset = rawSeg.length - rawSeg.trimStart().length;
+        const segStart = rawSegStart + trimOffset;
         const tag = `${persona.nombres}${persona.cedula ? ' CI: ' + persona.cedula : ''}`;
-        const newVal = form.actividad.slice(0, match.prefixEnd) + tag + ', ' + form.actividad.slice(cursorPos);
+        const newVal = form.actividad.slice(0, segStart) + tag + ', ' + form.actividad.slice(cursorPos);
         setForm(f => ({ ...f, actividad: newVal }));
         setActividadPersonaSugs([]);
-        const newCursor = match.prefixEnd + tag.length + 2;
+        setActividadPersonaNotFound(false);
+        const newCursor = segStart + tag.length + 2;
         setTimeout(() => { if (textarea) { textarea.focus(); textarea.setSelectionRange(newCursor, newCursor); } }, 0);
+    };
+
+    const handleTipoVehChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, tipoVehiculo: val }));
+        setTipoSugs(TIPO_VEHICULO_OPTS.filter(o => !val || o.toLowerCase().includes(val.toLowerCase())));
     };
 
     const handleMarcaChange = e => {
@@ -695,6 +703,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
         setForm(EMPTY_FORM);
         setSuggestions([]); setCedulaSugs([]); setConductorSugs([]);
         setDestinoSugs([]); setActividadSugs([]); setActividadPersonaSugs([]);
+        setTipoSugs([]); setActividadPersonaNotFound(false);
         setAutoFilled(false); setPersonaNotFound(false); setPlacaNotFound(false); setError('');
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
@@ -800,7 +809,12 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
                             suggestions={colorSugs} onSelect={s => { setForm(f => ({ ...f, color: s })); setColorSugs([]); }} />
                     </div>
                     <div className="modal-fields-row">
-                        <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV, Sedán..." value={form.tipoVehiculo} {...fp} />
+                        <TextSugField name="tipoVehiculo" label="TIPO" placeholder="SUV, Sedán..."
+                            value={form.tipoVehiculo} onChange={handleTipoVehChange}
+                            onFocus={() => setTipoSugs(TIPO_VEHICULO_OPTS.filter(o => !form.tipoVehiculo || o.toLowerCase().includes(form.tipoVehiculo.toLowerCase())))}
+                            onClearSugs={() => setTipoSugs([])}
+                            suggestions={tipoSugs}
+                            onSelect={s => { setForm(f => ({ ...f, tipoVehiculo: s })); setTipoSugs([]); }} />
                         <TextSugField name="empresa" label="EMPRESA" placeholder="Empresa S.A."
                             value={form.empresa} onChange={handleEmpresaChange}
                             onFocus={() => setEmpresaSugs(recentUnique('empresa', form.empresa))}
@@ -846,7 +860,11 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
                                 value={form.actividad}
                                 onChange={handleActividadChange}
                                 onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
-                                onBlur={() => setTimeout(() => { setActividadSugs([]); setActividadPersonaSugs([]); }, 200)}
+                                onBlur={() => setTimeout(() => {
+                                    setActividadSugs([]);
+                                    setActividadPersonaSugs([]);
+                                    setActividadPersonaNotFound(false);
+                                }, 200)}
                                 autoComplete="off"
                                 rows={3}
                                 className="modal-textarea"
@@ -877,6 +895,11 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
                                 </div>
                             ) : null}
                         </div>
+                        {actividadPersonaNotFound && (
+                            <div className="quick-info-banner actividad-not-found">
+                                Persona no encontrada en la BD — escríbela manualmente
+                            </div>
+                        )}
                     </div>
                 </div>
                 {error && <p className="modal-error">{error}</p>}
@@ -902,9 +925,9 @@ const DetalleRow = ({ label, value }) =>
         </div>
     ) : null;
 
-const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
+const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev, hasNext, onPrev, onNext, counter }) => (
     <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <div className="modal-card modal-card-detalle" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
                 <span className={`detalle-badge ${mov.tipo}`}>{mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                 <button className="modal-close" onClick={onClose}>✕</button>
@@ -913,7 +936,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
                 <div className="detalle-placa">{mov.placa}</div>
                 <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
             </div>
-            <div className="detalle-fields detalle-scroll">
+            <div className="detalle-fields">
                 <DetalleRow label="Marca"            value={mov.marca} />
                 <DetalleRow label="Color"            value={mov.color} />
                 <DetalleRow label="Tipo vehículo"    value={mov.tipoVehiculo} />
@@ -929,6 +952,13 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare }) => (
                 <button className="detalle-act-btn" onClick={() => onShare(mov)}><IconShare /> Compartir</button>
                 <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /> Eliminar</button>
             </div>
+            {(hasPrev || hasNext) && (
+                <div className="detalle-nav">
+                    <button className="detalle-nav-btn" onClick={onPrev} disabled={!hasPrev}>← Ant.</button>
+                    {counter && <span className="detalle-nav-counter">{counter}</span>}
+                    <button className="detalle-nav-btn" onClick={onNext} disabled={!hasNext}>Sig. →</button>
+                </div>
+            )}
         </div>
     </div>
 );
@@ -1202,10 +1232,18 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
     );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [tipoSugs, setTipoSugs] = useState([]);
 
     const handleChange = e => {
         const { name, value } = e.target;
         setForm(f => ({ ...f, [name]: name === 'placa' ? value.toUpperCase() : value }));
+        setError('');
+    };
+
+    const handleTipoChange = e => {
+        const val = e.target.value;
+        setForm(f => ({ ...f, tipoVehiculo: val }));
+        setTipoSugs(TIPO_VEHICULO_OPTS.filter(o => !val || o.toLowerCase().includes(val.toLowerCase())));
         setError('');
     };
 
@@ -1243,7 +1281,12 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
                         <ModalField name="color" label="COLOR" placeholder="Blanco" value={form.color} {...fp} />
                     </div>
                     <div className="modal-fields-row">
-                        <ModalCombo name="tipoVehiculo" label="TIPO" options={TIPO_VEHICULO_OPTS} placeholder="SUV..." value={form.tipoVehiculo} {...fp} />
+                        <TextSugField name="tipoVehiculo" label="TIPO" placeholder="SUV, Sedán..."
+                            value={form.tipoVehiculo} onChange={handleTipoChange}
+                            onFocus={() => setTipoSugs(TIPO_VEHICULO_OPTS.filter(o => !form.tipoVehiculo || o.toLowerCase().includes(form.tipoVehiculo.toLowerCase())))}
+                            onClearSugs={() => setTipoSugs([])}
+                            suggestions={tipoSugs}
+                            onSelect={s => { setForm(f => ({ ...f, tipoVehiculo: s })); setTipoSugs([]); }} />
                         <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
                     </div>
                     <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
@@ -2630,6 +2673,8 @@ const WorkspacePage = () => {
     const [bitDetailIdx, setBitDetailIdx] = useState(null);
     const [swipedRegId, setSwipedRegId] = useState(null);
     const regSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
+    const [movSort, setMovSort] = useState('desc');
+    const [detailMovIdx, setDetailMovIdx] = useState(null);
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -2637,6 +2682,13 @@ const WorkspacePage = () => {
             m.placa.toLowerCase().includes(sq) ||
             (m.conductor || '').toLowerCase().includes(sq))
         : movimientos;
+
+    const sortedMovs = useMemo(() => {
+        const arr = [...movsFiltrados];
+        return movSort === 'desc'
+            ? arr.sort((a, b) => (b.hora || '').localeCompare(a.hora || ''))
+            : arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+    }, [movsFiltrados, movSort]);
 
     const placaCounts = useMemo(() => {
         const counts = {};
@@ -2916,7 +2968,13 @@ const WorkspacePage = () => {
         }
     };
 
-    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: setDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
+    const openDetailMov = m => {
+        const idx = sortedMovs.findIndex(x => x._id === m._id);
+        setDetailMov(m);
+        setDetailMovIdx(idx);
+    };
+
+    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare };
 
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
@@ -3271,10 +3329,18 @@ const WorkspacePage = () => {
                                 </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     {!movCollapsed && movimientos.length > 0 && (
-                                        <span className="select-toggle-btn"
-                                            onClick={e => { e.stopPropagation(); toggleSelectMode(); }}>
-                                            {selectMode ? 'Cancelar' : 'Selec.'}
-                                        </span>
+                                        <>
+                                            <span
+                                                className="sort-toggle-btn"
+                                                title={movSort === 'desc' ? 'Más reciente primero' : 'Más antiguo primero'}
+                                                onClick={e => { e.stopPropagation(); setMovSort(s => s === 'desc' ? 'asc' : 'desc'); }}>
+                                                {movSort === 'desc' ? '↓ Rec.' : '↑ Ant.'}
+                                            </span>
+                                            <span className="select-toggle-btn"
+                                                onClick={e => { e.stopPropagation(); toggleSelectMode(); }}>
+                                                {selectMode ? 'Cancelar' : 'Selec.'}
+                                            </span>
+                                        </>
                                     )}
                                     <span className={`ws-chevron ${movCollapsed ? 'collapsed' : ''}`}>∧</span>
                                 </div>
@@ -3308,7 +3374,7 @@ const WorkspacePage = () => {
                                             ? <p className="ws-empty">Sin movimientos registrados hoy</p>
                                             : movsFiltrados.length === 0
                                                 ? <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
-                                                : [...movsFiltrados].reverse().map(m => (
+                                                : sortedMovs.map(m => (
                                                     <MovCard key={m._id} m={m}
                                                         count={placaCounts[m.placa] || 1}
                                                         selected={selectedIds.has(m._id)}
@@ -3418,8 +3484,16 @@ const WorkspacePage = () => {
                     onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (
-                <ModalDetalle mov={detailMov} onClose={() => setDetailMov(null)}
-                    onEdit={handleEdit} onDelete={handleDelete} onCopy={handleCopy} onShare={handleShare} />
+                <ModalDetalle
+                    mov={detailMov}
+                    onClose={() => { setDetailMov(null); setDetailMovIdx(null); }}
+                    onEdit={handleEdit} onDelete={handleDelete} onCopy={handleCopy} onShare={handleShare}
+                    hasPrev={detailMovIdx !== null && detailMovIdx > 0}
+                    hasNext={detailMovIdx !== null && detailMovIdx < sortedMovs.length - 1}
+                    onPrev={() => { const ni = detailMovIdx - 1; setDetailMovIdx(ni); setDetailMov(sortedMovs[ni]); }}
+                    onNext={() => { const ni = detailMovIdx + 1; setDetailMovIdx(ni); setDetailMov(sortedMovs[ni]); }}
+                    counter={detailMovIdx !== null ? `${detailMovIdx + 1} / ${sortedMovs.length}` : null}
+                />
             )}
             {registroDetailMov && (
                 <ModalDetalle mov={registroDetailMov} onClose={() => setRegistroDetailMov(null)}
