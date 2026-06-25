@@ -21,7 +21,7 @@ export const crearMovimiento = async (req, res) => {
             destino: destino || '', actividad: actividad || '',
             guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '',
             documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
-            hora: getHora(), fecha: getFecha(),
+            hora: getHora(), fecha: req.body.fecha || getFecha(),
         });
 
         await Vehiculo.findOneAndUpdate(
@@ -36,11 +36,11 @@ export const crearMovimiento = async (req, res) => {
     }
 };
 
-// GET /api/movimientos?puesto=X&bloque=Y[&desde=ISO_DATE]
+// GET /api/movimientos?puesto=X&bloque=Y[&desde=ISO_DATE][&fecha=YYYY-MM-DD]
 export const getMovimientos = async (req, res) => {
     try {
-        const { puesto, bloque, desde } = req.query;
-        const filter = { usuario: req.user._id, puesto, bloque, fecha: getFecha() };
+        const { puesto, bloque, desde, fecha } = req.query;
+        const filter = { usuario: req.user._id, puesto, bloque, fecha: fecha || getFecha() };
         if (desde) filter.createdAt = { $gte: new Date(desde) };
         const movimientos = await Movimiento.find(filter).sort({ createdAt: -1 });
         res.status(200).json({ movimientos });

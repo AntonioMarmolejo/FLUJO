@@ -131,6 +131,15 @@ const addToOfflineQueue = item => saveOfflineQueue([...getOfflineQueue(), item])
 const removeFromOfflineQueue = tempId => saveOfflineQueue(getOfflineQueue().filter(i => i.tempId !== tempId));
 const getHoraLocal = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
 const getFechaLocal = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+// Para turno nocturno (18:00-06:00) que cruza medianoche, usar fecha del día anterior entre 00:00-05:59
+const getTurnoFecha = (turnoActual) => {
+    const horaActual = parseInt(new Date().toLocaleTimeString('es-EC', { hour: '2-digit', hour12: false, timeZone: 'America/Guayaquil' }));
+    if (turnoActual === 'nocturno' && horaActual < 6) {
+        const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return ayer.toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+    }
+    return getFechaLocal();
+};
 const personaTagCount = text => (text.match(/\bCI:/gi) || []).length;
 
 // Palabras clave que disparan búsqueda de persona en campo actividad
@@ -413,7 +422,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
         : EMPTY_FORM
@@ -696,7 +705,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
         // Nuevo movimiento: guardado optimista — aparece en UI de inmediato
         const tempId = `tmp_${Date.now()}`;
         const hora = getHoraLocal();
-        const fecha = getFechaLocal();
+        const fecha = getTurnoFecha(turnoActual);
         const tempMov = { ...form, _id: tempId, hora, fecha, _pending: true };
 
         onGuardadoOptimista(tempMov);
@@ -708,7 +717,7 @@ const ModalAgregar = ({ puesto, bloque, onClose, onGuardado, onGuardadoOptimista
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
-        const payload = { ...form, puesto, bloque };
+        const payload = { ...form, puesto, bloque, fecha };
         if (personaNotFound && form.cedula) {
             api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
@@ -1766,13 +1775,73 @@ ${rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('\
 const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const [search, setSearch] = useState('');
     const [showExport, setShowExport] = useState(false);
+    const [vista, setVista] = useState('movimientos');
+    const [detailIdx, setDetailIdx] = useState(null);
+    const [bitDetailIdx, setBitDetailIdx] = useState(null);
+
+    const bitacora = useMemo(() => {
+        const sorted = [...movs].reverse();
+        const openSalidas = {};
+        const pairs = [];
+        for (const mov of sorted) {
+            if (mov.tipo === 'salida') {
+                if (!openSalidas[mov.placa]) openSalidas[mov.placa] = [];
+                openSalidas[mov.placa].push(mov);
+            } else if (mov.tipo === 'ingreso') {
+                if (openSalidas[mov.placa]?.length > 0) {
+                    const sal = openSalidas[mov.placa].shift();
+                    const condSal = (sal.conductor || '').trim();
+                    const condIng = (mov.conductor || '').trim();
+                    pairs.push({
+                        placa: mov.placa, salida: sal, ingreso: mov,
+                        horaS: sal.hora, horaI: mov.hora,
+                        conductor: condSal.toLowerCase() === condIng.toLowerCase()
+                            ? (condSal || '—')
+                            : `${condSal || '—'} / ${condIng || '—'}`,
+                        conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
+                        marca: sal.marca || mov.marca, empresa: sal.empresa || mov.empresa,
+                        tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
+                        destino: sal.destino || mov.destino, status: 'completo',
+                    });
+                } else {
+                    pairs.push({
+                        placa: mov.placa, salida: null, ingreso: mov,
+                        horaS: '—', horaI: mov.hora,
+                        conductor: mov.conductor || '—', conductorChanged: false,
+                        marca: mov.marca, empresa: mov.empresa,
+                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino, status: 'solo-ingreso',
+                    });
+                }
+            }
+        }
+        for (const sals of Object.values(openSalidas)) {
+            for (const s of sals) {
+                pairs.push({
+                    placa: s.placa, salida: s, ingreso: null,
+                    horaS: s.hora, horaI: '—',
+                    conductor: s.conductor || '—', conductorChanged: false,
+                    marca: s.marca, empresa: s.empresa,
+                    tipoVehiculo: s.tipoVehiculo, destino: s.destino, status: 'en-campo',
+                });
+            }
+        }
+        return pairs.sort((a, b) => {
+            const ta = a.horaS !== '—' ? a.horaS : a.horaI;
+            const tb = b.horaS !== '—' ? b.horaS : b.horaI;
+            return ta.localeCompare(tb);
+        });
+    }, [movs]);
+
+    const bitPlacaCounts = useMemo(() => {
+        const c = {};
+        bitacora.forEach(b => { c[b.placa] = (c[b.placa] || 0) + 1; });
+        return c;
+    }, [bitacora]);
 
     const handleShareFlujo = async () => {
         const fl = new Date(fecha + 'T12:00:00').toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         const text = `FLUJO — ${fl}\nTotal: ${movs.length} movimiento${movs.length !== 1 ? 's' : ''}\n\n` +
-            movs.map((m, i) =>
-                `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n   ${m.conductor || '—'} · ${m.empresa || '—'}\n   → ${m.destino || '—'}  ${m.hora}`
-            ).join('\n\n');
+            movs.map((m, i) => `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n   ${m.conductor || '—'} · ${m.empresa || '—'}\n   → ${m.destino || '—'}  ${m.hora}`).join('\n\n');
         if (navigator.share) { await navigator.share({ title: 'FLUJO — ' + fecha, text }).catch(() => {}); }
         else { navigator.clipboard?.writeText(text); }
     };
@@ -1781,6 +1850,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const filtrados = sq
         ? movs.filter(m => m.placa.toLowerCase().includes(sq) || (m.conductor || '').toLowerCase().includes(sq))
         : movs;
+    const movsOrdered = [...filtrados].reverse();
 
     const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
     const uniqueVehicles = Object.values(movs.reduce((acc, m) => {
@@ -1796,19 +1866,30 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
     const doExport = fmt => {
         setShowExport(false);
-        exportMovimientos(movs, fmt, `flujo_${fecha}`);
+        if (vista === 'bitacora' || fmt === 'bitacora') {
+            const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino', 'Estado'];
+            const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
+            const rows = bitacora.map((b, i) => [i + 1, b.placa, b.tipoVehiculo || '—', b.marca || '—', b.empresa || '—', b.horaS, b.horaI, b.conductor, b.destino || '—', estadoLabel[b.status] || b.status]);
+            const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+            ws['!cols'] = [{ wch: 4 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 13 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+            XLSX.writeFile(wb, `bitacora_${fecha}.xlsx`);
+        } else {
+            exportMovimientos(movs, fmt, `flujo_${fecha}`);
+        }
     };
+
+    const detailMov = detailIdx !== null ? movsOrdered[detailIdx] : null;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
             {/* Cabecera */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px 8px' }}>
-                <button className="ws-topbar-btn" style={{ flexShrink: 0 }} onClick={onBack}>
-                    <IconArrowLeft />
-                </button>
+                <button className="ws-topbar-btn" style={{ flexShrink: 0 }} onClick={onBack}><IconArrowLeft /></button>
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, color: '#aaa', textTransform: 'capitalize' }}>{fechaLarga}</div>
-                    <div style={{ fontSize: 11, color: '#555' }}>{movs.length} movimiento{movs.length !== 1 ? 's' : ''}</div>
+                    <div style={{ fontSize: 11, color: '#555' }}>{movs.length} mov. · {bitacora.length} en bitácora</div>
                 </div>
                 <button className="ws-topbar-btn" style={{ color: '#818cf8', marginRight: 4 }} onClick={handleShareFlujo} title="Compartir">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -1828,19 +1909,26 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
             {/* Menú exportar */}
             {showExport && (
                 <div style={{ margin: '0 16px 8px', background: '#1e1e1e', border: '1px solid #2e2e2e', borderRadius: 12, overflow: 'hidden' }}>
-                    <div className="export-menu-item" onClick={() => doExport('xls')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                        Excel (.xls)
-                    </div>
-                    <div className="export-menu-item" onClick={() => doExport('csv')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2" /><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" /></svg>
-                        CSV (.csv)
-                    </div>
+                    {vista === 'movimientos' ? (<>
+                        <div className="export-menu-item" onClick={() => doExport('xls')}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                            Excel (.xls)
+                        </div>
+                        <div className="export-menu-item" onClick={() => doExport('csv')}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2" /><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" /></svg>
+                            CSV (.csv)
+                        </div>
+                    </>) : (
+                        <div className="export-menu-item" onClick={() => doExport('bitacora')}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /></svg>
+                            Exportar Bitácora (.xlsx)
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Contadores */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 10px' }}>
                 <div className="ws-counter-card">
                     <span className="ws-counter-val">{contratistas}</span>
                     <span className="ws-counter-label">CONTRATISTAS</span>
@@ -1851,43 +1939,148 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                 </div>
             </div>
 
-            {/* Búsqueda */}
-            <div className="ws-search-bar" style={{ padding: '0 16px 12px', background: 'transparent' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
-                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
-                    value={search} onChange={e => setSearch(e.target.value)} />
-                {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+            {/* Tabs Movimientos / Bitácora */}
+            <div style={{ display: 'flex', gap: 8, padding: '0 16px 10px' }}>
+                <button className={`ws-vista-tab${vista === 'movimientos' ? ' active' : ''}`}
+                    onClick={() => setVista('movimientos')}>
+                    Movimientos
+                </button>
+                <button className={`ws-vista-tab${vista === 'bitacora' ? ' active' : ''}`}
+                    onClick={() => setVista('bitacora')}>
+                    Bitácora
+                </button>
             </div>
 
-            {/* Lista de movimientos (solo lectura) */}
-            <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filtrados.length === 0
-                    ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
-                    : (() => {
-                        const counts = {};
-                        filtrados.forEach(m => { counts[m.placa] = (counts[m.placa] || 0) + 1; });
-                        return [...filtrados].reverse().map(m => (
-                        <div key={m._id} className="mov-item" style={{ cursor: 'default' }}>
-                            <div className={`mov-icon ${m.tipo}`}>
-                                <span className="mov-count">{counts[m.placa] || 1}</span>
-                                <span className="mov-hora-small">{m.hora}</span>
-                            </div>
-                            <div className="mov-info">
-                                <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-                                <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-                                {(m.empresa || m.destino) && (
-                                    <span className="mov-detalle" style={{ fontSize: 11 }}>
-                                        {[m.empresa, m.destino].filter(Boolean).join(' · ')}
-                                    </span>
-                                )}
-                            </div>
+            {/* Búsqueda (solo movimientos) */}
+            {vista === 'movimientos' && (
+                <div className="ws-search-bar" style={{ padding: '0 16px 12px', background: 'transparent' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
+                        value={search} onChange={e => setSearch(e.target.value)} />
+                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                </div>
+            )}
+
+            {/* Lista de movimientos */}
+            {vista === 'movimientos' && (
+                <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {movsOrdered.length === 0
+                        ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
+                        : (() => {
+                            const counts = {};
+                            filtrados.forEach(m => { counts[m.placa] = (counts[m.placa] || 0) + 1; });
+                            return movsOrdered.map((m, idx) => (
+                                <div key={m._id} className="mov-item" onClick={() => setDetailIdx(idx)} style={{ cursor: 'pointer' }}>
+                                    <div className="mov-item-inner">
+                                        <div className={`mov-icon ${m.tipo}`}>
+                                            <span className="mov-count">{counts[m.placa] || 1}</span>
+                                            <span className="mov-hora-small">{m.hora}</span>
+                                        </div>
+                                        <div className="mov-info">
+                                            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                                            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                                            {(m.empresa || m.destino) && (
+                                                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                                                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                                                </span>
+                                            )}
+                                            {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
+                                                <span className="mov-actividad">{m.actividad}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ));
+                        })()}
+                </div>
+            )}
+
+            {/* Bitácora */}
+            {vista === 'bitacora' && (
+                <div className="ws-bitacora">
+                    <div className="bit-toolbar">
+                        <span className="bit-toolbar-count">{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {bitacora.length === 0 ? (
+                        <p className="ws-empty">Sin movimientos para consolidar</p>
+                    ) : (
+                        <div className="bit-list">
+                            {bitacora.map((b, i) => {
+                                const bText = [`Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`, `Conductor: ${b.conductor}`, b.empresa && `Empresa: ${b.empresa}`, b.destino && `Destino: ${b.destino}`, `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`].filter(Boolean).join('\n');
+                                return (
+                                    <div key={i} className={`bit-row bit-${b.status}`} onClick={() => setBitDetailIdx(i)} style={{ cursor: 'pointer' }}>
+                                        <div className="bit-row-top">
+                                            <span className="bit-count">{bitPlacaCounts[b.placa] || 1}</span>
+                                            <span className="bit-placa">{b.placa}</span>
+                                            {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
+                                            <span className={`bit-badge bit-badge-${b.status}`}>
+                                                {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
+                                            </span>
+                                            <div className="bit-row-actions" onClick={e => e.stopPropagation()}>
+                                                <button className="bit-act-btn" title="Copiar" onClick={() => navigator.clipboard?.writeText(bText)}><IconCopy /></button>
+                                                <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); }}><IconShare /></button>
+                                            </div>
+                                        </div>
+                                        <div className="bit-row-times">
+                                            <div className="bit-time bit-time-s">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                <span className="bit-time-label">Salida</span>
+                                                <span className="bit-time-val">{b.horaS}</span>
+                                            </div>
+                                            <div className="bit-time-arrow">→</div>
+                                            <div className="bit-time bit-time-i">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                <span className="bit-time-label">Ingreso</span>
+                                                <span className="bit-time-val">{b.horaI}</span>
+                                            </div>
+                                        </div>
+                                        <div className="bit-row-bottom">
+                                            <span className={`bit-conductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                {b.conductorChanged && (
+                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                )}
+                                                {b.conductor}
+                                            </span>
+                                            {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                        ));
-                    })()}
-            </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal detalle movimiento (solo lectura) */}
+            {detailMov && (
+                <ModalDetalle
+                    mov={detailMov}
+                    onClose={() => setDetailIdx(null)}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    onCopy={m => navigator.clipboard?.writeText(movToText(m))}
+                    onShare={m => { if (navigator.share) navigator.share({ title: m.placa, text: movToText(m) }).catch(() => {}); else navigator.clipboard?.writeText(movToText(m)); }}
+                    hasPrev={detailIdx > 0}
+                    hasNext={detailIdx < movsOrdered.length - 1}
+                    onPrev={() => setDetailIdx(i => i - 1)}
+                    onNext={() => setDetailIdx(i => i + 1)}
+                    counter={`${detailIdx + 1} / ${movsOrdered.length}`}
+                />
+            )}
+            {/* Modal detalle bitácora (solo lectura) */}
+            {bitDetailIdx !== null && (
+                <ModalBitacoraDetalle
+                    bitacora={bitacora}
+                    idx={bitDetailIdx}
+                    onClose={() => setBitDetailIdx(null)}
+                    onChange={setBitDetailIdx}
+                    onEditMov={() => {}}
+                    onDeletePair={() => {}}
+                />
+            )}
         </div>
     );
 };
@@ -2844,9 +3037,10 @@ const WorkspacePage = () => {
     const cargarDatos = async () => {
         if (!turnoActivo) return;
         try {
+            const turnoFecha = getTurnoFecha(turnoActivo.turnoActual);
             const [sRes, mRes] = await Promise.all([
-                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
-                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`),
+                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`),
+                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`),
             ]);
             setStats(sRes.data);
             const serverMovs = mRes.data.movimientos;
@@ -3552,7 +3746,7 @@ const WorkspacePage = () => {
 
             {/* Modales */}
             {showModal && turnoActivo && (
-                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
                     onGuardadoOptimista={handleGuardadoOptimista}
@@ -3560,7 +3754,7 @@ const WorkspacePage = () => {
                     movimientos={movimientos} />
             )}
             {editMov && turnoActivo && (
-                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque}
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (

@@ -153,6 +153,15 @@ const fromApi = (w) => {
     };
 };
 
+// Clasifica workers: remaining <= 3 → próximos a salir (soon)
+const classifyWorkers = (workers) => {
+    const mapped = workers.map(fromApi);
+    return {
+        active: mapped.filter(w => w.remaining > 3),
+        soon:   mapped.filter(w => w.remaining <= 3),
+    };
+};
+
 // ── Subcomponentes ──────────────────────────────────────
 function CyclePill({ cycle, onClick }) {
     const PILL_LABELS = { '14-7': '14·7', '14-14': '14·14', '15-15': '15·15', '20-10': '20·10', '30': '30 d' };
@@ -243,7 +252,7 @@ function ProgressBar({ value, total, color }) {
     );
 }
 
-function WorkerCard({ worker, soon, onDetail, onCycleClick }) {
+function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap }) {
     const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
     const [hover, setHover] = useState(false);
 
@@ -327,7 +336,23 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick }) {
                         </div>
                     </div>
                 </div>
-                <CyclePill cycle={worker.cycle} onClick={(e) => { onCycleClick && onCycleClick(worker); }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                        title="Rotar / Cambio de turno"
+                        onClick={e => { e.stopPropagation(); onSwap && onSwap(worker); }}
+                        style={{
+                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                            background: soon ? COLORS.yellowDim : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${soon ? 'rgba(239,159,39,0.4)' : COLORS.border}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: soon ? COLORS.yellow : COLORS.textMute,
+                            transition: 'background 140ms ease, color 140ms ease',
+                        }}
+                    >
+                        {Icon.swap(12, soon ? COLORS.yellow : COLORS.textMute)}
+                    </button>
+                    <CyclePill cycle={worker.cycle} onClick={() => { onCycleClick && onCycleClick(worker); }} />
+                </div>
             </div>
         </div>
     );
@@ -449,22 +474,21 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
                     </div>
                 </div>
 
-                {/* Botón cambio de turno (solo si soon) */}
-                {soon && (
-                    <div style={{ padding: '0 20px 12px' }}>
-                        <button onClick={() => { onClose(); setTimeout(() => onSwap && onSwap(worker), 180); }}
-                            style={{
-                                width: '100%', height: 38, borderRadius: 10,
-                                background: COLORS.yellowDim, border: '1px solid rgba(239,159,39,0.4)',
-                                color: COLORS.yellow, fontWeight: 600, fontSize: 13,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                                cursor: 'pointer', fontFamily: 'inherit',
-                            }}>
-                            {Icon.swap(13, COLORS.yellow)}
-                            Cambiar turno
-                        </button>
-                    </div>
-                )}
+                {/* Botón cambio de turno (siempre visible) */}
+                <div style={{ padding: '0 20px 12px' }}>
+                    <button onClick={() => { onClose(); setTimeout(() => onSwap && onSwap(worker), 180); }}
+                        style={{
+                            width: '100%', height: 38, borderRadius: 10,
+                            background: soon ? COLORS.yellowDim : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${soon ? 'rgba(239,159,39,0.4)' : COLORS.border}`,
+                            color: soon ? COLORS.yellow : COLORS.textMute, fontWeight: 600, fontSize: 13,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                        }}>
+                        {Icon.swap(13, soon ? COLORS.yellow : COLORS.textMute)}
+                        Cambiar turno / Rotar
+                    </button>
+                </div>
 
                 {/* Acciones */}
                 <div style={{
@@ -1481,8 +1505,9 @@ const FlujoPersonalPage = () => {
     useEffect(() => {
         api.get('/flujo-workers')
             .then(res => {
-                setActive(res.data.active.map(fromApi));
-                setSoon(res.data.soon.map(fromApi));
+                const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
+                setActive(a);
+                setSoon(s);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -1531,7 +1556,7 @@ const FlujoPersonalPage = () => {
                     status: 'active',
                 });
                 setSoon(s => s.filter(w => w.id !== swapFor.id));
-                setActive(a => [...a, fromApi(res.data.worker)]);
+                setActive(a => [...a.filter(w => w.id !== swapFor.id), fromApi(res.data.worker)]);
                 showToast(`Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
             } catch {
                 showToast('Error al realizar el cambio');
@@ -1655,8 +1680,9 @@ const FlujoPersonalPage = () => {
         try {
             await api.post('/flujo-workers/bulk', { workers: toAdd });
             const res = await api.get('/flujo-workers');
-            setActive(res.data.active.map(fromApi));
-            setSoon(res.data.soon.map(fromApi));
+            const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
+            setActive(a);
+            setSoon(s);
             setImportOpen(false);
             showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
         } catch {
@@ -1720,6 +1746,7 @@ const FlujoPersonalPage = () => {
                                     <WorkerCard key={w.id} worker={w} soon
                                         onDetail={setDetailWorker}
                                         onCycleClick={setCycleFor}
+                                        onSwap={setSwapFor}
                                     />
                                 ))}
                             </>
@@ -1734,6 +1761,7 @@ const FlujoPersonalPage = () => {
                                 <WorkerCard key={w.id} worker={w}
                                     onDetail={setDetailWorker}
                                     onCycleClick={setCycleFor}
+                                    onSwap={setSwapFor}
                                 />
                             ))
                         )}
