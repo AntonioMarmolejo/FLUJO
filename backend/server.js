@@ -11,6 +11,7 @@ import extensionRoutes from './src/routes/extension.routes.js';
 import personaRoutes from './src/routes/persona.routes.js';
 import flujoWorkerRoutes from './src/routes/flujoWorker.routes.js';
 import calendarioGrupoRoutes from './src/routes/calendarioGrupo.routes.js';
+import adminRoutes from './src/routes/admin.routes.js';
 
 dotenv.config();
 connectDB();
@@ -39,6 +40,7 @@ app.use('/api/extensiones', extensionRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/flujo-workers', flujoWorkerRoutes);
 app.use('/api/calendarios', calendarioGrupoRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/', (_req, res) => res.json({ message: '🚀 Flujo API corriendo' }));

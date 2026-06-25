@@ -10,6 +10,7 @@ import TurnoPage from './pages/TurnoPage';
 import ConfirmacionTurnoPage from './pages/ConfirmacionTurnoPage';
 import FlujoPersonalPage from './pages/FlujoPersonalPage';
 import CalendarioPage from './pages/CalendarioPage';
+import AdminPage from './pages/AdminPage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -40,6 +41,9 @@ function App() {
                         } />
                         <Route path="/calendario" element={
                             <ProtectedRoute><CalendarioPage /></ProtectedRoute>
+                        } />
+                        <Route path="/admin" element={
+                            <ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>
                         } />
                     </Routes>
                 </AuthProvider>

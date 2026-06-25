@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Verificar sesión al cargar la app
     useEffect(() => {
         const verifyToken = async () => {
             const token = localStorage.getItem('token');
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }) => {
                 const { data } = await api.get('/auth/me', { timeout: 8000 });
                 setUser(data.user);
             } catch {
-                // Si hay token guardado localmente, úsalo como fallback mientras no haya red
                 const cached = localStorage.getItem('user');
                 if (cached) {
                     try { setUser(JSON.parse(cached)); return; } catch { /* ignorar */ }
@@ -33,7 +31,6 @@ export const AuthProvider = ({ children }) => {
         verifyToken();
     }, []);
 
-    // Advertencia al intentar salir del navegador / cerrar pestaña
     useEffect(() => {
         if (!user) return;
         const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
@@ -79,8 +76,12 @@ export const AuthProvider = ({ children }) => {
         navigate('/');
     };
 
+    const role = user?.role || 'operador';
+    const isAdmin = role === 'admin';
+    const isSupervisor = role === 'supervisor' || role === 'admin';
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser, role, isAdmin, isSupervisor }}>
             {children}
         </AuthContext.Provider>
     );

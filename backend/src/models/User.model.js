@@ -36,6 +36,19 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        role: {
+            type: String,
+            enum: ['admin', 'supervisor', 'operador'],
+            default: 'operador',
+        },
+        activo: {
+            type: Boolean,
+            default: true,
+        },
+        lastLogin: {
+            type: Date,
+            default: null,
+        },
     },
     { timestamps: true }
 );
