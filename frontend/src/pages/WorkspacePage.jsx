@@ -119,6 +119,12 @@ const IconCalendar = () => (
     </svg>
 );
 
+const IconShield = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────
 const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
@@ -245,7 +251,7 @@ const DRAWER_ITEMS = [
     { label: 'Calendario', tab: 'calendario', icon: <IconCalendar /> },
 ];
 
-const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab }) => (
+const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin }) => (
     <div className="drawer-overlay" onClick={onClose}>
         <div className="drawer-panel" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
@@ -267,6 +273,16 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab }) => (
                     <span className="drawer-item-icon"><IconBolt /></span>
                     <span className="drawer-item-label">Crear nuevo flujo</span>
                 </button>
+                {isAdmin && (
+                    <>
+                        <div className="drawer-divider" />
+                        <button className="drawer-item" onClick={() => { onNavigate('admin'); onClose(); }}>
+                            <span className="drawer-item-icon"><IconShield /></span>
+                            <span className="drawer-item-label">Administración</span>
+                            <IconChevronRight />
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     </div>
@@ -2902,7 +2918,7 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -3259,9 +3275,11 @@ const WorkspacePage = () => {
                 <DrawerMenu
                     onClose={() => setShowDrawer(false)}
                     activeTab={lastDrawerTab}
+                    isAdmin={isAdmin}
                     onNavigate={tab => {
                         setLastDrawerTab(tab);
-                        if (tab === 'calendario') navigate('/calendario');
+                        if (tab === 'admin') navigate('/admin');
+                        else if (tab === 'calendario') navigate('/calendario');
                         else if (tab === 'jefes') navigate('/flujos/personal');
                         else handleTabChange(tab);
                     }}
