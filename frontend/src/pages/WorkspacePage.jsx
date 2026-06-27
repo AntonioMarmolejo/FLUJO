@@ -146,10 +146,6 @@ const getTurnoFecha = (turnoActual) => {
     }
     return getFechaLocal();
 };
-const personaTagCount = text => (text.match(/\bCI:/gi) || []).length;
-
-// Palabras clave que disparan búsqueda de persona en campo actividad
-const ACTIVIDAD_TRIGGERS = ['llevando al sr', 'lleva al sr', 'lleva a la sr', 'lleva al', 'va con el sr', 'va con la sr', 'va con', 'con el sr', 'con la sr'];
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
@@ -477,14 +473,16 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
     const [marcaSugs, setMarcaSugs] = useState([]);
     const [colorSugs, setColorSugs] = useState([]);
     const [empresaSugs, setEmpresaSugs] = useState([]);
-    const [actividadPersonaSugs, setActividadPersonaSugs] = useState([]);
     const [tipoSugs, setTipoSugs] = useState([]);
-    const [actividadPersonaNotFound, setActividadPersonaNotFound] = useState(false);
+    const [personasTags, setPersonasTags] = useState([]);
+    const [showTagInput, setShowTagInput] = useState(false);
+    const [tagQuery, setTagQuery] = useState('');
+    const [tagSugs, setTagSugs] = useState([]);
     const actividadRef = useRef(null);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
-    const actividadPersonaTimer = useRef(null);
+    const tagTimer = useRef(null);
     const [showScanner, setShowScanner] = useState(false);
     const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
@@ -606,56 +604,28 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
 
     const handleActividadChange = e => {
         const val = e.target.value;
-        const cursor = e.target.selectionStart;
         setForm(f => ({ ...f, actividad: val }));
         setError('');
-        setActividadPersonaNotFound(false);
-
-        // Segmento actual: texto después de la última coma hasta el cursor
-        const before = val.slice(0, cursor);
-        const lastComma = before.lastIndexOf(',');
-        const rawSegStart = lastComma === -1 ? 0 : lastComma + 1;
-        const segment = before.slice(rawSegStart).trimStart();
-
-        clearTimeout(actividadPersonaTimer.current);
-
-        if (segment.length < 2) {
-            setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
-            setActividadPersonaSugs([]);
-            return;
-        }
-
-        // Con 2+ caracteres buscamos personas en BD
-        setActividadSugs([]);
-        if (personaTagCount(val) < 10) {
-            actividadPersonaTimer.current = setTimeout(async () => {
-                try {
-                    const { data } = await api.get(`/personas/search?q=${encodeURIComponent(segment)}`);
-                    const results = data.personas || [];
-                    setActividadPersonaSugs(results);
-                    setActividadPersonaNotFound(results.length === 0 && segment.length >= 3);
-                } catch { setActividadPersonaSugs([]); }
-            }, 300);
-        }
+        setActividadSugs(val.length >= 1 ? recentUnique('actividad', val) : []);
     };
 
-    const selectActividadPersona = persona => {
-        if (personaTagCount(form.actividad) >= 10) return;
-        const textarea = actividadRef.current;
-        const cursorPos = textarea ? textarea.selectionStart : form.actividad.length;
-        const before = form.actividad.slice(0, cursorPos);
-        const lastComma = before.lastIndexOf(',');
-        const rawSegStart = lastComma === -1 ? 0 : lastComma + 1;
-        const rawSeg = form.actividad.slice(rawSegStart, cursorPos);
-        const trimOffset = rawSeg.length - rawSeg.trimStart().length;
-        const segStart = rawSegStart + trimOffset;
-        const tag = `${persona.nombres}${persona.cedula ? ' CI: ' + persona.cedula : ''}`;
-        const newVal = form.actividad.slice(0, segStart) + tag + ', ' + form.actividad.slice(cursorPos);
-        setForm(f => ({ ...f, actividad: newVal }));
-        setActividadPersonaSugs([]);
-        setActividadPersonaNotFound(false);
-        const newCursor = segStart + tag.length + 2;
-        setTimeout(() => { if (textarea) { textarea.focus(); textarea.setSelectionRange(newCursor, newCursor); } }, 0);
+    const handleTagSearch = val => {
+        setTagQuery(val);
+        if (val.length < 2) { setTagSugs([]); return; }
+        clearTimeout(tagTimer.current);
+        tagTimer.current = setTimeout(async () => {
+            try {
+                const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
+                setTagSugs(data.personas || []);
+            } catch { setTagSugs([]); }
+        }, 300);
+    };
+
+    const selectTag = persona => {
+        setPersonasTags(t => [...t, persona]);
+        setShowTagInput(false);
+        setTagQuery('');
+        setTagSugs([]);
     };
 
     const handleTipoVehChange = e => {
@@ -725,11 +695,17 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
     const handleSubmit = async () => {
         if (!form.placa) { setError('La placa es obligatoria'); return; }
 
+        const actividadFinal = [
+            form.actividad,
+            ...personasTags.map(p => p.nombres + (p.cedula ? ' CI: ' + p.cedula : '')),
+        ].filter(Boolean).join(' · ');
+        const formFinal = { ...form, actividad: actividadFinal };
+
         // Edición: espera respuesta del servidor (comportamiento original)
         if (editData?._id) {
             setLoading(true);
             try {
-                await api.put(`/movimientos/${editData._id}`, form);
+                await api.put(`/movimientos/${editData._id}`, formFinal);
                 onGuardado();
                 onClose();
             } catch (err) {
@@ -744,18 +720,18 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
         const tempId = `tmp_${Date.now()}`;
         const hora = getHoraLocal();
         const fecha = getTurnoFecha(turnoActual);
-        const tempMov = { ...form, _id: tempId, hora, fecha, _pending: true };
+        const tempMov = { ...formFinal, _id: tempId, hora, fecha, _pending: true };
 
         onGuardadoOptimista(tempMov);
         setForm(EMPTY_FORM);
         setSuggestions([]); setCedulaSugs([]); setConductorSugs([]);
-        setDestinoSugs([]); setActividadSugs([]); setActividadPersonaSugs([]);
-        setTipoSugs([]); setActividadPersonaNotFound(false);
+        setDestinoSugs([]); setActividadSugs([]);
+        setTipoSugs([]); setPersonasTags([]); setShowTagInput(false); setTagQuery(''); setTagSugs([]);
         setAutoFilled(false); setPersonaNotFound(false); setPlacaNotFound(false); setError('');
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
-        const payload = { ...form, puesto, bloque, fecha };
+        const payload = { ...formFinal, puesto, bloque, fecha };
         if (personaNotFound && form.cedula) {
             api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
@@ -903,50 +879,67 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
                             <textarea
                                 ref={actividadRef}
                                 name="actividad"
-                                placeholder="VACIO · con 2 pax a... · va con el Sr. Juan CI..."
+                                placeholder="VACIO · con 2 pax a destino..."
                                 value={form.actividad}
                                 onChange={handleActividadChange}
                                 onFocus={() => setActividadSugs(recentUnique('actividad', form.actividad))}
-                                onBlur={() => setTimeout(() => {
-                                    setActividadSugs([]);
-                                    setActividadPersonaSugs([]);
-                                    setActividadPersonaNotFound(false);
-                                }, 200)}
+                                onBlur={() => setTimeout(() => setActividadSugs([]), 200)}
                                 autoComplete="off"
                                 rows={3}
                                 className="modal-textarea"
                             />
-                            {actividadPersonaSugs.length > 0 ? (
-                                <div className="placa-suggestions">
-                                    <div className="activ-persona-header">
-                                        PERSONAS · {personaTagCount(form.actividad)}/10
-                                    </div>
-                                    {actividadPersonaSugs.map((p, i) => (
-                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectActividadPersona(p); }}>
-                                            <div>
-                                                <div className="placa-suggestion-placa">{p.nombres}</div>
-                                                <div className="placa-suggestion-info">{[p.cedula, p.empresa].filter(Boolean).join(' · ')}</div>
-                                            </div>
-                                            <span className="placa-suggestion-badge db">BD</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : actividadSugs.length > 0 ? (
+                            {actividadSugs.length > 0 && (
                                 <div className="placa-suggestions">
                                     {actividadSugs.map((s, i) => (
                                         <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}>
                                             <div className="placa-suggestion-placa">{s}</div>
-                                            <span className="placa-suggestion-badge hoy">Hoy</span>
+                                            <span className="placa-suggestion-badge hoy">Reciente</span>
                                         </div>
                                     ))}
                                 </div>
-                            ) : null}
+                            )}
                         </div>
-                        {actividadPersonaNotFound && (
-                            <div className="quick-info-banner actividad-not-found">
-                                Persona no encontrada en la BD — escríbela manualmente
-                            </div>
-                        )}
+                        <div className="activ-tags-row">
+                            {personasTags.map((p, i) => (
+                                <span key={i} className="activ-persona-tag">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                    {p.nombres}{p.cedula ? ` · ${p.cedula}` : ''}
+                                    <button className="activ-tag-remove" onMouseDown={e => { e.preventDefault(); setPersonasTags(t => t.filter((_, j) => j !== i)); }}>×</button>
+                                </span>
+                            ))}
+                            {personasTags.length < 10 && (
+                                showTagInput ? (
+                                    <div className="activ-tag-input-wrap">
+                                        <input
+                                            autoFocus
+                                            className="activ-tag-input"
+                                            placeholder="Nombre o cédula..."
+                                            value={tagQuery}
+                                            onChange={e => handleTagSearch(e.target.value)}
+                                            onBlur={() => setTimeout(() => { setShowTagInput(false); setTagQuery(''); setTagSugs([]); }, 200)}
+                                        />
+                                        {tagSugs.length > 0 && (
+                                            <div className="placa-suggestions activ-tag-sugs">
+                                                {tagSugs.map((pg, i) => (
+                                                    <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectTag(pg); }}>
+                                                        <div>
+                                                            <div className="placa-suggestion-placa">{pg.nombres}</div>
+                                                            <div className="placa-suggestion-info">{[pg.cedula, pg.empresa].filter(Boolean).join(' · ')}</div>
+                                                        </div>
+                                                        <span className="placa-suggestion-badge db">BD</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button className="activ-add-tag-btn" onClick={() => setShowTagInput(true)}>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                        persona
+                                    </button>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
                 {error && <p className="modal-error">{error}</p>}
@@ -2265,6 +2258,74 @@ const PantallaFlujos = ({ turnoActivo }) => {
     );
 };
 
+// ── Pantalla Utilidades ────────────────────────────────────
+const UTIL_ITEMS = [
+    {
+        id: 'firmas', label: 'Firmas\nFuncionarios',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M17 3a2.828 2.828 0 114 4L8 20l-5 1 1-5L17 3z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    },
+    {
+        id: 'plataformas', label: 'Plataformas y\nNominativos',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="13" width="18" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="3" width="18" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg>,
+    },
+    {
+        id: 'mapas', label: 'Mapas de\nLocaciones',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.686 2 6 4.686 6 8c0 5.25 6 13 6 13s6-7.75 6-13c0-3.314-2.686-6-6-6z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.8"/></svg>,
+    },
+    {
+        id: 'distancias', label: 'Distancias',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M3 12l3.5-3M3 12l3.5 3M21 12l-3.5-3M21 12l-3.5 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    },
+    {
+        id: 'codigos-radio', label: 'Códigos\nde Radio',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="7" y="8" width="10" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M10 3h4M12 3v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="17" r="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    },
+    {
+        id: 'nominativo-radio', label: 'Nominativo\nRadio',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.8"/><path d="M2 20c0-3.5 3.1-6 7-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 13l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    },
+    {
+        id: 'nominativo-personal', label: 'Nominativo\nPersonal',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.8"/><path d="M1 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="18" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.8"/><path d="M16 20c0-2.5 1.5-4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
+    },
+    {
+        id: 'luminarias', label: 'Control de\nLuminarias',
+        icon: <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M9 21h6M12 3a6 6 0 016 6c0 2.4-1.2 4.5-3 5.7V17H9v-2.3C7.2 13.5 6 11.4 6 9a6 6 0 016-6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    },
+];
+
+const PantallaUtilidades = () => {
+    const [detalle, setDetalle] = useState(null);
+
+    if (detalle) {
+        return (
+            <div className="util-detalle">
+                <button className="util-back-btn" onClick={() => setDetalle(null)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Volver
+                </button>
+                <h2 className="util-detalle-titulo">{detalle.label.replace('\n', ' ')}</h2>
+                <div className="util-detalle-contenido">
+                    <p className="ws-empty">Próximamente</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="util-grid">
+            {UTIL_ITEMS.map(u => (
+                <button key={u.id} className="util-tile" onClick={() => setDetalle(u)}>
+                    <div className="util-tile-icon">{u.icon}</div>
+                    <span className="util-tile-label">{u.label}</span>
+                </button>
+            ))}
+        </div>
+    );
+};
+
 // ── Helpers de texto para copiar/compartir ────────────────
 const vToText = v => [
     `PLACA: ${v.placa}`,
@@ -3365,7 +3426,7 @@ const WorkspacePage = () => {
                     {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && (
+                    {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                 <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
@@ -3373,7 +3434,7 @@ const WorkspacePage = () => {
                             </svg>
                         </button>
                     )}
-                    {!isDrawerTab && tabActiva !== 'flujos' && (
+                    {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => handleTabChange('perfil')}>
                             <IconUserCircle active={tabActiva === 'perfil'} />
                         </button>
@@ -3737,6 +3798,8 @@ const WorkspacePage = () => {
 
                 {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} />}
 
+                {tabActiva === 'utilidades' && <PantallaUtilidades />}
+
                 {tabActiva === 'perfil' && (
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
                 )}
@@ -3861,7 +3924,7 @@ const WorkspacePage = () => {
                 />
             )}
 
-            {/* Bottom nav — solo Inicio, Avance, Flujos */}
+            {/* Bottom nav */}
             <nav className="ws-navbar">
                 {[
                     {
@@ -3878,6 +3941,14 @@ const WorkspacePage = () => {
                         id: 'flujos', label: 'Flujos', icon: (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                 <path d="M3 6h18M3 12h12M3 18h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                        )
+                    },
+                    {
+                        id: 'utilidades', label: 'Utilidades', icon: (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                                <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         )
                     },
