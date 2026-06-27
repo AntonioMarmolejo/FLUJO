@@ -155,10 +155,32 @@ const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' ·
 const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
+const LAST_TURNO_KEY = 'flujo_last_turno';
 const REGISTRO_CONFIG_KEY = 'ws_registro_config';
 const getRegistroConfig = () => {
     try { return JSON.parse(localStorage.getItem(REGISTRO_CONFIG_KEY) || '{}'); } catch { return {}; }
 };
+const buildStats = (movs, diasActivos = 0) => {
+    const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
+    const placaMap = {};
+    movs.forEach(m => {
+        if (!placaMap[m.placa] || (!placaMap[m.placa].empresa && m.empresa)) placaMap[m.placa] = m;
+    });
+    const unicos = Object.values(placaMap);
+    const grafico = Array.from({ length: 24 }, (_, h) => ({
+        label: `${h}h`,
+        ingresos: movs.filter(m => parseInt(m.hora?.split(':')[0] ?? 0) === h && m.tipo === 'ingreso').length,
+        salidas:  movs.filter(m => parseInt(m.hora?.split(':')[0] ?? 0) === h && m.tipo === 'salida').length,
+    }));
+    return {
+        totalFlujos: movs.length,
+        diasActivos,
+        petroecuador: unicos.filter(isPetro).length,
+        contratistas: unicos.filter(m => !isPetro(m)).length,
+        grafico,
+    };
+};
+
 const generarNarrativa = (mov, cfg = {}) => {
     const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad } = mov;
     const ubiIngreso = cfg.ubicacion || 'EPF';
@@ -2125,12 +2147,25 @@ const PantallaFlujos = ({ turnoActivo }) => {
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
     const [confirmarFlujo, setConfirmarFlujo] = useState(null);
 
+    // Guarda el último puesto/bloque conocido para poder ver flujos sin turno activo
     useEffect(() => {
-        if (!turnoActivo) { setLoading(false); return; }
-        api.get(`/movimientos/todos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}`)
+        if (turnoActivo) {
+            localStorage.setItem(LAST_TURNO_KEY, JSON.stringify({ puesto: turnoActivo.puesto, bloque: turnoActivo.bloque }));
+        }
+    }, [turnoActivo]);
+
+    const { puesto, bloque } = useMemo(() => {
+        if (turnoActivo) return { puesto: turnoActivo.puesto, bloque: turnoActivo.bloque };
+        try { return JSON.parse(localStorage.getItem(LAST_TURNO_KEY) || '{}'); } catch { return {}; }
+    }, [turnoActivo]);
+
+    useEffect(() => {
+        if (!puesto || !bloque) { setLoading(false); return; }
+        setLoading(true);
+        api.get(`/movimientos/todos?puesto=${puesto}&bloque=${bloque}`)
             .then(res => { setMovimientos(res.data.movimientos); setLoading(false); })
             .catch(() => setLoading(false));
-    }, [turnoActivo]);
+    }, [puesto, bloque]);
 
     const handleDeleteFlujo = async () => {
         if (!confirmarFlujo) return;
@@ -2152,7 +2187,7 @@ const PantallaFlujos = ({ turnoActivo }) => {
             .map(([fecha, movs]) => ({ fecha, movs }));
     }, [movimientos]);
 
-    if (!turnoActivo) {
+    if (!puesto || !bloque) {
         return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
     }
 
@@ -2927,7 +2962,7 @@ const WorkspacePage = () => {
     const [movCollapsed, setMovCollapsed] = useState(false);
     const [chartCollapsed, setChartCollapsed] = useState(true);
 
-    const [stats, setStats] = useState(null);
+    const [diasActivos, setDiasActivos] = useState(0);
     const [movimientos, setMovimientos] = useState([]);
     const [turnoActivo, setTurnoActivo] = useState(null);
 
@@ -2957,6 +2992,11 @@ const WorkspacePage = () => {
     const [swipedMovId, setSwipedMovId] = useState(null);
     const movSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [editHoraMov, setEditHoraMov] = useState(null);
+
+    const stats = useMemo(
+        () => movimientos.length > 0 ? buildStats(movimientos, diasActivos) : null,
+        [movimientos, diasActivos]
+    );
 
     const sq = searchQuery.toLowerCase();
     const movsFiltrados = sq
@@ -3052,21 +3092,30 @@ const WorkspacePage = () => {
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
+        const turnoFecha = getTurnoFecha(turnoActivo.turnoActual);
         try {
-            const turnoFecha = getTurnoFecha(turnoActivo.turnoActual);
-            const [sRes, mRes] = await Promise.all([
-                api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`),
-                api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`),
-            ]);
-            setStats(sRes.data);
+            const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
             const serverMovs = mRes.data.movimientos;
             const serverIds = new Set(serverMovs.map(m => m._id));
-            // Fusionar movimientos pendientes offline que aún no llegaron al servidor
             const pendingItems = getOfflineQueue()
                 .filter(item => !serverIds.has(item.tempId))
                 .map(item => ({ _id: item.tempId, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
             setMovimientos([...serverMovs, ...pendingItems]);
-        } catch { }
+            // diasActivos no se puede calcular localmente — lo pedimos en background
+            api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`)
+                .then(sRes => setDiasActivos(sRes.data.diasActivos ?? 0))
+                .catch(() => {});
+        } catch {
+            // Sin conexión: conservar movimientos confirmados + cola offline
+            setMovimientos(prev => {
+                const confirmed = prev.filter(m => !m._pending);
+                const confirmedIds = new Set(confirmed.map(m => m._id));
+                const queueItems = getOfflineQueue()
+                    .filter(i => !confirmedIds.has(i.tempId))
+                    .map(i => ({ _id: i.tempId, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
+                return [...confirmed, ...queueItems];
+            });
+        }
     };
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);

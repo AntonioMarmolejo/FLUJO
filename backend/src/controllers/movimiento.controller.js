@@ -53,7 +53,7 @@ export const getMovimientos = async (req, res) => {
 export const getStats = async (req, res) => {
     try {
         const { puesto, bloque, desde } = req.query;
-        const fecha = getFecha();
+        const fecha = req.query.fecha || getFecha();
         const filter = { usuario: req.user._id, puesto, bloque };
         const movFilter = { ...filter, fecha };
         if (desde) movFilter.createdAt = { $gte: new Date(desde) };
