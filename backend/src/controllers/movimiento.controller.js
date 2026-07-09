@@ -10,7 +10,7 @@ const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula
 // POST /api/movimientos
 export const crearMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque, hora: horaCliente } = req.body;
         if (!tipo || !placa || !puesto || !bloque) return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
 
         const movimiento = await Movimiento.create({
@@ -21,7 +21,7 @@ export const crearMovimiento = async (req, res) => {
             destino: destino || '', actividad: actividad || '',
             guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '',
             documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
-            hora: getHora(), fecha: req.body.fecha || getFecha(),
+            hora: horaCliente || getHora(), fecha: req.body.fecha || getFecha(),
         });
 
         await Vehiculo.findOneAndUpdate(

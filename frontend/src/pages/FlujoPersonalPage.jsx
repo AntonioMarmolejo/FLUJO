@@ -22,6 +22,14 @@ const COLORS = {
     redDim: 'rgba(226,75,74,0.14)',
     blue: '#3b82f6',
     blueDim: 'rgba(59,130,246,0.14)',
+    cyan: '#22d3ee',
+    cyanDim: 'rgba(34,211,238,0.14)',
+};
+
+const TURNO_META = {
+    dia:      { label: 'DÍA',      color: '#4ade80', dim: 'rgba(74,222,128,0.14)' },
+    noche:    { label: 'NOCHE',    color: '#3b82f6', dim: 'rgba(59,130,246,0.14)' },
+    descanso: { label: 'DESCANSO', color: '#7c5ef5', dim: 'rgba(124,94,245,0.14)' },
 };
 
 const Icon = {
@@ -252,7 +260,8 @@ function ProgressBar({ value, total, color }) {
     );
 }
 
-function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap }) {
+function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap, hasTurnoSibling, onToLibre }) {
+    const turnoMeta = TURNO_META[worker.turno] || TURNO_META.dia;
     const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
     const [hover, setHover] = useState(false);
 
@@ -280,14 +289,23 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap }) {
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
-                <span style={{
-                    fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6,
-                    color: COLORS.violet, textTransform: 'uppercase',
-                    flex: 1, minWidth: 0,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                    {worker.role}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+                    <span style={{
+                        fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6,
+                        color: COLORS.violet, textTransform: 'uppercase',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                        {worker.role}
+                    </span>
+                    <span style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: 0.7,
+                        color: turnoMeta.color, background: turnoMeta.dim,
+                        border: `1px solid ${turnoMeta.color}44`,
+                        padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+                    }}>
+                        {turnoMeta.label}
+                    </span>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                     <span style={{
                         fontSize: 9.5, color: COLORS.textMute,
@@ -336,21 +354,65 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap }) {
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <button
-                        title="Rotar / Cambio de turno"
-                        onClick={e => { e.stopPropagation(); onSwap && onSwap(worker); }}
-                        style={{
-                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                            background: soon ? COLORS.yellowDim : 'rgba(255,255,255,0.05)',
-                            border: `1px solid ${soon ? 'rgba(239,159,39,0.4)' : COLORS.border}`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: soon ? COLORS.yellow : COLORS.textMute,
-                            transition: 'background 140ms ease, color 140ms ease',
-                        }}
-                    >
-                        {Icon.swap(12, soon ? COLORS.yellow : COLORS.textMute)}
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {/* Pasar a libre — solo para descanso */}
+                    {worker.turno === 'descanso' && (
+                        <button
+                            title="Pasar a libre"
+                            onClick={e => { e.stopPropagation(); onToLibre && onToLibre(worker); }}
+                            style={{
+                                height: 28, padding: '0 8px', borderRadius: 8, flexShrink: 0,
+                                background: COLORS.violetDim,
+                                border: '1px solid rgba(124,94,245,0.4)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: COLORS.violet,
+                                fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3,
+                                gap: 4,
+                            }}
+                        >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                                <path d="M5 12h14M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            LIBRE
+                        </button>
+                    )}
+                    {/* Intercambio día/noche — solo si hay un compañero con turno opuesto */}
+                    {(worker.turno === 'dia' || worker.turno === 'noche') && hasTurnoSibling && (
+                        <button
+                            title={`Cambiar a ${worker.turno === 'dia' ? 'noche' : 'día'}`}
+                            onClick={e => { e.stopPropagation(); onTurnoSwap && onTurnoSwap(worker); }}
+                            style={{
+                                height: 28, padding: '0 7px', borderRadius: 8, flexShrink: 0,
+                                background: worker.turno === 'dia' ? 'rgba(59,130,246,0.12)' : 'rgba(74,222,128,0.12)',
+                                border: `1px solid ${worker.turno === 'dia' ? 'rgba(59,130,246,0.4)' : 'rgba(74,222,128,0.4)'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: worker.turno === 'dia' ? COLORS.blue : COLORS.green,
+                                fontSize: 9, fontWeight: 800, gap: 3,
+                            }}
+                        >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {worker.turno === 'dia' ? 'NOCHE' : 'DÍA'}
+                        </button>
+                    )}
+                    {/* Swap principal (relevo/cambio de guardia) — no se muestra en descanso */}
+                    {worker.turno !== 'descanso' && (
+                        <button
+                            title="Rotar / Cambio de turno"
+                            onClick={e => { e.stopPropagation(); onSwap && onSwap(worker); }}
+                            style={{
+                                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                background: soon ? COLORS.yellowDim : 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${soon ? 'rgba(239,159,39,0.4)' : COLORS.border}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: soon ? COLORS.yellow : COLORS.textMute,
+                            }}
+                        >
+                            {Icon.swap(12, soon ? COLORS.yellow : COLORS.textMute)}
+                        </button>
+                    )}
                     <CyclePill cycle={worker.cycle} onClick={() => { onCycleClick && onCycleClick(worker); }} />
                 </div>
             </div>
@@ -1307,7 +1369,7 @@ const inputSt = {
 
 function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
     const todayISO = new Date().toISOString().split('T')[0];
-    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: String(daysSince(todayISO)) };
+    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: String(daysSince(todayISO)), turno: 'dia' };
     const [form, setForm] = useState(EMPTY);
     const [error, setError] = useState('');
 
@@ -1321,6 +1383,7 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                 inDate: editData.inDateISO || todayISO,
                 back: editData.back || '',
                 days: String(daysSince(editData.inDateISO) || 1),
+                turno: editData.turno || 'dia',
             });
         } else {
             const today = new Date().toISOString().split('T')[0];
@@ -1359,6 +1422,7 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
             out: calcOutDate(form.inDate, total),
             inDateISO: form.inDate,
             back: form.back.trim(),
+            turno: form.turno || 'dia',
         };
         if (editData) { onEdit && onEdit(worker); }
         else { onAdd && onAdd(worker); }
@@ -1438,6 +1502,26 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                         </div>
                     </div>
                 </div>
+                <div style={{ marginBottom: 12 }}>
+                    {lbl('TURNO')}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        {[
+                            { id: 'dia',      label: '☀ Día',      color: '#4ade80' },
+                            { id: 'noche',    label: '🌙 Noche',    color: '#3b82f6' },
+                            { id: 'descanso', label: '💤 Descanso', color: '#7c5ef5' },
+                        ].map(t => (
+                            <button key={t.id} type="button" onClick={() => setF('turno', t.id)} style={{
+                                flex: 1, height: 36, borderRadius: 9,
+                                background: form.turno === t.id ? `${t.color}22` : 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${form.turno === t.id ? t.color + '66' : '#2a2a2a'}`,
+                                color: form.turno === t.id ? t.color : '#8a8a8a',
+                                fontSize: 11.5, fontWeight: 700,
+                                cursor: 'pointer', fontFamily: 'inherit',
+                                transition: 'all 140ms ease',
+                            }}>{t.label}</button>
+                        ))}
+                    </div>
+                </div>
                 <div style={{ marginBottom: 14 }}>
                     {lbl('NOMBRE DEL RELEVO / BACK *')}
                     <input style={inputSt} placeholder="Ej: Rodrigo Salinas Vega"
@@ -1499,18 +1583,20 @@ const FlujoPersonalPage = () => {
     const [countOpen, setCountOpen] = useState(null);
     const [active, setActive] = useState([]);
     const [soonList, setSoon] = useState([]);
+    const [descansoList, setDescanso] = useState([]);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
 
+    const reloadWorkers = () =>
+        api.get('/flujo-workers').then(res => {
+            const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
+            setActive(a);
+            setSoon(s);
+            setDescanso((res.data.descanso || []).map(fromApi));
+        });
+
     useEffect(() => {
-        api.get('/flujo-workers')
-            .then(res => {
-                const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
-                setActive(a);
-                setSoon(s);
-            })
-            .catch(() => {})
-            .finally(() => setLoading(false));
+        reloadWorkers().catch(() => {}).finally(() => setLoading(false));
     }, []);
     const [fabHover, setFabHover] = useState(false);
     const [controlsOpen, setControlsOpen] = useState(false);
@@ -1544,7 +1630,7 @@ const FlujoPersonalPage = () => {
             const total = CYCLE_TOTAL[swapFor.cycle];
             const todayISO = new Date().toISOString().split('T')[0];
             try {
-                await api.delete(`/flujo-workers/${swapFor.id}`);
+                // Crear primero → si falla, el saliente sigue en el sistema (no se pierde)
                 const res = await api.post('/flujo-workers', {
                     name: swapFor.back,
                     role: swapFor.role,
@@ -1554,7 +1640,9 @@ const FlujoPersonalPage = () => {
                     inDateISO: todayISO,
                     back: swapFor.name,
                     status: 'active',
+                    turno: swapFor.turno || 'dia',
                 });
+                await api.delete(`/flujo-workers/${swapFor.id}`);
                 setSoon(s => s.filter(w => w.id !== swapFor.id));
                 setActive(a => [...a.filter(w => w.id !== swapFor.id), fromApi(res.data.worker)]);
                 showToast(`Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
@@ -1565,6 +1653,43 @@ const FlujoPersonalPage = () => {
             showToast('Ingreso del back registrado');
         }
         setSwapFor(null);
+    };
+
+    const handleTurnoSwap = async (worker) => {
+        const allWorkers = [...active, ...soonList];
+        const sibling = allWorkers.find(w =>
+            w.id !== worker.id &&
+            w.role.trim().toLowerCase() === worker.role.trim().toLowerCase() &&
+            (w.turno === 'dia' || w.turno === 'noche')
+        );
+        const newTurno = worker.turno === 'dia' ? 'noche' : 'dia';
+        try {
+            await api.put(`/flujo-workers/${worker.id}`, { ...worker, turno: newTurno });
+            if (sibling) {
+                const siblingNewTurno = sibling.turno === 'dia' ? 'noche' : 'dia';
+                await api.put(`/flujo-workers/${sibling.id}`, { ...sibling, turno: siblingNewTurno });
+            }
+            const applySwap = list => list.map(w => {
+                if (w.id === worker.id) return { ...w, turno: newTurno };
+                if (sibling && w.id === sibling.id) return { ...w, turno: sibling.turno === 'dia' ? 'noche' : 'dia' };
+                return w;
+            });
+            setActive(applySwap);
+            setSoon(applySwap);
+            showToast(`Turno cambiado a ${newTurno}`);
+        } catch {
+            showToast('Error al cambiar turno');
+        }
+    };
+
+    const handleToLibre = async (worker) => {
+        try {
+            await api.delete(`/flujo-workers/${worker.id}`);
+            setDescanso(d => d.filter(w => w.id !== worker.id));
+            showToast(`${worker.name.split(' ')[0]} pasó a libre`);
+        } catch {
+            showToast('Error al actualizar');
+        }
     };
 
     const handleCycle = async (cycle) => {
@@ -1593,8 +1718,14 @@ const FlujoPersonalPage = () => {
                 inDateISO: worker.inDateISO,
                 back: worker.back,
                 status: 'active',
+                turno: worker.turno || 'dia',
             });
-            setActive(a => [...a, fromApi(res.data.worker)]);
+            const saved = fromApi(res.data.worker);
+            if (saved.turno === 'descanso') {
+                setDescanso(d => [...d, saved]);
+            } else {
+                setActive(a => [...a, saved]);
+            }
             setAddOpen(false);
             showToast(`${worker.name.split(' ')[0]} agregado`);
         } catch {
@@ -1692,6 +1823,15 @@ const FlujoPersonalPage = () => {
 
     const filteredActive = filter(active);
     const filteredSoon = filter(soonList);
+    const filteredDescanso = filter(descansoList);
+
+    // Para cada worker saber si tiene un compañero con turno opuesto (dia↔noche)
+    const allInTurno = [...active, ...soonList];
+    const hasTurnoSibling = (w) => allInTurno.some(
+        x => x.id !== w.id &&
+             x.role.trim().toLowerCase() === w.role.trim().toLowerCase() &&
+             (x.turno === 'dia' || x.turno === 'noche')
+    );
 
     return (
         <div style={{
@@ -1747,6 +1887,9 @@ const FlujoPersonalPage = () => {
                                         onDetail={setDetailWorker}
                                         onCycleClick={setCycleFor}
                                         onSwap={setSwapFor}
+                                        onTurnoSwap={handleTurnoSwap}
+                                        hasTurnoSibling={hasTurnoSibling(w)}
+                                        onToLibre={handleToLibre}
                                     />
                                 ))}
                             </>
@@ -1762,8 +1905,24 @@ const FlujoPersonalPage = () => {
                                     onDetail={setDetailWorker}
                                     onCycleClick={setCycleFor}
                                     onSwap={setSwapFor}
+                                    onTurnoSwap={handleTurnoSwap}
+                                    hasTurnoSibling={hasTurnoSibling(w)}
+                                    onToLibre={handleToLibre}
                                 />
                             ))
+                        )}
+                        {!loading && filteredDescanso.length > 0 && (
+                            <>
+                                <SectionHeader label="En descanso" count={filteredDescanso.length} dot={COLORS.violet} />
+                                {filteredDescanso.map(w => (
+                                    <WorkerCard key={w.id} worker={w}
+                                        onDetail={setDetailWorker}
+                                        onCycleClick={setCycleFor}
+                                        onSwap={setSwapFor}
+                                        onToLibre={handleToLibre}
+                                    />
+                                ))}
+                            </>
                         )}
                     </div>
                 </div>

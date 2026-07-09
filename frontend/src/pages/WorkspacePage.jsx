@@ -731,7 +731,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
-        const payload = { ...formFinal, puesto, bloque, fecha };
+        const payload = { ...formFinal, puesto, bloque, fecha, hora };
         if (personaNotFound && form.cedula) {
             api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }

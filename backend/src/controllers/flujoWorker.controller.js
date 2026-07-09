@@ -10,15 +10,19 @@ const fields = w => ({
     back:      w.back?.trim() || 'Pendiente',
     status:    w.status || 'active',
     remaining: w.remaining ?? null,
+    turno:     w.turno || 'dia',
 });
 
 // GET /api/flujo-workers
 export const getWorkers = async (req, res) => {
     try {
         const workers = await FlujoWorker.find().sort({ createdAt: 1 });
+        const enTurno   = workers.filter(w => w.turno !== 'descanso');
+        const enDescanso = workers.filter(w => w.turno === 'descanso');
         res.json({
-            active: workers.filter(w => w.status === 'active'),
-            soon:   workers.filter(w => w.status === 'soon'),
+            active:   enTurno.filter(w => w.status === 'active'),
+            soon:     enTurno.filter(w => w.status === 'soon'),
+            descanso: enDescanso,
         });
     } catch (error) {
         res.status(500).json({ message: 'Error al obtener funcionarios', error: error.message });
