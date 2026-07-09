@@ -123,9 +123,28 @@ export const getMovimientosTodos = async (req, res) => {
 // PUT /api/movimientos/:id
 export const updateMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, hora } = req.body;
-        const update = { tipo, placa: placa?.trim().toUpperCase(), marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '', destino: destino || '', actividad: actividad || '', guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '', documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '' };
-        if (hora) update.hora = hora;
+        const b = req.body;
+        // Solo sobreescribir los campos que vengan en el body — así editar solo la hora
+        // no borra el resto de los datos del movimiento.
+        const update = {};
+        if ('tipo'             in b) update.tipo             = b.tipo;
+        if ('placa'            in b) update.placa            = b.placa?.trim().toUpperCase();
+        if ('marca'            in b) update.marca            = b.marca            || '';
+        if ('color'            in b) update.color            = b.color            || '';
+        if ('tipoVehiculo'     in b) update.tipoVehiculo     = b.tipoVehiculo     || '';
+        if ('empresa'          in b) update.empresa          = b.empresa          || '';
+        if ('conductor'        in b) update.conductor        = b.conductor        || '';
+        if ('cedula'           in b) update.cedula           = b.cedula           || '';
+        if ('destino'          in b) update.destino          = b.destino          || '';
+        if ('actividad'        in b) update.actividad        = b.actividad        || '';
+        if ('guia'             in b) update.guia             = b.guia             || '';
+        if ('guias'            in b) update.guias            = b.guias            || [];
+        if ('quienAutoriza'    in b) update.quienAutoriza    = b.quienAutoriza    || '';
+        if ('empresaAutoriza'  in b) update.empresaAutoriza  = b.empresaAutoriza  || '';
+        if ('documento'        in b) update.documento        = b.documento        || '';
+        if ('documentoNombre'  in b) update.documentoNombre  = b.documentoNombre  || '';
+        if ('documentoTipo'    in b) update.documentoTipo    = b.documentoTipo    || '';
+        if ('hora'             in b && b.hora) update.hora   = b.hora;
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
             update,
