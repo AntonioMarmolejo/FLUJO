@@ -260,7 +260,7 @@ function ProgressBar({ value, total, color }) {
     );
 }
 
-function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap, hasTurnoSibling, onToLibre }) {
+function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap, hasTurnoSibling, onToLibre, on3PersonSwap }) {
     const turnoMeta = TURNO_META[worker.turno] || TURNO_META.dia;
     const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
     const [hover, setHover] = useState(false);
@@ -374,6 +374,22 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                                 <path d="M5 12h14M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             LIBRE
+                        </button>
+                    )}
+                    {/* Intercambio back↔turno — solo para descanso en grupo de 3 */}
+                    {worker.turno === 'descanso' && on3PersonSwap && (
+                        <button
+                            title="Intercambiar turno con persona de día o noche"
+                            onClick={e => { e.stopPropagation(); on3PersonSwap(worker); }}
+                            style={{
+                                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                                background: COLORS.yellowDim,
+                                border: '1px solid rgba(239,159,39,0.4)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', color: COLORS.yellow,
+                            }}
+                        >
+                            {Icon.swap(12, COLORS.yellow)}
                         </button>
                     )}
                     {/* Intercambio día/noche — solo si hay un compañero con turno opuesto */}
@@ -772,6 +788,103 @@ function SwapModal({ open, worker, onClose, onConfirm }) {
                     );
                 })}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={onClose} style={{
+                        flex: 1, height: 44, borderRadius: 11,
+                        background: 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${COLORS.border}`,
+                        color: COLORS.text, fontSize: 14, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                    }}>Cancelar</button>
+                    <button onClick={() => onConfirm(choice)} style={{
+                        flex: 1.4, height: 44, borderRadius: 11,
+                        background: COLORS.violet, border: '1px solid transparent',
+                        color: '#fff', fontSize: 14, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        boxShadow: '0 6px 18px rgba(124,94,245,0.4)',
+                    }}>Confirmar</button>
+                </div>
+            </div>
+        </ModalShell>
+    );
+}
+
+function SwapModal3({ open, group, onClose, onConfirm }) {
+    const [choice, setChoice] = useState('dia');
+
+    useEffect(() => { if (open) setChoice('dia'); }, [open]);
+
+    if (!group) return <ModalShell open={open} onClose={onClose}><div /></ModalShell>;
+
+    const { backWorker, dayWorker, nightWorker } = group;
+    const opts = [
+        { id: 'dia',   label: dayWorker.name,   sub: 'Persona de día → pasa a descanso',   icon: '☀', color: '#4ade80' },
+        { id: 'noche', label: nightWorker.name,  sub: 'Persona de noche → pasa a descanso', icon: '🌙', color: '#3b82f6' },
+    ];
+
+    return (
+        <ModalShell open={open} onClose={onClose}>
+            <div style={{
+                background: COLORS.cardElev, borderRadius: 18,
+                border: `1px solid ${COLORS.borderLight}`,
+                padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            width: 36, height: 36, borderRadius: 10,
+                            background: COLORS.yellowDim,
+                            border: '1px solid rgba(239,159,39,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            {Icon.swap(16, COLORS.yellow)}
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Intercambio de turno</div>
+                            <div style={{ fontSize: 11.5, color: COLORS.textMute }}>{backWorker.name} — Descanso</div>
+                        </div>
+                    </div>
+                    <button onClick={onClose} style={{
+                        width: 30, height: 30, borderRadius: 8,
+                        background: 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${COLORS.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer',
+                    }}>{Icon.close(12, COLORS.textMute)}</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: COLORS.textMute, marginBottom: 12 }}>
+                    ¿Con quién desea intercambiar?
+                </div>
+                {opts.map(o => {
+                    const sel = choice === o.id;
+                    return (
+                        <button key={o.id} onClick={() => setChoice(o.id)} style={{
+                            width: '100%', textAlign: 'left',
+                            background: sel ? `${o.color}18` : 'rgba(255,255,255,0.025)',
+                            border: `1px solid ${sel ? o.color + '66' : COLORS.border}`,
+                            borderRadius: 12, padding: 12, marginBottom: 8,
+                            cursor: 'pointer', fontFamily: 'inherit',
+                            transition: 'border-color 160ms ease, background 160ms ease',
+                            display: 'flex', gap: 12, alignItems: 'flex-start',
+                        }}>
+                            <div style={{
+                                width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                                border: `1.5px solid ${sel ? o.color : COLORS.borderLight}`,
+                                background: sel ? o.color : 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 140ms ease',
+                            }}>
+                                {sel && Icon.check(10, '#fff')}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: COLORS.text, marginBottom: 3 }}>
+                                    {o.icon} {o.label}
+                                </div>
+                                <div style={{ fontSize: 11.5, color: COLORS.textMute }}>{o.sub}</div>
+                            </div>
+                        </button>
+                    );
+                })}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                     <button onClick={onClose} style={{
                         flex: 1, height: 44, borderRadius: 11,
                         background: 'rgba(255,255,255,0.05)',
@@ -1367,43 +1480,55 @@ const inputSt = {
     outline: 'none', colorScheme: 'dark',
 };
 
-function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
+function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
     const todayISO = new Date().toISOString().split('T')[0];
-    const EMPTY = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: String(daysSince(todayISO)), turno: 'dia' };
-    const [form, setForm] = useState(EMPTY);
-    const [error, setError] = useState('');
+    const EMPTY_DUO  = { name: '', role: '', cycle: '15-15', inDate: todayISO, back: '', days: String(daysSince(todayISO)), turno: 'dia' };
+    const EMPTY_TRIO = { role: '', nameDia: '', nameNoche: '', nameBack: '', cycle: '15-15', inDate: todayISO, days: String(daysSince(todayISO)) };
+
+    const [mode, setMode]       = useState('duo');
+    const [form, setForm]       = useState(EMPTY_DUO);
+    const [trioForm, setTrio]   = useState(EMPTY_TRIO);
+    const [error, setError]     = useState('');
 
     useEffect(() => {
         if (!open) return;
+        setMode('duo');
+        setError('');
+        const today = new Date().toISOString().split('T')[0];
         if (editData) {
             setForm({
                 name: editData.name || '',
                 role: editData.role || '',
                 cycle: editData.cycle || '15-15',
-                inDate: editData.inDateISO || todayISO,
+                inDate: editData.inDateISO || today,
                 back: editData.back || '',
                 days: String(daysSince(editData.inDateISO) || 1),
                 turno: editData.turno || 'dia',
             });
         } else {
-            const today = new Date().toISOString().split('T')[0];
-            setForm({ ...EMPTY, inDate: today, days: String(daysSince(today)) });
+            setForm({ ...EMPTY_DUO, inDate: today, days: String(daysSince(today)) });
+            setTrio({ ...EMPTY_TRIO, inDate: today, days: String(daysSince(today)) });
         }
-        setError('');
     }, [open, editData]);
 
     const setF = (k, v) => {
         setForm(f => {
             const next = { ...f, [k]: v };
-            if (k === 'inDate' && v) {
-                next.days = String(daysSince(v));
-            }
+            if (k === 'inDate' && v) next.days = String(daysSince(v));
+            return next;
+        });
+        setError('');
+    };
+    const setTF = (k, v) => {
+        setTrio(f => {
+            const next = { ...f, [k]: v };
+            if (k === 'inDate' && v) next.days = String(daysSince(v));
             return next;
         });
         setError('');
     };
 
-    const handleSubmit = () => {
+    const handleSubmitDuo = () => {
         if (!form.name.trim() || !form.role.trim() || !form.inDate || !form.back.trim()) {
             setError('Completa todos los campos obligatorios');
             return;
@@ -1413,23 +1538,56 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
         const worker = {
             ...(editData || {}),
             id: editData ? editData.id : Date.now(),
-            name: form.name.trim(),
-            role: form.role.trim(),
-            cycle: form.cycle,
-            total,
-            days,
-            in: fmtDate(form.inDate),
-            out: calcOutDate(form.inDate, total),
-            inDateISO: form.inDate,
-            back: form.back.trim(),
-            turno: form.turno || 'dia',
+            name: form.name.trim(), role: form.role.trim(), cycle: form.cycle,
+            total, days, in: fmtDate(form.inDate), out: calcOutDate(form.inDate, total),
+            inDateISO: form.inDate, back: form.back.trim(), turno: form.turno || 'dia',
         };
         if (editData) { onEdit && onEdit(worker); }
         else { onAdd && onAdd(worker); }
     };
 
+    const handleSubmitTrio = () => {
+        if (!trioForm.role.trim() || !trioForm.nameDia.trim() || !trioForm.nameNoche.trim() || !trioForm.nameBack.trim()) {
+            setError('Completa todos los campos obligatorios');
+            return;
+        }
+        const total = CYCLE_TOTAL[trioForm.cycle];
+        const days = Math.min(Math.max(parseInt(trioForm.days) || 1, 1), total);
+        onAddTrio && onAddTrio({
+            role: trioForm.role.trim(),
+            nameDia: trioForm.nameDia.trim(),
+            nameNoche: trioForm.nameNoche.trim(),
+            nameBack: trioForm.nameBack.trim(),
+            cycle: trioForm.cycle,
+            inDate: trioForm.inDate,
+            days,
+        });
+    };
+
     const lbl = (t) => (
         <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: COLORS.textMute, letterSpacing: 0.6, marginBottom: 5 }}>{t}</label>
+    );
+    const CicloYDias = ({ vals, setter }) => (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+                {lbl('CICLO *')}
+                <select style={{ ...inputSt, cursor: 'pointer' }} value={vals.cycle} onChange={e => setter('cycle', e.target.value)}>
+                    <option value="14-7">14 / 7 días</option>
+                    <option value="14-14">14 / 14 días</option>
+                    <option value="15-15">15 / 15 días</option>
+                    <option value="20-10">20 / 10 días</option>
+                    <option value="30">30 días</option>
+                </select>
+            </div>
+            <div style={{ flex: 1 }}>
+                {lbl('DÍAS EN TURNO')}
+                <div style={{ position: 'relative' }}>
+                    <input style={{ ...inputSt, paddingRight: 36 }} type="number" min="1" placeholder="1"
+                        value={vals.days} onChange={e => setter('days', e.target.value)} />
+                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: COLORS.textDim, fontWeight: 700, letterSpacing: 0.3, pointerEvents: 'none' }}>AUTO</span>
+                </div>
+            </div>
+        </div>
     );
 
     return (
@@ -1439,6 +1597,7 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                 border: `1px solid ${COLORS.borderLight}`,
                 padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
             }}>
+                {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
@@ -1461,72 +1620,97 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                     }}>{Icon.close(12, COLORS.textMute)}</button>
                 </div>
 
-                <div style={{ marginBottom: 12 }}>
-                    {lbl('NOMBRE COMPLETO *')}
-                    <input style={inputSt} placeholder="Ej: Marcelo Quintero Ríos"
-                        value={form.name} onChange={e => setF('name', e.target.value)} />
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    {lbl('CARGO / ROL *')}
-                    <input style={inputSt} placeholder="Ej: Operador de Planta"
-                        value={form.role} onChange={e => setF('role', e.target.value)} />
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    {lbl('FECHA DE INGRESO *')}
-                    <input style={inputSt} type="date"
-                        value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                    <div style={{ flex: 1 }}>
-                        {lbl('CICLO *')}
-                        <select style={{ ...inputSt, cursor: 'pointer' }}
-                            value={form.cycle} onChange={e => setF('cycle', e.target.value)}>
-                            <option value="14-7">14 / 7 días</option>
-                            <option value="14-14">14 / 14 días</option>
-                            <option value="15-15">15 / 15 días</option>
-                            <option value="20-10">20 / 10 días</option>
-                            <option value="30">30 días</option>
-                        </select>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        {lbl('DÍAS EN TURNO')}
-                        <div style={{ position: 'relative' }}>
-                            <input style={{ ...inputSt, paddingRight: 36 }} type="number" min="1"
-                                placeholder="1"
-                                value={form.days} onChange={e => setF('days', e.target.value)} />
-                            <span style={{
-                                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                                fontSize: 9, color: COLORS.textDim, fontWeight: 700, letterSpacing: 0.3,
-                                pointerEvents: 'none',
-                            }}>AUTO</span>
-                        </div>
-                    </div>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    {lbl('TURNO')}
-                    <div style={{ display: 'flex', gap: 6 }}>
-                        {[
-                            { id: 'dia',      label: '☀ Día',      color: '#4ade80' },
-                            { id: 'noche',    label: '🌙 Noche',    color: '#3b82f6' },
-                            { id: 'descanso', label: '💤 Descanso', color: '#7c5ef5' },
-                        ].map(t => (
-                            <button key={t.id} type="button" onClick={() => setF('turno', t.id)} style={{
-                                flex: 1, height: 36, borderRadius: 9,
-                                background: form.turno === t.id ? `${t.color}22` : 'rgba(255,255,255,0.04)',
-                                border: `1px solid ${form.turno === t.id ? t.color + '66' : '#2a2a2a'}`,
-                                color: form.turno === t.id ? t.color : '#8a8a8a',
-                                fontSize: 11.5, fontWeight: 700,
-                                cursor: 'pointer', fontFamily: 'inherit',
+                {/* Toggle modo — solo al crear */}
+                {!editData && (
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 4 }}>
+                        {[{ id: 'duo', label: '2 personas' }, { id: 'trio', label: '3 personas' }].map(m => (
+                            <button key={m.id} onClick={() => { setMode(m.id); setError(''); }} style={{
+                                flex: 1, height: 32, borderRadius: 7,
+                                background: mode === m.id ? COLORS.violet : 'transparent',
+                                border: '1px solid transparent',
+                                color: mode === m.id ? '#fff' : COLORS.textMute,
+                                fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                                 transition: 'all 140ms ease',
-                            }}>{t.label}</button>
+                            }}>{m.label}</button>
                         ))}
                     </div>
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                    {lbl('NOMBRE DEL RELEVO / BACK *')}
-                    <input style={inputSt} placeholder="Ej: Rodrigo Salinas Vega"
-                        value={form.back} onChange={e => setF('back', e.target.value)} />
-                </div>
+                )}
+
+                {/* ── FORMULARIO DUO ── */}
+                {mode === 'duo' && (
+                    <>
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('NOMBRE COMPLETO *')}
+                            <input style={inputSt} placeholder="Ej: Marcelo Quintero Ríos"
+                                value={form.name} onChange={e => setF('name', e.target.value)} />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('CARGO / ROL *')}
+                            <input style={inputSt} placeholder="Ej: Operador de Planta"
+                                value={form.role} onChange={e => setF('role', e.target.value)} />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('FECHA DE INGRESO *')}
+                            <input style={inputSt} type="date" value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
+                        </div>
+                        <CicloYDias vals={form} setter={setF} />
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('TURNO')}
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                {[
+                                    { id: 'dia',      label: '☀ Día',      color: '#4ade80' },
+                                    { id: 'noche',    label: '🌙 Noche',    color: '#3b82f6' },
+                                    { id: 'descanso', label: '💤 Descanso', color: '#7c5ef5' },
+                                ].map(t => (
+                                    <button key={t.id} type="button" onClick={() => setF('turno', t.id)} style={{
+                                        flex: 1, height: 36, borderRadius: 9,
+                                        background: form.turno === t.id ? `${t.color}22` : 'rgba(255,255,255,0.04)',
+                                        border: `1px solid ${form.turno === t.id ? t.color + '66' : '#2a2a2a'}`,
+                                        color: form.turno === t.id ? t.color : '#8a8a8a',
+                                        fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                                        transition: 'all 140ms ease',
+                                    }}>{t.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: 14 }}>
+                            {lbl('NOMBRE DEL RELEVO / BACK *')}
+                            <input style={inputSt} placeholder="Ej: Rodrigo Salinas Vega"
+                                value={form.back} onChange={e => setF('back', e.target.value)} />
+                        </div>
+                    </>
+                )}
+
+                {/* ── FORMULARIO TRIO ── */}
+                {mode === 'trio' && (
+                    <>
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('PUESTO / CARGO *')}
+                            <input style={inputSt} placeholder="Ej: Analista de Supervisión"
+                                value={trioForm.role} onChange={e => setTF('role', e.target.value)} />
+                        </div>
+                        <div style={{ background: 'rgba(74,222,128,0.06)', borderRadius: 10, border: '1px solid rgba(74,222,128,0.2)', padding: '10px 12px', marginBottom: 8 }}>
+                            <div style={{ fontSize: 10, color: '#4ade80', fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>☀ PERSONA DÍA *</div>
+                            <input style={inputSt} placeholder="Nombre completo"
+                                value={trioForm.nameDia} onChange={e => setTF('nameDia', e.target.value)} />
+                        </div>
+                        <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 10, border: '1px solid rgba(59,130,246,0.2)', padding: '10px 12px', marginBottom: 8 }}>
+                            <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>🌙 PERSONA NOCHE *</div>
+                            <input style={inputSt} placeholder="Nombre completo"
+                                value={trioForm.nameNoche} onChange={e => setTF('nameNoche', e.target.value)} />
+                        </div>
+                        <div style={{ background: 'rgba(124,94,245,0.06)', borderRadius: 10, border: '1px solid rgba(124,94,245,0.2)', padding: '10px 12px', marginBottom: 12 }}>
+                            <div style={{ fontSize: 10, color: COLORS.violet, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>💤 BACK / DESCANSO *</div>
+                            <input style={inputSt} placeholder="Nombre completo"
+                                value={trioForm.nameBack} onChange={e => setTF('nameBack', e.target.value)} />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                            {lbl('FECHA DE INGRESO *')}
+                            <input style={inputSt} type="date" value={trioForm.inDate} onChange={e => setTF('inDate', e.target.value)} />
+                        </div>
+                        <CicloYDias vals={trioForm} setter={setTF} />
+                    </>
+                )}
 
                 {error && <p style={{ color: COLORS.red, fontSize: 12, textAlign: 'center', marginBottom: 8 }}>{error}</p>}
 
@@ -1537,7 +1721,7 @@ function AddWorkerModal({ open, onClose, onAdd, editData, onEdit }) {
                         color: COLORS.text, fontSize: 14, fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
                     }}>Cancelar</button>
-                    <button onClick={handleSubmit} style={{
+                    <button onClick={mode === 'trio' ? handleSubmitTrio : handleSubmitDuo} style={{
                         flex: 1.4, height: 44, borderRadius: 11,
                         background: COLORS.violet, border: '1px solid transparent',
                         color: '#fff', fontSize: 14, fontWeight: 700,
@@ -1581,6 +1765,7 @@ const FlujoPersonalPage = () => {
     const [addOpen, setAddOpen] = useState(false);
     const [editData, setEditData] = useState(null);
     const [countOpen, setCountOpen] = useState(null);
+    const [swapFor3, setSwapFor3] = useState(null);
     const [active, setActive] = useState([]);
     const [soonList, setSoon] = useState([]);
     const [descansoList, setDescanso] = useState([]);
@@ -1733,6 +1918,39 @@ const FlujoPersonalPage = () => {
         }
     };
 
+    const handleAddTrio = async ({ role, nameDia, nameNoche, nameBack, cycle, inDate, days }) => {
+        const total = CYCLE_TOTAL[cycle];
+        try {
+            await Promise.all([
+                api.post('/flujo-workers', { name: nameDia,   role, cycle, total, days, inDateISO: inDate, back: nameBack, status: 'active', turno: 'dia' }),
+                api.post('/flujo-workers', { name: nameNoche, role, cycle, total, days, inDateISO: inDate, back: nameBack, status: 'active', turno: 'noche' }),
+                api.post('/flujo-workers', { name: nameBack,  role, cycle, total, days, inDateISO: inDate, back: `${nameDia} / ${nameNoche}`, status: 'active', turno: 'descanso' }),
+            ]);
+            await reloadWorkers();
+            setAddOpen(false);
+            showToast('Puesto de 3 personas registrado');
+        } catch {
+            showToast('Error al registrar');
+        }
+    };
+
+    const handleSwap3 = async (targetTurno) => {
+        if (!swapFor3) return;
+        const { backWorker, dayWorker, nightWorker } = swapFor3;
+        const targetWorker = targetTurno === 'dia' ? dayWorker : nightWorker;
+        try {
+            await Promise.all([
+                api.put(`/flujo-workers/${backWorker.id}`,   { ...backWorker,   turno: targetTurno }),
+                api.put(`/flujo-workers/${targetWorker.id}`, { ...targetWorker, turno: 'descanso' }),
+            ]);
+            await reloadWorkers();
+            showToast(`${backWorker.name.split(' ')[0]} pasa a ${targetTurno === 'dia' ? 'día' : 'noche'}`);
+        } catch {
+            showToast('Error al intercambiar');
+        }
+        setSwapFor3(null);
+    };
+
     const handleEdit = async (updated) => {
         try {
             const res = await api.put(`/flujo-workers/${updated.id}`, {
@@ -1825,6 +2043,17 @@ const FlujoPersonalPage = () => {
     const filteredSoon = filter(soonList);
     const filteredDescanso = filter(descansoList);
 
+    // Detecta si un worker pertenece a un grupo de 3 (dia + noche + descanso con mismo rol)
+    const get3PersonGroup = (worker) => {
+        const all = [...active, ...soonList, ...descansoList];
+        const same = all.filter(w => w.role.trim().toLowerCase() === worker.role.trim().toLowerCase());
+        const dia     = same.find(w => w.turno === 'dia');
+        const noche   = same.find(w => w.turno === 'noche');
+        const descanso = same.find(w => w.turno === 'descanso');
+        if (!dia || !noche || !descanso) return null;
+        return { dayWorker: dia, nightWorker: noche, backWorker: descanso };
+    };
+
     // Para cada worker saber si tiene un compañero con turno opuesto (dia↔noche)
     const allInTurno = [...active, ...soonList];
     const hasTurnoSibling = (w) => allInTurno.some(
@@ -1914,14 +2143,18 @@ const FlujoPersonalPage = () => {
                         {!loading && filteredDescanso.length > 0 && (
                             <>
                                 <SectionHeader label="En descanso" count={filteredDescanso.length} dot={COLORS.violet} />
-                                {filteredDescanso.map(w => (
-                                    <WorkerCard key={w.id} worker={w}
-                                        onDetail={setDetailWorker}
-                                        onCycleClick={setCycleFor}
-                                        onSwap={setSwapFor}
-                                        onToLibre={handleToLibre}
-                                    />
-                                ))}
+                                {filteredDescanso.map(w => {
+                                    const trio = get3PersonGroup(w);
+                                    return (
+                                        <WorkerCard key={w.id} worker={w}
+                                            onDetail={setDetailWorker}
+                                            onCycleClick={setCycleFor}
+                                            onSwap={setSwapFor}
+                                            onToLibre={handleToLibre}
+                                            on3PersonSwap={trio ? () => setSwapFor3(trio) : undefined}
+                                        />
+                                    );
+                                })}
                             </>
                         )}
                     </div>
@@ -1965,8 +2198,9 @@ const FlujoPersonalPage = () => {
             />
             <DeleteModal open={!!deleteFor} worker={deleteFor} onClose={() => setDeleteFor(null)} onConfirm={handleDelete} />
             <SwapModal open={!!swapFor} worker={swapFor} onClose={() => setSwapFor(null)} onConfirm={handleSwap} />
+            <SwapModal3 open={!!swapFor3} group={swapFor3} onClose={() => setSwapFor3(null)} onConfirm={handleSwap3} />
             <CycleModal open={!!cycleFor} worker={cycleFor} onClose={() => setCycleFor(null)} onConfirm={handleCycle} />
-            <AddWorkerModal open={addOpen} onClose={() => { setAddOpen(false); setEditData(null); }} onAdd={handleAdd} editData={editData} onEdit={handleEdit} />
+            <AddWorkerModal open={addOpen} onClose={() => { setAddOpen(false); setEditData(null); }} onAdd={handleAdd} onAddTrio={handleAddTrio} editData={editData} onEdit={handleEdit} />
             <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onConfirm={handleImportConfirm} />
             <CountListModal
                 open={!!countOpen}
