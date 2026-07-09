@@ -456,7 +456,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
         : EMPTY_FORM
@@ -719,7 +719,10 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, onClose, onGuardado, onGuar
         // Nuevo movimiento: guardado optimista — aparece en UI de inmediato
         const tempId = `tmp_${Date.now()}`;
         const hora = getHoraLocal();
-        const fecha = getTurnoFecha(turnoActual);
+        // fechaFlujo viene del turno activo (fecha de inicio del turno) para que todos los
+        // movimientos del turno nocturno queden agrupados bajo la misma fecha, incluso los
+        // registrados después de medianoche.
+        const fecha = fechaFlujo || getTurnoFecha(turnoActual);
         const tempMov = { ...formFinal, _id: tempId, hora, fecha, _pending: true };
 
         onGuardadoOptimista(tempMov);
@@ -3153,7 +3156,9 @@ const WorkspacePage = () => {
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
-        const turnoFecha = getTurnoFecha(turnoActivo.turnoActual);
+        // Usamos la fecha del turno (no calculada en el momento) para que el nocturno
+        // siempre cargue los movimientos del día de inicio del turno, incluso de madrugada.
+        const turnoFecha = turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual);
         try {
             const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
             const serverMovs = mRes.data.movimientos;
@@ -3878,6 +3883,7 @@ const WorkspacePage = () => {
             {/* Modales */}
             {showModal && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
+                    fechaFlujo={turnoActivo.fecha}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
                     onGuardadoOptimista={handleGuardadoOptimista}
@@ -3886,6 +3892,7 @@ const WorkspacePage = () => {
             )}
             {editMov && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
+                    fechaFlujo={turnoActivo.fecha}
                     onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (

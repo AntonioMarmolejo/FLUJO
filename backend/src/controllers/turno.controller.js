@@ -1,17 +1,20 @@
 import Turno from '../models/Turno.model.js';
 
-// Obtener hora actual en formato HH:MM
-const getHoraActual = () => {
-    return new Date().toLocaleTimeString('es-EC', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    });
-};
+const TZ = 'America/Guayaquil';
 
-// Obtener fecha actual en formato YYYY-MM-DD
-const getFechaActual = () => {
-    return new Date().toISOString().split('T')[0];
+// Siempre en hora de Ecuador para evitar el corte a las 19:00 ECU (medianoche UTC)
+const getHoraActual = () =>
+    new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ });
+
+const getFechaActual = () =>
+    new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+
+const getHoraECU = () =>
+    parseInt(new Date().toLocaleTimeString('es-EC', { hour: '2-digit', hour12: false, timeZone: TZ }), 10);
+
+const getFechaAyer = () => {
+    const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return ayer.toLocaleDateString('en-CA', { timeZone: TZ });
 };
 
 // POST /api/turnos/iniciar
@@ -25,15 +28,16 @@ export const iniciarTurno = async (req, res) => {
 
         const fecha = getFechaActual();
         const horaInicio = getHoraActual();
+        const horaECU = getHoraECU();
 
-        // Verificar si ya existe un turno activo para este usuario, puesto y fecha
-        const turnoExistente = await Turno.findOne({
-            usuario: req.user._id,
-            puesto,
-            bloque,
-            fecha,
-            activo: true,
-        });
+        // Buscar turno activo de hoy; si es madrugada (00-05) también revisar nocturno de ayer
+        let turnoExistente = await Turno.findOne({ usuario: req.user._id, puesto, bloque, fecha, activo: true });
+        if (!turnoExistente && horaECU < 6) {
+            turnoExistente = await Turno.findOne({
+                usuario: req.user._id, puesto, bloque,
+                fecha: getFechaAyer(), turnoActual: 'nocturno', activo: true,
+            });
+        }
 
         if (turnoExistente) {
             // Registrar cambio de turno
@@ -100,11 +104,18 @@ export const getUltimoTurno = async (req, res) => {
 export const getTurnoActivo = async (req, res) => {
     try {
         const fecha = getFechaActual();
-        const turno = await Turno.findOne({
-            usuario: req.user._id,
-            fecha,
-            activo: true,
-        });
+        let turno = await Turno.findOne({ usuario: req.user._id, fecha, activo: true });
+
+        // Si es madrugada (00:00-05:59 ECU) y no hay turno de hoy, buscar nocturno de ayer
+        if (!turno && getHoraECU() < 6) {
+            turno = await Turno.findOne({
+                usuario: req.user._id,
+                fecha: getFechaAyer(),
+                turnoActual: 'nocturno',
+                activo: true,
+            });
+        }
+
         res.status(200).json({ turno });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
