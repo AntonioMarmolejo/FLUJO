@@ -3174,7 +3174,7 @@ const PanelActivacion = ({ user, permisosPanel, isPending }) => {
 
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
-    const { user, logout, isAdmin, isPending, hasPermiso } = useAuth();
+    const { user, logout, isAdmin, isPending, hasPermiso, permisosPanel } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 

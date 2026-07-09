@@ -164,8 +164,11 @@ export default function AdminPage() {
     const [passForm, setPassForm] = useState({ password: '', confirm: '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [loadError, setLoadError] = useState('');
 
     const load = useCallback(async () => {
+        setLoading(true);
+        setLoadError('');
         try {
             const [uRes, sRes] = await Promise.all([
                 api.get('/admin/usuarios'),
@@ -173,8 +176,8 @@ export default function AdminPage() {
             ]);
             setUsers(uRes.data.users);
             setStats(sRes.data);
-        } catch {
-            /* ignorar */
+        } catch (e) {
+            setLoadError(e.response?.data?.message || 'Error al cargar usuarios. Verifica tu conexión.');
         } finally {
             setLoading(false);
         }
@@ -277,7 +280,10 @@ export default function AdminPage() {
                     <div style={{ fontWeight: 700, fontSize: 16 }}>Panel de Administración</div>
                     <div style={{ fontSize: 12, color: C.muted }}>Gestión de usuarios del sistema</div>
                 </div>
-                <div style={{ marginLeft: 'auto' }}>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <Btn onClick={load} color={C.muted} style={{ fontSize: 13 }}>
+                        ↻ Actualizar
+                    </Btn>
                     <Btn onClick={() => { setForm({ name: '', email: '', password: '', role: 'operador' }); setError(''); setModalCreate(true); }}>
                         + Nuevo usuario
                     </Btn>
@@ -334,6 +340,13 @@ export default function AdminPage() {
                 </div>
 
                 {/* Lista */}
+                {loadError && (
+                    <div style={{
+                        background: C.redDim, border: `1px solid ${C.red}44`,
+                        borderRadius: 10, padding: '12px 16px', marginBottom: 12,
+                        color: C.red, fontSize: 13,
+                    }}>{loadError}</div>
+                )}
                 {loading ? (
                     <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>Cargando…</div>
                 ) : filtered.length === 0 ? (
