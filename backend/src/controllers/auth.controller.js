@@ -12,6 +12,8 @@ const buildUserResponse = (user) => ({
     name: user.name,
     email: user.email,
     role: user.role || 'operador',
+    status: user.status || 'pending',
+    permisosPanel: user.permisosPanel || [],
     activo: user.activo !== false,
     bloques: user.bloques,
     puestos: Object.fromEntries(user.puestos || new Map()),
@@ -30,9 +32,11 @@ export const register = async (req, res) => {
 
         // Si no existe ningún admin, el primer usuario en registrarse es admin
         const adminCount = await User.countDocuments({ role: 'admin' });
-        const role = adminCount === 0 ? 'admin' : 'operador';
+        const isFirst = adminCount === 0;
+        const role = isFirst ? 'admin' : 'operador';
+        const status = isFirst ? 'active' : 'pending';
 
-        const user = await User.create({ name, email, password, role });
+        const user = await User.create({ name, email, password, role, status });
         const token = generateToken(user._id, user.role);
 
         res.status(201).json({
@@ -125,8 +129,10 @@ export const googleAuth = async (req, res) => {
         let user = await User.findOne({ $or: [{ googleId }, { email }] });
         if (!user) {
             const adminCount = await User.countDocuments({ role: 'admin' });
-            const role = adminCount === 0 ? 'admin' : 'operador';
-            user = await User.create({ googleId, email, name, onboardingCompleto: false, role });
+            const isFirst = adminCount === 0;
+            const role = isFirst ? 'admin' : 'operador';
+            const status = isFirst ? 'active' : 'pending';
+            user = await User.create({ googleId, email, name, onboardingCompleto: false, role, status });
         } else if (!user.googleId) {
             user.googleId = googleId;
             await user.save();

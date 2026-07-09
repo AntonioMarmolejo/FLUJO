@@ -79,9 +79,12 @@ export const AuthProvider = ({ children }) => {
     const role = user?.role || 'operador';
     const isAdmin = role === 'admin';
     const isSupervisor = role === 'supervisor' || role === 'admin';
+    const isPending = (user?.status || 'pending') === 'pending';
+    const permisosPanel = user?.permisosPanel || [];
+    const hasPermiso = (panel) => isAdmin || permisosPanel.includes(panel);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser, role, isAdmin, isSupervisor }}>
+        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser, role, isAdmin, isSupervisor, isPending, permisosPanel, hasPermiso }}>
             {children}
         </AuthContext.Provider>
     );

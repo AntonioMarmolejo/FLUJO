@@ -35,3 +35,21 @@ export const authorizeRole = (...rolesPermitidos) => {
         next();
     };
 };
+
+// Bloquea operaciones de escritura a usuarios pendientes de aprobación
+export const requireActive = (req, res, next) => {
+    const userStatus = req.user?.status || 'pending';
+    if (userStatus === 'pending') {
+        return res.status(403).json({
+            message: 'Tu cuenta está pendiente de aprobación. Contacta al administrador para activar el acceso.',
+            code: 'ACCOUNT_PENDING',
+        });
+    }
+    if (userStatus === 'suspended') {
+        return res.status(403).json({
+            message: 'Tu cuenta está suspendida. Contacta al administrador.',
+            code: 'ACCOUNT_SUSPENDED',
+        });
+    }
+    next();
+};

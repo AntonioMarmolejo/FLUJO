@@ -41,6 +41,15 @@ const userSchema = new mongoose.Schema(
             enum: ['admin', 'supervisor', 'operador'],
             default: 'operador',
         },
+        status: {
+            type: String,
+            enum: ['pending', 'active', 'suspended'],
+            default: 'pending',
+        },
+        permisosPanel: {
+            type: [String],
+            default: [],
+        },
         activo: {
             type: Boolean,
             default: true,

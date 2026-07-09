@@ -6,6 +6,8 @@ const buildUser = (u) => ({
     name: u.name,
     email: u.email,
     role: u.role || 'operador',
+    status: u.status || 'pending',
+    permisosPanel: u.permisosPanel || [],
     activo: u.activo !== false,
     lastLogin: u.lastLogin || null,
     createdAt: u.createdAt,
@@ -37,6 +39,7 @@ export const createUsuario = async (req, res) => {
             email,
             password,
             role: role || 'operador',
+            status: 'active',
             activo: true,
         });
 
@@ -46,14 +49,16 @@ export const createUsuario = async (req, res) => {
     }
 };
 
-// PUT /api/admin/usuarios/:id  — cambiar role y/o activo
+// PUT /api/admin/usuarios/:id  — cambiar role, activo, status y/o permisosPanel
 export const updateUsuario = async (req, res) => {
     try {
-        const { role, activo, name } = req.body;
+        const { role, activo, name, status, permisosPanel } = req.body;
         const update = {};
         if (role !== undefined) update.role = role;
         if (activo !== undefined) update.activo = activo;
         if (name !== undefined) update.name = name;
+        if (status !== undefined) update.status = status;
+        if (permisosPanel !== undefined) update.permisosPanel = permisosPanel;
 
         // No dejar al admin desactivarse a sí mismo ni quitarse el rol
         if (req.params.id === String(req.user._id)) {
@@ -107,18 +112,19 @@ export const resetPassword = async (req, res) => {
 // GET /api/admin/stats  — métricas de uso
 export const getStats = async (req, res) => {
     try {
-        const [total, admins, supervisors, operadores, inactivos] = await Promise.all([
+        const [total, admins, supervisors, operadores, inactivos, pendientes] = await Promise.all([
             User.countDocuments({}),
             User.countDocuments({ role: 'admin' }),
             User.countDocuments({ role: 'supervisor' }),
             User.countDocuments({ role: 'operador' }),
             User.countDocuments({ activo: false }),
+            User.countDocuments({ status: 'pending' }),
         ]);
 
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const activosUltimos30 = await User.countDocuments({ lastLogin: { $gte: thirtyDaysAgo } });
 
-        res.json({ total, admins, supervisors, operadores, inactivos, activosUltimos30 });
+        res.json({ total, admins, supervisors, operadores, inactivos, pendientes, activosUltimos30 });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }

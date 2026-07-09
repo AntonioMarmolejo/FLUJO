@@ -28,6 +28,21 @@ const ROLE_META = {
     operador:   { label: 'Operador',   color: C.green,   dim: C.greenDim  },
 };
 
+const STATUS_META = {
+    pending:   { label: 'Pendiente',  color: C.orange, dim: C.orangeDim },
+    active:    { label: 'Activo',     color: C.green,  dim: C.greenDim  },
+    suspended: { label: 'Suspendido', color: C.red,    dim: C.redDim    },
+};
+
+const PANELS_DISPONIBLES = [
+    { id: 'movimientos', label: 'Registrar Movimientos (sync)' },
+    { id: 'utilidades',  label: 'Utilidades' },
+    { id: 'personas',    label: 'Gestión de Personas' },
+    { id: 'placas',      label: 'Placas Vehículos' },
+    { id: 'extensiones', label: 'Extensiones' },
+    { id: 'reportes',    label: 'Reportes y Avance' },
+];
+
 const fmt = (d) => {
     if (!d) return 'Nunca';
     return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -48,6 +63,17 @@ const Initials = ({ name, role }) => {
 
 const RoleBadge = ({ role }) => {
     const meta = ROLE_META[role] || ROLE_META.operador;
+    return (
+        <span style={{
+            background: meta.dim, color: meta.color,
+            border: `1px solid ${meta.color}44`,
+            padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+        }}>{meta.label}</span>
+    );
+};
+
+const StatusBadge = ({ status }) => {
+    const meta = STATUS_META[status] || STATUS_META.pending;
     return (
         <span style={{
             background: meta.dim, color: meta.color,
@@ -125,6 +151,7 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterRole, setFilterRole] = useState('todos');
+    const [filterStatus, setFilterStatus] = useState('todos');
 
     const [modalCreate, setModalCreate] = useState(false);
     const [modalEdit, setModalEdit] = useState(null);
@@ -132,7 +159,7 @@ export default function AdminPage() {
     const [modalDel, setModalDel] = useState(null);
 
     const [form, setForm] = useState({ name: '', email: '', password: '', role: 'operador' });
-    const [editForm, setEditForm] = useState({ name: '', role: 'operador', activo: true });
+    const [editForm, setEditForm] = useState({ name: '', role: 'operador', activo: true, status: 'active', permisosPanel: [] });
     const [passForm, setPassForm] = useState({ password: '', confirm: '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -158,7 +185,8 @@ export default function AdminPage() {
         const q = search.toLowerCase();
         const matchSearch = !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
         const matchRole = filterRole === 'todos' || u.role === filterRole;
-        return matchSearch && matchRole;
+        const matchStatus = filterStatus === 'todos' || u.status === filterStatus;
+        return matchSearch && matchRole && matchStatus;
     });
 
     const handleCreate = async () => {
@@ -191,6 +219,18 @@ export default function AdminPage() {
             load();
         } catch (e) {
             alert(e.response?.data?.message || 'Error');
+        }
+    };
+
+    const handleAprobar = async (u) => {
+        try {
+            await api.put(`/admin/usuarios/${u.id}`, {
+                status: 'active',
+                permisosPanel: ['movimientos'],
+            });
+            load();
+        } catch (e) {
+            alert(e.response?.data?.message || 'Error al aprobar');
         }
     };
 
@@ -249,6 +289,7 @@ export default function AdminPage() {
                 {stats && (
                     <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                         <StatCard label="Total usuarios" value={stats.total} />
+                        <StatCard label="Pendientes" value={stats.pendientes} color={C.orange} />
                         <StatCard label="Admins" value={stats.admins} color={C.purple} />
                         <StatCard label="Supervisores" value={stats.supervisors} color={C.orange} />
                         <StatCard label="Operadores" value={stats.operadores} color={C.green} />
@@ -269,6 +310,16 @@ export default function AdminPage() {
                             borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14, outline: 'none',
                         }}
                     />
+                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
+                        background: C.surface2, border: `1px solid ${C.border}`,
+                        borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14,
+                        outline: 'none', cursor: 'pointer',
+                    }}>
+                        <option value="todos">Todos los estados</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="active">Activos</option>
+                        <option value="suspended">Suspendidos</option>
+                    </select>
                     <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{
                         background: C.surface2, border: `1px solid ${C.border}`,
                         borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14,
@@ -300,6 +351,7 @@ export default function AdminPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                         <span style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</span>
                                         <RoleBadge role={u.role} />
+                                        <StatusBadge status={u.status} />
                                         {u.id === me?.id && (
                                             <span style={{ fontSize: 11, color: C.muted, background: C.surface2, padding: '1px 7px', borderRadius: 10, border: `1px solid ${C.border}` }}>tú</span>
                                         )}
@@ -311,9 +363,19 @@ export default function AdminPage() {
                                     <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
                                         Último acceso: {fmt(u.lastLogin)}
                                     </div>
+                                    {u.permisosPanel?.length > 0 && (
+                                        <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>
+                                            Paneles: {u.permisosPanel.join(', ')}
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                    <Btn onClick={() => { setEditForm({ name: u.name, role: u.role, activo: u.activo }); setError(''); setModalEdit(u); }}>
+                                    {u.status === 'pending' && u.id !== me?.id && (
+                                        <Btn onClick={() => handleAprobar(u)} color={C.green}>
+                                            ✓ Aprobar
+                                        </Btn>
+                                    )}
+                                    <Btn onClick={() => { setEditForm({ name: u.name, role: u.role, activo: u.activo, status: u.status || 'pending', permisosPanel: u.permisosPanel || [] }); setError(''); setModalEdit(u); }}>
                                         Editar
                                     </Btn>
                                     <Btn onClick={() => { setPassForm({ password: '', confirm: '' }); setError(''); setModalPass(u); }} color={C.orange}>
@@ -373,6 +435,36 @@ export default function AdminPage() {
                             <option value="supervisor">Supervisor</option>
                             <option value="admin">Administrador</option>
                         </Select>
+                    </Field>
+                    <Field label="Estado de cuenta">
+                        <Select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}>
+                            <option value="pending">Pendiente de aprobación</option>
+                            <option value="active">Activo</option>
+                            <option value="suspended">Suspendido</option>
+                        </Select>
+                    </Field>
+                    <Field label="Paneles habilitados">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                            {PANELS_DISPONIBLES.map(p => {
+                                const checked = editForm.permisosPanel.includes(p.id);
+                                return (
+                                    <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: C.text }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => setEditForm(f => ({
+                                                ...f,
+                                                permisosPanel: checked
+                                                    ? f.permisosPanel.filter(x => x !== p.id)
+                                                    : [...f.permisosPanel, p.id],
+                                            }))}
+                                            style={{ accentColor: C.purple, width: 15, height: 15 }}
+                                        />
+                                        {p.label}
+                                    </label>
+                                );
+                            })}
+                        </div>
                     </Field>
                     {error && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

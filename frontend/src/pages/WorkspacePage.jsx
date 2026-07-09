@@ -3014,7 +3014,7 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
-    const { user, logout, isAdmin } = useAuth();
+    const { user, logout, isAdmin, isPending, hasPermiso } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -3191,8 +3191,9 @@ const WorkspacePage = () => {
     };
 
     // Sincronización offline: reintenta la cola cuando vuelve la conexión
+    // Usuarios pendientes de aprobación no sincronizan — sus movimientos quedan en cola
     useEffect(() => {
-        if (!turnoActivo) return;
+        if (!turnoActivo || isPending) return;
         const syncQueue = async () => {
             const queue = getOfflineQueue();
             if (!queue.length) return;
@@ -3207,7 +3208,7 @@ const WorkspacePage = () => {
         if (navigator.onLine) syncQueue();
         window.addEventListener('online', syncQueue);
         return () => window.removeEventListener('online', syncQueue);
-    }, [turnoActivo]);
+    }, [turnoActivo, isPending]);
 
     useEffect(() => {
         if (location.state?.openDrawer) {
@@ -3924,6 +3925,21 @@ const WorkspacePage = () => {
                 />
             )}
 
+            {/* Banner cuenta pendiente */}
+            {isPending && (
+                <div style={{
+                    background: 'rgba(239,159,39,0.12)', borderTop: '1px solid rgba(239,159,39,0.3)',
+                    padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 12, color: '#ef9f27',
+                }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span>Cuenta pendiente de aprobación. Los movimientos se guardan localmente hasta que el administrador active tu acceso.</span>
+                </div>
+            )}
+
             {/* Bottom nav */}
             <nav className="ws-navbar">
                 {[
@@ -3944,14 +3960,14 @@ const WorkspacePage = () => {
                             </svg>
                         )
                     },
-                    {
+                    ...(!isPending && hasPermiso('utilidades') ? [{
                         id: 'utilidades', label: 'Utilidades', icon: (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
                                 <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         )
-                    },
+                    }] : []),
                 ].map(tab => (
                     <button key={tab.id}
                         className={`ws-nav-btn ${tabActiva === tab.id ? 'active' : ''}`}
