@@ -41,6 +41,7 @@ const PANELS_DISPONIBLES = [
     { id: 'placas',      label: 'Placas Vehículos' },
     { id: 'extensiones', label: 'Extensiones' },
     { id: 'reportes',    label: 'Reportes y Avance' },
+    { id: 'jefes',       label: 'Jefes Inmediatos' },
 ];
 
 const fmt = (d) => {

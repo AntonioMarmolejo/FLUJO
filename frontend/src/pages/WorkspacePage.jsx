@@ -269,7 +269,24 @@ const DRAWER_ITEMS = [
     { label: 'Calendario', tab: 'calendario', icon: <IconCalendar /> },
 ];
 
-const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin }) => (
+// Qué permiso requiere cada tab del cajón (null = siempre accesible)
+const DRAWER_PERMISSION = {
+    'avance':      'reportes',
+    'placas-db':   'placas',
+    'extensiones': 'extensiones',
+    'personas':    'personas',
+    'jefes':       'jefes',
+    'calendario':  null,
+};
+
+const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin, isPending, hasPermiso }) => {
+    const canAccess = (tab) => {
+        if (isAdmin) return true;
+        const perm = DRAWER_PERMISSION[tab];
+        if (!perm) return !isPending;
+        return !isPending && hasPermiso(perm);
+    };
+    return (
     <div className="drawer-overlay" onClick={onClose}>
         <div className="drawer-panel" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
@@ -277,15 +294,27 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin }) =
                 <button className="drawer-close-btn" onClick={onClose}>✕</button>
             </div>
             <div className="drawer-nav">
-                {DRAWER_ITEMS.map(item => (
+                {DRAWER_ITEMS.map(item => {
+                    const ok = canAccess(item.tab);
+                    return (
                     <button key={item.tab}
                         className={`drawer-item ${item.tab === activeTab ? 'drawer-item-active' : ''}`}
-                        onClick={() => { onNavigate(item.tab); onClose(); }}>
+                        style={!ok ? { opacity: 0.55 } : undefined}
+                        onClick={() => {
+                            if (!ok) return;
+                            onNavigate(item.tab); onClose();
+                        }}>
                         <span className="drawer-item-icon">{item.icon}</span>
                         <span className="drawer-item-label">{item.label}</span>
-                        <IconChevronRight />
+                        {ok ? <IconChevronRight /> : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, opacity: 0.7 }}>
+                                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                        )}
                     </button>
-                ))}
+                    );
+                })}
                 <div className="drawer-divider" />
                 <button className="drawer-item drawer-item-flujo" onClick={() => { onNuevoFlujo(); onClose(); }}>
                     <span className="drawer-item-icon"><IconBolt /></span>
@@ -304,7 +333,8 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin }) =
             </div>
         </div>
     </div>
-);
+    );
+};
 
 // ── Escáner QR ────────────────────────────────────────────
 const ModalEscanerQR = ({ onScanned, onClose }) => {
@@ -3015,6 +3045,133 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
     );
 };
 
+// ── Acceso restringido ────────────────────────────────────
+const AccesoRestringido = ({ label }) => (
+    <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '60px 24px', textAlign: 'center',
+    }}>
+        <div style={{
+            width: 56, height: 56, borderRadius: 16, marginBottom: 16,
+            background: 'rgba(239,159,39,0.10)', border: '1px solid rgba(239,159,39,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2" />
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#f0f0f0', marginBottom: 8 }}>Acceso restringido</div>
+        <div style={{ fontSize: 13, color: '#888', lineHeight: 1.55, maxWidth: 280 }}>
+            No tienes permiso para acceder a <strong style={{ color: '#ccc' }}>{label}</strong>.
+            Contacta al administrador para solicitar acceso.
+        </div>
+    </div>
+);
+
+const PANEL_LABELS = {
+    movimientos: 'Registrar Movimientos',
+    reportes:    'Avance del Día',
+    placas:      'Placas Vehículos',
+    extensiones: 'Extensiones',
+    personas:    'Gestión de Personas',
+    jefes:       'Jefes Inmediatos',
+    utilidades:  'Utilidades',
+};
+
+// ── Panel estado activación (para usuarios pendientes o con permisos parciales) ──
+const PanelActivacion = ({ user, permisosPanel, isPending }) => {
+    const paneles = Object.entries(PANEL_LABELS);
+    return (
+        <div style={{
+            margin: '12px 12px 4px', borderRadius: 14,
+            background: 'rgba(239,159,39,0.07)',
+            border: '1px solid rgba(239,159,39,0.25)',
+            padding: '14px 16px',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{
+                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                    background: 'rgba(239,159,39,0.15)', border: '1px solid rgba(239,159,39,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="#ef9f27" strokeWidth="2" />
+                        <path d="M12 8v4M12 16h.01" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                </div>
+                <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#f0f0f0' }}>
+                        {isPending ? 'Cuenta pendiente de activación' : 'Acceso parcial'}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#888' }}>
+                        {isPending
+                            ? 'El administrador debe aprobar tu cuenta para habilitar los módulos.'
+                            : 'Algunos módulos aún no están habilitados para tu cuenta.'}
+                    </div>
+                </div>
+            </div>
+
+            {/* Pasos */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
+                {[
+                    { label: 'Registro', done: true },
+                    { label: 'Aprobación', done: !isPending },
+                    { label: 'Acceso completo', done: !isPending && paneles.every(([id]) => permisosPanel.includes(id)) },
+                ].map((step, i, arr) => (
+                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? 1 : undefined }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                            <div style={{
+                                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                                background: step.done ? 'rgba(40,201,151,0.2)' : 'rgba(239,159,39,0.15)',
+                                border: `1.5px solid ${step.done ? '#28c997' : 'rgba(239,159,39,0.5)'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                {step.done
+                                    ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                    : <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef9f27', opacity: 0.7 }} />
+                                }
+                            </div>
+                            <span style={{ fontSize: 9.5, color: step.done ? '#28c997' : '#888', fontWeight: 600, whiteSpace: 'nowrap' }}>{step.label}</span>
+                        </div>
+                        {i < arr.length - 1 && (
+                            <div style={{ flex: 1, height: 1.5, background: step.done ? 'rgba(40,201,151,0.3)' : 'rgba(255,255,255,0.08)', margin: '0 6px', marginBottom: 14 }} />
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Módulos */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {paneles.map(([id, label]) => {
+                    const granted = !isPending && permisosPanel.includes(id);
+                    return (
+                        <div key={id} style={{
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            background: granted ? 'rgba(40,201,151,0.07)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${granted ? 'rgba(40,201,151,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                            borderRadius: 8, padding: '6px 8px',
+                        }}>
+                            <div style={{
+                                width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                                background: granted ? 'rgba(40,201,151,0.2)' : 'rgba(239,159,39,0.15)',
+                                border: `1px solid ${granted ? '#28c99766' : 'rgba(239,159,39,0.4)'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                {granted
+                                    ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                    : <svg width="7" height="7" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2.5" /><path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2.5" strokeLinecap="round" /></svg>
+                                }
+                            </div>
+                            <span style={{ fontSize: 10.5, color: granted ? '#d4d4d4' : '#666', fontWeight: 600 }}>{label}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
     const { user, logout, isAdmin, isPending, hasPermiso } = useAuth();
@@ -3392,6 +3549,8 @@ const WorkspacePage = () => {
                     onClose={() => setShowDrawer(false)}
                     activeTab={lastDrawerTab}
                     isAdmin={isAdmin}
+                    isPending={isPending}
+                    hasPermiso={hasPermiso}
                     onNavigate={tab => {
                         setLastDrawerTab(tab);
                         if (tab === 'admin') navigate('/admin');
@@ -3467,6 +3626,9 @@ const WorkspacePage = () => {
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
                     <>
+                    {(isPending || (!isAdmin && permisosPanel.length < Object.keys(PANEL_LABELS).length)) && (
+                        <PanelActivacion user={user} permisosPanel={permisosPanel} isPending={isPending} />
+                    )}
                     <div className="ws-vista-tabs">
                         <button className={`ws-vista-tab${vistaInicio === 'movimientos' ? ' active' : ''}`}
                             onClick={() => setVistaInicio('movimientos')}>
@@ -3799,7 +3961,9 @@ const WorkspacePage = () => {
                 )}
 
                 {tabActiva === 'avance' && (
-                    <PantallaAvance turnoActivo={turnoActivo} user={user} />
+                    (!isAdmin && (isPending || !hasPermiso('reportes')))
+                        ? <AccesoRestringido label="Avance del Día" />
+                        : <PantallaAvance turnoActivo={turnoActivo} user={user} />
                 )}
 
                 {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} />}
@@ -3810,10 +3974,10 @@ const WorkspacePage = () => {
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
                 )}
 
-                {tabActiva === 'placas-db' && <PantallaPlacasDB />}
-                {tabActiva === 'extensiones' && <PantallaExtensiones />}
-                {tabActiva === 'personas' && <PantallaPersonas />}
-                {tabActiva === 'jefes' && <PantallaStub title="Jefes Inmediatos" />}
+                {tabActiva === 'placas-db' && ((!isAdmin && (isPending || !hasPermiso('placas'))) ? <AccesoRestringido label="Placas Vehículos" /> : <PantallaPlacasDB />)}
+                {tabActiva === 'extensiones' && ((!isAdmin && (isPending || !hasPermiso('extensiones'))) ? <AccesoRestringido label="Extensiones" /> : <PantallaExtensiones />)}
+                {tabActiva === 'personas' && ((!isAdmin && (isPending || !hasPermiso('personas'))) ? <AccesoRestringido label="Gestión de Personas" /> : <PantallaPersonas />)}
+                {tabActiva === 'jefes' && ((!isAdmin && (isPending || !hasPermiso('jefes'))) ? <AccesoRestringido label="Jefes Inmediatos" /> : <PantallaStub title="Jefes Inmediatos" />)}
             </div>
 
             {/* FABs — solo en inicio / movimientos */}
