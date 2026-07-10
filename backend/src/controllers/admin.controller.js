@@ -15,10 +15,13 @@ const buildUser = (u) => ({
 
 // GET /api/admin/usuarios
 export const getUsuarios = async (req, res) => {
+    console.log(`[admin] getUsuarios — solicitado por: ${req.user?.email} (role: ${req.user?.role})`);
     try {
         const users = await User.find({}).sort({ createdAt: -1 });
+        console.log(`[admin] getUsuarios — retornando ${users.length} usuarios`);
         res.json({ users: users.map(buildUser) });
     } catch (error) {
+        console.error(`[admin] getUsuarios — error: ${error.message}`);
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };
