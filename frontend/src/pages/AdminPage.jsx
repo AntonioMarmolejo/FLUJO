@@ -177,7 +177,17 @@ export default function AdminPage() {
             setUsers(uRes.data.users);
             setStats(sRes.data);
         } catch (e) {
-            setLoadError(e.response?.data?.message || 'Error al cargar usuarios. Verifica tu conexión.');
+            const status = e.response?.status;
+            const msg = e.response?.data?.message;
+            if (status === 403) {
+                setLoadError('Acceso denegado (403). Tu sesión no tiene permisos de administrador. Cierra sesión y vuelve a iniciar.');
+            } else if (status === 401) {
+                setLoadError('Sesión expirada (401). Cierra sesión y vuelve a iniciar.');
+            } else if (msg) {
+                setLoadError(msg);
+            } else {
+                setLoadError(`Error ${status || 'de red'} al cargar usuarios. Revisa los logs del servidor.`);
+            }
         } finally {
             setLoading(false);
         }
