@@ -1864,6 +1864,26 @@
 
 .bit-list { display: flex; flex-direction: column; gap: 8px; }
 
+.bit-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.bit-actions {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 5px;
+    padding: 0 10px;
+    z-index: 0;
+}
+
 .bit-row {
     background: #141414;
     border: 1px solid #222;
@@ -1872,9 +1892,17 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    transition: border-color 140ms ease;
+    position: relative;
+    z-index: 1;
+    transform: translateX(0);
+    transition: border-color 140ms ease, transform 0.25s ease;
 }
 .bit-row:hover { border-color: #2e2e2e; }
+.bit-row.bit-row-swiped {
+    transform: translateX(180px);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
 .bit-row.bit-en-campo  { border-left: 3px solid #f87171; }
 .bit-row.bit-completo  { border-left: 3px solid #4ade80; }
 .bit-row.bit-solo-ingreso { border-left: 3px solid #818cf8; }
@@ -2133,12 +2161,6 @@
     flex-shrink: 0;
 }
 
-.bit-row-actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    margin-left: auto;
-}
 
 .bit-act-btn {
     display: flex;
