@@ -44,6 +44,21 @@ const PANELS_DISPONIBLES = [
     { id: 'jefes',       label: 'Jefes Inmediatos' },
 ];
 
+const adm_css = `
+  .adm-hdr       { display:flex; align-items:center; gap:12px; }
+  .adm-hdr-btns  { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .adm-stats     { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+  .adm-card      { display:flex; align-items:center; gap:12px; }
+  .adm-actions   { display:flex; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+  @media (max-width:640px) {
+    .adm-hdr      { flex-wrap:wrap; }
+    .adm-hdr-btns { margin-left:0; width:100%; }
+    .adm-stats    { display:grid; grid-template-columns:1fr 1fr; }
+    .adm-card     { flex-direction:column; align-items:flex-start; }
+    .adm-actions  { width:100%; justify-content:flex-start; }
+  }
+`;
+
 const fmt = (d) => {
     if (!d) return 'Nunca';
     return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -274,11 +289,12 @@ export default function AdminPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: 'system-ui, sans-serif' }}>
+            <style>{adm_css}</style>
 
             {/* Header */}
-            <div style={{
+            <div className="adm-hdr" style={{
                 background: C.surface, borderBottom: `1px solid ${C.border}`,
-                padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '16px 20px',
             }}>
                 <button onClick={() => navigate('/workspace')} style={{
                     background: C.surface2, border: `1px solid ${C.border}`,
@@ -290,7 +306,7 @@ export default function AdminPage() {
                     <div style={{ fontWeight: 700, fontSize: 16 }}>Panel de Administración</div>
                     <div style={{ fontSize: 12, color: C.muted }}>Gestión de usuarios del sistema</div>
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                <div className="adm-hdr-btns">
                     <Btn onClick={load} color={C.muted} style={{ fontSize: 13 }}>
                         ↻ Actualizar
                     </Btn>
@@ -304,7 +320,7 @@ export default function AdminPage() {
 
                 {/* Stats */}
                 {stats && (
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                    <div className="adm-stats">
                         <StatCard label="Total usuarios" value={stats.total} />
                         <StatCard label="Pendientes" value={stats.pendientes} color={C.orange} />
                         <StatCard label="Admins" value={stats.admins} color={C.purple} />
@@ -364,10 +380,9 @@ export default function AdminPage() {
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {filtered.map(u => (
-                            <div key={u.id} style={{
+                            <div key={u.id} className="adm-card" style={{
                                 background: C.surface, border: `1px solid ${C.border}`,
                                 borderRadius: 12, padding: '14px 16px',
-                                display: 'flex', alignItems: 'center', gap: 12,
                                 opacity: u.activo ? 1 : 0.55,
                             }}>
                                 <Initials name={u.name} role={u.role} />
@@ -393,7 +408,7 @@ export default function AdminPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                <div className="adm-actions">
                                     {u.status === 'pending' && u.id !== me?.id && (
                                         <Btn onClick={() => handleAprobar(u)} color={C.green}>
                                             ✓ Aprobar
