@@ -11,6 +11,11 @@ const flujoWorkerSchema = new mongoose.Schema({
     status:     { type: String, enum: ['active', 'soon'], default: 'active' },
     remaining:  { type: Number, default: null },
     turno:      { type: String, enum: ['dia', 'noche', 'descanso'], default: 'dia' },
+    // Trío: un solo registro con 3 personas
+    isTrio:          { type: Boolean, default: false },
+    trioPeople:      [{ name: { type: String, trim: true }, turno: { type: String, enum: ['dia', 'noche', 'descanso'] } }],
+    lastMorningSwap: { type: String, default: null }, // "YYYY-MM-DD" — auto-swap 06:00
+    lastEveningSwap: { type: String, default: null }, // "YYYY-MM-DD" — auto-swap 18:00
 }, { timestamps: true });
 
 export default mongoose.model('FlujoWorker', flujoWorkerSchema);

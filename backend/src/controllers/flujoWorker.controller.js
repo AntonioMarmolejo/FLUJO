@@ -11,6 +11,10 @@ const fields = w => ({
     status:    w.status || 'active',
     remaining: w.remaining ?? null,
     turno:     w.turno || 'dia',
+    isTrio:          w.isTrio         || false,
+    trioPeople:      w.trioPeople     || [],
+    lastMorningSwap: w.lastMorningSwap || null,
+    lastEveningSwap: w.lastEveningSwap || null,
 });
 
 // GET /api/flujo-workers

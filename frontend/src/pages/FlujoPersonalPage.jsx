@@ -436,6 +436,107 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
     );
 }
 
+function WorkerCardTrio({ worker, soon, onDetail, onCycleClick, onTrioNightSwap, onTrioDayNightSwap }) {
+    const [hover, setHover] = useState(false);
+    const dia   = worker.trioPeople?.find(p => p.turno === 'dia');
+    const noche = worker.trioPeople?.find(p => p.turno === 'noche');
+    const desc  = worker.trioPeople?.find(p => p.turno === 'descanso');
+    const borderColor = soon ? 'rgba(239,159,39,0.55)' : COLORS.border;
+
+    return (
+        <div
+            onClick={() => onDetail && onDetail(worker)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+                background: COLORS.card,
+                border: `1px solid ${hover ? (soon ? COLORS.yellow : COLORS.borderLight) : borderColor}`,
+                borderRadius: 14, padding: '14px', marginBottom: 10,
+                cursor: 'pointer', transition: 'border-color 160ms ease',
+                position: 'relative', overflow: 'hidden',
+            }}>
+            {soon && (
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${COLORS.yellow}, rgba(239,159,39,0.4))` }} />
+            )}
+
+            {/* Encabezado */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: COLORS.violet, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                        {worker.role}
+                    </span>
+                    <span style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                        color: COLORS.violet, background: COLORS.violetDim,
+                        border: `1px solid ${COLORS.violet}44`, padding: '1px 6px', borderRadius: 4,
+                    }}>TRÍO</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 9.5, color: COLORS.textMute, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                        {worker.in} – {worker.out}
+                    </span>
+                    {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
+                </div>
+            </div>
+
+            {/* Tres personas */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                {[
+                    { person: dia,   label: 'DÍA',      color: '#4ade80', icon: '☀', dim: 'rgba(74,222,128,0.10)' },
+                    { person: noche, label: 'NOCHE',    color: '#3b82f6', icon: '🌙', dim: 'rgba(59,130,246,0.10)' },
+                    { person: desc,  label: 'DESCANSO', color: '#7c5ef5', icon: '💤', dim: 'rgba(124,94,245,0.10)' },
+                ].map(({ person, label, color, icon, dim }) => (
+                    <div key={label} style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '5px 8px', borderRadius: 8,
+                        background: dim, border: `1px solid ${color}22`,
+                    }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color, width: 66, flexShrink: 0, letterSpacing: 0.3 }}>
+                            {icon} {label}
+                        </span>
+                        <span style={{ fontSize: 12.5, color: COLORS.text, fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {person?.name || '—'}
+                        </span>
+                    </div>
+                ))}
+            </div>
+
+            <ProgressBar value={worker.days} total={worker.total} color={soon ? COLORS.yellow : COLORS.violet} />
+
+            {/* Botones de cambio rápido */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 12, paddingTop: 12, borderTop: `1px dashed ${COLORS.border}`, alignItems: 'center' }}>
+                <button
+                    title="Intercambiar NOCHE con DESCANSO (06:00 auto)"
+                    onClick={e => { e.stopPropagation(); onTrioNightSwap && onTrioNightSwap(worker); }}
+                    style={{
+                        flex: 1, height: 30, borderRadius: 8,
+                        border: '1px solid rgba(59,130,246,0.35)',
+                        background: 'rgba(59,130,246,0.10)', color: '#3b82f6',
+                        fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, letterSpacing: 0.3,
+                    }}
+                >
+                    {Icon.swap(10, '#3b82f6')} 🌙↔💤
+                </button>
+                <button
+                    title="Intercambiar DÍA con NOCHE (18:00 auto)"
+                    onClick={e => { e.stopPropagation(); onTrioDayNightSwap && onTrioDayNightSwap(worker); }}
+                    style={{
+                        flex: 1, height: 30, borderRadius: 8,
+                        border: '1px solid rgba(74,222,128,0.35)',
+                        background: 'rgba(74,222,128,0.10)', color: '#4ade80',
+                        fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, letterSpacing: 0.3,
+                    }}
+                >
+                    {Icon.swap(10, '#4ade80')} ☀↔🌙
+                </button>
+                <CyclePill cycle={worker.cycle} onClick={() => onCycleClick && onCycleClick(worker)} />
+            </div>
+        </div>
+    );
+}
+
 function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSwap, onCopy, onShare, onCycleClick }) {
     if (!worker) return <ModalShell open={open} onClose={onClose}><div /></ModalShell>;
     const accentColor = soon ? COLORS.yellow : COLORS.green;
@@ -1771,6 +1872,7 @@ const FlujoPersonalPage = () => {
     const [descansoList, setDescanso] = useState([]);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
+    const autoSwapDoneRef = useRef(false);
 
     const reloadWorkers = () =>
         api.get('/flujo-workers').then(res => {
@@ -1783,6 +1885,52 @@ const FlujoPersonalPage = () => {
     useEffect(() => {
         reloadWorkers().catch(() => {}).finally(() => setLoading(false));
     }, []);
+
+    // Auto-swap de tríos: NOCHE↔DESCANSO a las 06:00 y DÍA↔NOCHE a las 18:00
+    useEffect(() => {
+        if (loading || autoSwapDoneRef.current) return;
+        autoSwapDoneRef.current = true;
+
+        const hourECU = parseInt(
+            new Date().toLocaleTimeString('es-EC', { hour: '2-digit', hour12: false, timeZone: 'America/Guayaquil' }), 10
+        );
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+        const trioWorkers = [...active, ...soonList].filter(w => w.isTrio && w.trioPeople?.length === 3);
+        if (!trioWorkers.length) return;
+
+        (async () => {
+            let anySwap = false;
+            for (const worker of trioWorkers) {
+                let people = worker.trioPeople.map(p => ({ ...p }));
+                const upd = { lastMorningSwap: worker.lastMorningSwap, lastEveningSwap: worker.lastEveningSwap };
+                let changed = false;
+                if (hourECU >= 6 && worker.lastMorningSwap !== today) {
+                    people = people.map(p =>
+                        p.turno === 'noche' ? { ...p, turno: 'descanso' } :
+                        p.turno === 'descanso' ? { ...p, turno: 'noche' } : p
+                    );
+                    upd.lastMorningSwap = today;
+                    changed = true;
+                }
+                if (hourECU >= 18 && worker.lastEveningSwap !== today) {
+                    people = people.map(p =>
+                        p.turno === 'dia' ? { ...p, turno: 'noche' } :
+                        p.turno === 'noche' ? { ...p, turno: 'dia' } : p
+                    );
+                    upd.lastEveningSwap = today;
+                    changed = true;
+                }
+                if (changed) {
+                    await api.put(`/flujo-workers/${worker.id}`, { ...worker, ...upd, trioPeople: people });
+                    anySwap = true;
+                }
+            }
+            if (anySwap) {
+                await reloadWorkers();
+                showToast('Cambio de turno automático aplicado');
+            }
+        })().catch(() => {});
+    }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
     const [fabHover, setFabHover] = useState(false);
     const [controlsOpen, setControlsOpen] = useState(false);
 
@@ -1921,16 +2069,51 @@ const FlujoPersonalPage = () => {
     const handleAddTrio = async ({ role, nameDia, nameNoche, nameBack, cycle, inDate, days }) => {
         const total = CYCLE_TOTAL[cycle];
         try {
-            await Promise.all([
-                api.post('/flujo-workers', { name: nameDia,   role, cycle, total, days, inDateISO: inDate, back: nameBack, status: 'active', turno: 'dia' }),
-                api.post('/flujo-workers', { name: nameNoche, role, cycle, total, days, inDateISO: inDate, back: nameBack, status: 'active', turno: 'noche' }),
-                api.post('/flujo-workers', { name: nameBack,  role, cycle, total, days, inDateISO: inDate, back: `${nameDia} / ${nameNoche}`, status: 'active', turno: 'descanso' }),
-            ]);
+            await api.post('/flujo-workers', {
+                name: nameDia, role, cycle, total, days,
+                inDateISO: inDate, back: nameBack, status: 'active', turno: 'dia',
+                isTrio: true,
+                trioPeople: [
+                    { name: nameDia,   turno: 'dia' },
+                    { name: nameNoche, turno: 'noche' },
+                    { name: nameBack,  turno: 'descanso' },
+                ],
+            });
             await reloadWorkers();
             setAddOpen(false);
             showToast('Puesto de 3 personas registrado');
         } catch {
             showToast('Error al registrar');
+        }
+    };
+
+    const handleTrioNightSwap = async (worker) => {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+        const newPeople = (worker.trioPeople || []).map(p =>
+            p.turno === 'noche' ? { ...p, turno: 'descanso' } :
+            p.turno === 'descanso' ? { ...p, turno: 'noche' } : p
+        );
+        try {
+            await api.put(`/flujo-workers/${worker.id}`, { ...worker, trioPeople: newPeople, lastMorningSwap: today });
+            await reloadWorkers();
+            showToast('Cambio 🌙↔💤 aplicado');
+        } catch {
+            showToast('Error al cambiar turno');
+        }
+    };
+
+    const handleTrioDayNightSwap = async (worker) => {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
+        const newPeople = (worker.trioPeople || []).map(p =>
+            p.turno === 'dia' ? { ...p, turno: 'noche' } :
+            p.turno === 'noche' ? { ...p, turno: 'dia' } : p
+        );
+        try {
+            await api.put(`/flujo-workers/${worker.id}`, { ...worker, trioPeople: newPeople, lastEveningSwap: today });
+            await reloadWorkers();
+            showToast('Cambio ☀↔🌙 aplicado');
+        } catch {
+            showToast('Error al cambiar turno');
         }
     };
 
@@ -2111,7 +2294,14 @@ const FlujoPersonalPage = () => {
                         {!loading && filteredSoon.length > 0 && (
                             <>
                                 <SectionHeader label="Próximos a salir" count={filteredSoon.length} dot={COLORS.yellow} alert />
-                                {filteredSoon.map(w => (
+                                {filteredSoon.map(w => w.isTrio ? (
+                                    <WorkerCardTrio key={w.id} worker={w} soon
+                                        onDetail={setDetailWorker}
+                                        onCycleClick={setCycleFor}
+                                        onTrioNightSwap={handleTrioNightSwap}
+                                        onTrioDayNightSwap={handleTrioDayNightSwap}
+                                    />
+                                ) : (
                                     <WorkerCard key={w.id} worker={w} soon
                                         onDetail={setDetailWorker}
                                         onCycleClick={setCycleFor}
@@ -2129,7 +2319,14 @@ const FlujoPersonalPage = () => {
                                 {search ? 'Sin resultados para la búsqueda.' : 'Sin funcionarios en turno activo.'}
                             </div>
                         ) : (
-                            filteredActive.map(w => (
+                            filteredActive.map(w => w.isTrio ? (
+                                <WorkerCardTrio key={w.id} worker={w}
+                                    onDetail={setDetailWorker}
+                                    onCycleClick={setCycleFor}
+                                    onTrioNightSwap={handleTrioNightSwap}
+                                    onTrioDayNightSwap={handleTrioDayNightSwap}
+                                />
+                            ) : (
                                 <WorkerCard key={w.id} worker={w}
                                     onDetail={setDetailWorker}
                                     onCycleClick={setCycleFor}
