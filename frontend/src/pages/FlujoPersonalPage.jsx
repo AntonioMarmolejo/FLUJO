@@ -539,6 +539,87 @@ function WorkerCardTrio({ worker, soon, onDetail, onCycleClick, onTrioNightSwap,
 
 function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSwap, onCopy, onShare, onCycleClick }) {
     if (!worker) return <ModalShell open={open} onClose={onClose}><div /></ModalShell>;
+
+    /* ── Vista para registros trío ── */
+    if (worker.isTrio) {
+        const dia   = worker.trioPeople?.find(p => p.turno === 'dia');
+        const noche = worker.trioPeople?.find(p => p.turno === 'noche');
+        const desc  = worker.trioPeople?.find(p => p.turno === 'descanso');
+        const pct   = Math.min(100, (worker.days / worker.total) * 100);
+        const ac    = soon ? COLORS.yellow : COLORS.violet;
+        return (
+            <ModalShell open={open} onClose={onClose}>
+                <div style={{ background: COLORS.cardElev, borderRadius: 20, border: `1px solid ${COLORS.borderLight}`, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.7)' }}>
+                    <div style={{ height: 4, background: `linear-gradient(90deg, ${ac}, ${ac}55)` }} />
+                    <div style={{ padding: '18px 20px 12px' }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+                            <div style={{ width: 52, height: 52, borderRadius: 15, flexShrink: 0, background: COLORS.violetDim, border: `1.5px solid ${COLORS.violet}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>👥</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.violet, letterSpacing: 0.7, textTransform: 'uppercase' }}>{worker.role}</span>
+                                    <span style={{ fontSize: 9, fontWeight: 800, color: COLORS.violet, background: COLORS.violetDim, border: `1px solid ${COLORS.violet}44`, padding: '1px 6px', borderRadius: 4 }}>TRÍO</span>
+                                </div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.text }}>Puesto de 3 Personas</div>
+                            </div>
+                            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>{Icon.close(12, COLORS.textMute)}</button>
+                        </div>
+                        {/* Progreso */}
+                        <div style={{ marginBottom: 14 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
+                                <span style={{ fontSize: 10, color: COLORS.textDim, fontVariantNumeric: 'tabular-nums' }}>{pct.toFixed(0)}% del ciclo</span>
+                            </div>
+                            <div style={{ height: 6, width: '100%', borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 3, background: `linear-gradient(90deg, ${ac}, ${ac}bb)`, transition: 'width 400ms ease' }} />
+                            </div>
+                        </div>
+                        {/* 3 personas */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
+                            {[
+                                { person: dia,   label: 'DÍA',      color: '#4ade80', icon: '☀', dim: 'rgba(74,222,128,0.10)' },
+                                { person: noche, label: 'NOCHE',    color: '#3b82f6', icon: '🌙', dim: 'rgba(59,130,246,0.10)' },
+                                { person: desc,  label: 'DESCANSO', color: '#7c5ef5', icon: '💤', dim: 'rgba(124,94,245,0.10)' },
+                            ].map(({ person, label, color, icon, dim }) => (
+                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: dim, border: `1px solid ${color}22` }}>
+                                    <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: `${color}22`, border: `1px solid ${color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{icon}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color, letterSpacing: 0.5 }}>{label}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{person?.name || '—'}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Info */}
+                        <div style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 2 }}>
+                            {[{ label: 'Ingreso', val: worker.in }, { label: 'Salida est.', val: worker.out }, { label: 'Ciclo', val: worker.cycle }].map(({ label, val }) => (
+                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid ${COLORS.border}` }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.textDim, letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{val}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    {/* Acciones */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: `1px solid ${COLORS.border}` }}>
+                        {[
+                            { icon: Icon.edit(17, COLORS.blue),    label: 'Editar',    color: COLORS.blue,   action: () => { onClose(); setTimeout(() => onEdit && onEdit(worker), 180); } },
+                            { icon: Icon.share(17, COLORS.violet), label: 'Compartir', color: COLORS.violet, action: () => { onShare && onShare(worker); } },
+                            { icon: Icon.trash(17, COLORS.red),    label: 'Eliminar',  color: COLORS.red,    action: () => { onClose(); setTimeout(() => onDelete && onDelete(worker), 180); } },
+                        ].map(({ icon, label, color, action }) => (
+                            <button key={label} onClick={action} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '14px 6px', background: 'transparent', border: 'none', borderRight: `1px solid ${COLORS.border}`, color, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 140ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                {icon}
+                                <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color }}>{label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </ModalShell>
+        );
+    }
+
     const accentColor = soon ? COLORS.yellow : COLORS.green;
     const accentDim   = soon ? COLORS.yellowDim : COLORS.greenDim;
     const initials = worker.name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -2226,6 +2307,14 @@ const FlujoPersonalPage = () => {
     const filteredSoon = filter(soonList);
     const filteredDescanso = filter(descansoList);
 
+    // Para tríos, DÍA y NOCHE cuentan como activos; DESCANSO cuenta como libre
+    const activeCount = active.reduce((sum, w) =>
+        w.isTrio ? sum + (w.trioPeople || []).filter(p => p.turno === 'dia' || p.turno === 'noche').length
+                 : sum + 1, 0);
+    const freeCount = [...active, ...soonList].reduce((sum, w) =>
+        w.isTrio ? sum + (w.trioPeople || []).filter(p => p.turno === 'descanso').length
+                 : sum + 1, 0);
+
     // Detecta si un worker pertenece a un grupo de 3 (dia + noche + descanso con mismo rol)
     const get3PersonGroup = (worker) => {
         const all = [...active, ...soonList, ...descansoList];
@@ -2279,8 +2368,8 @@ const FlujoPersonalPage = () => {
                         <SearchBar
                             value={search} onChange={setSearch}
                             onImport={() => setImportOpen(true)}
-                            activeCount={active.length}
-                            freeCount={active.length + soonList.length}
+                            activeCount={activeCount}
+                            freeCount={freeCount}
                             onActiveClick={() => setCountOpen('active')}
                             onFreeClick={() => setCountOpen('free')}
                         />
@@ -2404,8 +2493,14 @@ const FlujoPersonalPage = () => {
                 onClose={() => setCountOpen(null)}
                 kind={countOpen}
                 items={countOpen === 'active'
-                    ? active.map(w => ({ name: w.name, role: w.role, meta: `Día ${w.days}/${w.total}` }))
-                    : [...active, ...soonList].map(w => ({ name: w.back, role: w.role, meta: null }))
+                    ? active.flatMap(w => w.isTrio
+                        ? (w.trioPeople || []).filter(p => p.turno === 'dia' || p.turno === 'noche')
+                            .map(p => ({ name: p.name, role: w.role, meta: p.turno === 'dia' ? '☀ DÍA' : '🌙 NOCHE' }))
+                        : [{ name: w.name, role: w.role, meta: `Día ${w.days}/${w.total}` }])
+                    : [...active, ...soonList].flatMap(w => w.isTrio
+                        ? (w.trioPeople || []).filter(p => p.turno === 'descanso')
+                            .map(p => ({ name: p.name, role: w.role, meta: '💤 DESCANSO' }))
+                        : [{ name: w.back, role: w.role, meta: null }])
                 }
             />
         </div>
