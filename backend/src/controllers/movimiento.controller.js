@@ -1,4 +1,4 @@
-import Movimiento from '../models/movimiento.model.js';
+import Movimiento from '../models/Movimiento.model.js';
 import Vehiculo from '../models/Vehiculo.model.js';
 
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
