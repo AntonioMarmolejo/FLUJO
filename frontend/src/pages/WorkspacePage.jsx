@@ -506,6 +506,8 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
     const [tipoSugs, setTipoSugs] = useState([]);
     const [personasTags, setPersonasTags] = useState([]);
     const [showTagInput, setShowTagInput] = useState(false);
+    const [horaManual, setHoraManual] = useState('');
+    const [showHoraInput, setShowHoraInput] = useState(false);
     const [tagQuery, setTagQuery] = useState('');
     const [tagSugs, setTagSugs] = useState([]);
     const actividadRef = useRef(null);
@@ -748,7 +750,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
 
         // Nuevo movimiento: guardado optimista — aparece en UI de inmediato
         const tempId = `tmp_${Date.now()}`;
-        const hora = getHoraLocal();
+        const hora = horaManual || getHoraLocal();
         // fechaFlujo viene del turno activo (fecha de inicio del turno) para que todos los
         // movimientos del turno nocturno queden agrupados bajo la misma fecha, incluso los
         // registrados después de medianoche.
@@ -760,6 +762,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
         setSuggestions([]); setCedulaSugs([]); setConductorSugs([]);
         setDestinoSugs([]); setActividadSugs([]);
         setTipoSugs([]); setPersonasTags([]); setShowTagInput(false); setTagQuery(''); setTagSugs([]);
+        setHoraManual(''); setShowHoraInput(false);
         setAutoFilled(false); setPersonaNotFound(false); setPlacaNotFound(false); setError('');
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
@@ -813,6 +816,26 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                     <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
                         <label>
                             <span>PLACAS <span style={{ color: '#f87171' }}>*</span></span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {showHoraInput ? (
+                                    <input
+                                        type="time"
+                                        className="hora-manual-input"
+                                        value={horaManual}
+                                        onChange={e => setHoraManual(e.target.value)}
+                                        onBlur={() => { if (!horaManual) setShowHoraInput(false); }}
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <button className="activ-add-tag-btn" onClick={() => setShowHoraInput(true)}>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                        hora
+                                    </button>
+                                )}
+                                {horaManual && (
+                                    <button className="activ-add-tag-btn" style={{ color: '#f87171' }} onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
+                                )}
+                            </span>
                             {!editData && (
                                 <button className="qr-field-btn" title="Escanear QR vehículo" onClick={() => setShowScanner(true)}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
