@@ -23,6 +23,7 @@ const movimientoSchema = new mongoose.Schema(
         cedula: { type: String, trim: true, default: '' },
         destino: { type: String, trim: true, default: '' },
         actividad: { type: String, trim: true, default: '' },
+        genero: { type: String, enum: ['m', 'f'], default: 'm' },
         guia: { type: String, trim: true, default: '' },
         guias: [{
             numero: { type: String, trim: true, default: '' },

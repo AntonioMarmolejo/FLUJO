@@ -545,6 +545,25 @@
     background: rgba(129, 140, 248, 0.22);
 }
 
+.genero-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #2e2e2e;
+    background: #1a1a1a;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s;
+}
+.genero-toggle-btn.active    { border-color: #818cf8; color: #818cf8; background: rgba(129,140,248,0.12); }
+.genero-toggle-btn.active-f  { border-color: #f472b6; color: #f472b6; background: rgba(244,114,182,0.12); }
+.genero-toggle-btn:hover     { border-color: #555; color: #ccc; }
+
 .modal-field input {
     background: #252525;
     border: 1px solid #2e2e2e;

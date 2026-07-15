@@ -126,7 +126,7 @@ const IconShield = () => (
 );
 
 // ── Helpers ───────────────────────────────────────────────
-const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '' };
+const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', genero: 'm' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
 
 // ── Cola offline ──────────────────────────────────────────
@@ -177,12 +177,24 @@ const buildStats = (movs, diasActivos = 0) => {
     };
 };
 
+const MASC_TIPOS = new Set(['sedán','sedan','suv','camión','camion','bus','volquete','tanquero','cabezal','tráiler','trailer','tracto','furgón','furgon','pickup','pick-up','pick up','camper','buldócer','buldocer','cisternero']);
+const articuloVehiculo = tipo => tipo && MASC_TIPOS.has(tipo.toLowerCase().trim()) ? 'el' : 'la';
+
 const generarNarrativa = (mov, cfg = {}) => {
-    const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad } = mov;
-    const ubiIngreso = cfg.ubicacion || 'EPF';
-    const accion = tipo === 'ingreso' ? `Ingresa al ${ubiIngreso}` : `Sale al ${destino || 'destino'}`;
+    const { hora, tipo, conductor, cedula, empresa, tipoVehiculo, placa, destino, actividad, genero } = mov;
+    const ubiIngreso  = cfg.ubicacion    || 'EPF';
+    const conSalida   = cfg.conSalida    || 'Sale al';
+    const conIngreso  = cfg.conIngreso   || 'Ingresa al';
+    const titHombre   = cfg.conTitHombre || 'el Sr.';
+    const titMujer    = cfg.conTitMujer  || 'la Srta.';
+    const conCedula   = cfg.conCedula    || 'cc:';
+    const conEmpresa  = cfg.conEmpresa   || 'de';
+    const conPlaca    = cfg.conPlaca     || 'de Placas';
+    const conVehiculo = cfg.conVehiculo  || `conduciendo ${articuloVehiculo(tipoVehiculo)}`;
+    const titulo      = genero === 'f' ? titMujer : titHombre;
+    const accion      = tipo === 'ingreso' ? `${conIngreso} ${ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
     const descripcion = (!actividad || /^vac[ií]o$/i.test(actividad.trim())) ? 'vacía' : actividad.trim();
-    return `${hora} ${accion} el Sr. ${conductor || '—'} cc: ${cedula || '—'} de ${empresa || '—'} conduciendo la ${tipoVehiculo || 'vehículo'} de Placas ${placa} ${descripcion}`;
+    return `${hora} ${accion} ${titulo} ${conductor || '—'} ${conCedula} ${cedula || '—'} ${conEmpresa} ${empresa || '—'} ${conVehiculo} ${tipoVehiculo || 'vehículo'} ${conPlaca} ${placa} ${descripcion}`;
 };
 
 // Tabs que vienen del cajón (tienen botón de regreso)
@@ -488,7 +500,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 // ── Modal formulario (crear + editar) ────────────────────
 const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
-        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '' }
+        ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
         : EMPTY_FORM
     );
     const [loading, setLoading] = useState(false);
@@ -903,19 +915,25 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
                         suggestions={conductorSugs} onSelect={selectPersonaSug}
-                        labelAction={!editData && (
-                            <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-                                    <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
-                                    <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
-                                    <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
-                                </svg>
-                            </button>
-                        )} />
+                        labelAction={
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <button className={`genero-toggle-btn${form.genero === 'm' ? ' active' : ''}`} title="Masculino" onClick={() => setForm(f => ({ ...f, genero: 'm' }))}>♂</button>
+                                <button className={`genero-toggle-btn${form.genero === 'f' ? ' active-f' : ''}`} title="Femenino" onClick={() => setForm(f => ({ ...f, genero: 'f' }))}>♀</button>
+                                {!editData && (
+                                    <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                                            <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+                                            <rect x="19" y="15" width="2" height="2" fill="currentColor"/>
+                                            <rect x="15" y="19" width="2" height="2" fill="currentColor"/>
+                                            <rect x="19" y="19" width="2" height="2" fill="currentColor"/>
+                                        </svg>
+                                    </button>
+                                )}
+                            </span>
+                        } />
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
                         suggestions={cedulaSugs} onSelect={selectPersonaSug} />
@@ -1175,22 +1193,43 @@ const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onD
 };
 
 // ── Modal config Registro ─────────────────────────────────
+const CFG_DEFAULTS = {
+    ubicacion: 'EPF', empresaAutoriza: 'EP Petroecuador',
+    conSalida: 'Sale al', conIngreso: 'Ingresa al',
+    conTitHombre: 'el Sr.', conTitMujer: 'la Srta.',
+    conCedula: 'cc:', conEmpresa: 'de', conPlaca: 'de Placas',
+    conVehiculo: '',
+};
 const ModalRegistroConfig = ({ config, onSave, onClose }) => {
-    const [local, setLocal] = useState({ ubicacion: config.ubicacion || 'EPF', empresaAutoriza: config.empresaAutoriza || 'EP Petroecuador' });
+    const [local, setLocal] = useState({ ...CFG_DEFAULTS, ...config });
+    const f = key => e => setLocal(l => ({ ...l, [key]: e.target.value }));
+    const Row = ({ k, label, placeholder }) => (
+        <ModalField name={k} label={label} placeholder={placeholder} value={local[k]} autoFilled={false} onChange={f(k)} />
+    );
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Configurar Registro</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Configurar Narrativa</span>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
                 <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <ModalField name="ubicacion" label="UBICACIÓN (destino del ingreso)" placeholder="Ej: EPF" value={local.ubicacion} autoFilled={false}
-                        onChange={e => setLocal(l => ({ ...l, ubicacion: e.target.value }))} />
-                    <ModalField name="empresaAutoriza" label="EMPRESA AUTORIZANTE (default)" placeholder="Ej: EP Petroecuador" value={local.empresaAutoriza} autoFilled={false}
-                        onChange={e => setLocal(l => ({ ...l, empresaAutoriza: e.target.value }))} />
-                    <p style={{ fontSize: 11, color: '#666', margin: 0, lineHeight: 1.5 }}>
-                        Estos valores se usan para generar la narrativa automática cuando no se especifican en el movimiento individual.
+                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>DESTINO / UBICACIÓN</p>
+                    <Row k="ubicacion"   label="NOMBRE DEL LUGAR (para ingresos)"  placeholder="EPF" />
+                    <Row k="conSalida"   label="CONECTOR SALIDA"                    placeholder="Sale al" />
+                    <Row k="conIngreso"  label="CONECTOR INGRESO"                   placeholder="Ingresa al" />
+                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>CONDUCTOR</p>
+                    <Row k="conTitHombre" label="TÍTULO MASCULINO"                  placeholder="el Sr." />
+                    <Row k="conTitMujer"  label="TÍTULO FEMENINO"                   placeholder="la Srta." />
+                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>OTROS CONECTORES</p>
+                    <Row k="conCedula"   label="PREFIJO CÉDULA"                     placeholder="cc:" />
+                    <Row k="conEmpresa"  label="PREFIJO EMPRESA"                    placeholder="de" />
+                    <Row k="conVehiculo" label="ACCIÓN VEHÍCULO (vacío = auto)"     placeholder="conduciendo el / conduciendo la" />
+                    <Row k="conPlaca"    label="PREFIJO PLACA"                       placeholder="de Placas" />
+                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>EXCEL / WORD</p>
+                    <Row k="empresaAutoriza" label="EMPRESA AUTORIZANTE (default)"  placeholder="EP Petroecuador" />
+                    <p style={{ fontSize: 11, color: '#555', margin: 0, lineHeight: 1.5 }}>
+                        Deja "Acción vehículo" vacío para detectar el/la automáticamente según el tipo.
                     </p>
                 </div>
                 <div style={{ padding: '0 16px 16px' }}>
