@@ -1013,9 +1013,9 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
 };
 
 // ── Modal detalle ─────────────────────────────────────────
-const DetalleRow = ({ label, value }) =>
+const DetalleRow = ({ label, value, full }) =>
     value ? (
-        <div className="detalle-field">
+        <div className={`detalle-field${full ? ' detalle-field-full' : ''}`}>
             <span className="detalle-label">{label}</span>
             <span className="detalle-value">{value}</span>
         </div>
@@ -1040,13 +1040,13 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                 <DetalleRow label="Conductor"        value={mov.conductor} />
                 <DetalleRow label="Cédula"           value={mov.cedula} />
                 <DetalleRow label="Destino"          value={mov.destino || '—'} />
-                <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} />
+                <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} full />
             </div>
             <div className="detalle-actions">
-                <button className="detalle-act-btn" onClick={() => { onEdit(mov); onClose(); }}><IconPencil /> Editar</button>
-                <button className="detalle-act-btn" onClick={() => onCopy(mov)}><IconCopy /> Copiar</button>
-                <button className="detalle-act-btn" onClick={() => onShare(mov)}><IconShare /> Compartir</button>
-                <button className="detalle-act-btn danger" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /> Eliminar</button>
+                {onEdit   && <button className="detalle-act-btn" title="Editar"     onClick={() => { onEdit(mov); onClose(); }}><IconPencil /></button>}
+                {onCopy   && <button className="detalle-act-btn" title="Copiar"     onClick={() => onCopy(mov)}><IconCopy /></button>}
+                {onShare  && <button className="detalle-act-btn" title="Compartir"  onClick={() => onShare(mov)}><IconShare /></button>}
+                {onDelete && <button className="detalle-act-btn danger" title="Eliminar" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /></button>}
             </div>
             {(hasPrev || hasNext) && (
                 <div className="detalle-nav">
