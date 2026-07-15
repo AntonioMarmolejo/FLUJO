@@ -1204,10 +1204,10 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 };
 
 // ── Tarjeta de movimiento ─────────────────────────────────
-const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora }) => {
+const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora, onGoToReg }) => {
     const isSwiped = swipedMovId === m._id;
     return (
-        <div className={`mov-item${selected ? ' mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`}>
+        <div className={`mov-item${selected ? ' mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`} data-movid={m._id}>
             {!selectMode && !m._pending && (
                 <div className="mov-actions" onClick={e => e.stopPropagation()}>
                     <button className="mov-act-btn danger" title="Eliminar" onClick={() => { onDelete(m._id); setSwipedMovId(null); }}><IconMinus /></button>
@@ -1238,6 +1238,7 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                         if (dx < -30) setSwipedMovId(null);
                     } else {
                         if (dx > 55) setSwipedMovId(m._id);
+                        else if (dx < -55 && !m._pending) { onGoToReg(m._id); }
                     }
                 }}
                 onClick={() => {
@@ -3265,6 +3266,36 @@ const WorkspacePage = () => {
     const [swipedMovId, setSwipedMovId] = useState(null);
     const movSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [editHoraMov, setEditHoraMov] = useState(null);
+    const [highlightMovId, setHighlightMovId] = useState(null);
+    const [highlightRegId, setHighlightRegId] = useState(null);
+
+    useEffect(() => {
+        if (!highlightRegId || vistaInicio !== 'registro') return;
+        const t = setTimeout(() => {
+            const el = document.querySelector(`[data-regid="${highlightRegId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('flash-highlight');
+                setTimeout(() => el.classList.remove('flash-highlight'), 1400);
+            }
+            setHighlightRegId(null);
+        }, 200);
+        return () => clearTimeout(t);
+    }, [highlightRegId, vistaInicio]);
+
+    useEffect(() => {
+        if (!highlightMovId || vistaInicio !== 'movimientos') return;
+        const t = setTimeout(() => {
+            const el = document.querySelector(`[data-movid="${highlightMovId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('flash-highlight');
+                setTimeout(() => el.classList.remove('flash-highlight'), 1400);
+            }
+            setHighlightMovId(null);
+        }, 200);
+        return () => clearTimeout(t);
+    }, [highlightMovId, vistaInicio]);
 
     const stats = useMemo(
         () => movimientos.length > 0 ? buildStats(movimientos, diasActivos) : null,
@@ -3596,7 +3627,9 @@ const WorkspacePage = () => {
         setDetailMovIdx(idx);
     };
 
-    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)) };
+    const goToReg = id => { setVistaInicio('registro'); setHighlightRegId(id); };
+    const goToMov = id => { setVistaInicio('movimientos'); setHighlightMovId(id); };
+    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)), onGoToReg: goToReg };
 
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
@@ -3845,7 +3878,7 @@ const WorkspacePage = () => {
                             ) : (
                                 <div className="reg-list">
                                     {sortedRegs.map(mov => (
-                                        <div key={mov._id} className={`reg-entry reg-${mov.tipo}${swipedRegId === mov._id ? ' reg-swiped' : ''}`}>
+                                        <div key={mov._id} className={`reg-entry reg-${mov.tipo}${swipedRegId === mov._id ? ' reg-swiped' : ''}`} data-regid={mov._id}>
                                             <div className="reg-actions" onClick={e => e.stopPropagation()}>
                                                 <button className="reg-act-btn" title="Ver detalle" onClick={() => { setRegistroDetailMov(mov); setSwipedRegId(null); }}>
                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" stroke="currentColor" strokeWidth="2"/></svg>
@@ -3890,6 +3923,7 @@ const WorkspacePage = () => {
                                                         if (dx < -30) setSwipedRegId(null);
                                                     } else {
                                                         if (dx > 55) setSwipedRegId(mov._id);
+                                                        else if (dx < -55) goToMov(mov._id);
                                                     }
                                                 }}
                                                 onClick={() => {

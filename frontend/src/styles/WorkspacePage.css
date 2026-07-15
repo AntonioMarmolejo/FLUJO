@@ -1042,6 +1042,18 @@
     50% { opacity: 0.25; }
 }
 
+@keyframes flashHighlight {
+    0%   { transform: scale(1);    box-shadow: none; }
+    25%  { transform: scale(1.03); box-shadow: 0 0 0 2px #818cf8, 0 4px 20px rgba(129,140,248,0.3); }
+    70%  { transform: scale(1.03); box-shadow: 0 0 0 2px #818cf8, 0 4px 20px rgba(129,140,248,0.3); }
+    100% { transform: scale(1);    box-shadow: none; }
+}
+.flash-highlight {
+    animation: flashHighlight 1.4s ease forwards;
+    position: relative;
+    z-index: 2;
+}
+
 /* Fila de etiquetas de persona en campo actividad */
 .activ-tags-row {
     display: flex;
