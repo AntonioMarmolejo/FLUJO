@@ -3260,6 +3260,7 @@ const WorkspacePage = () => {
     const [swipedBitMainIdx, setSwipedBitMainIdx] = useState(null);
     const bitMainSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [movSort, setMovSort] = useState('desc');
+    const [regSort, setRegSort] = useState('asc');
     const [detailMovIdx, setDetailMovIdx] = useState(null);
     const [swipedMovId, setSwipedMovId] = useState(null);
     const movSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
@@ -3283,6 +3284,13 @@ const WorkspacePage = () => {
             ? arr.sort((a, b) => (b.hora || '').localeCompare(a.hora || ''))
             : arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
     }, [movsFiltrados, movSort]);
+
+    const sortedRegs = useMemo(() => {
+        const arr = [...movimientos];
+        return regSort === 'asc'
+            ? arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+            : arr.sort((a, b) => (b.hora || '').localeCompare(a.hora || ''));
+    }, [movimientos, regSort]);
 
     const placaCounts = useMemo(() => {
         const counts = {};
@@ -3812,6 +3820,12 @@ const WorkspacePage = () => {
                             <div className="reg-toolbar">
                                 <span className="reg-count">{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</span>
                                 <div className="reg-toolbar-actions">
+                                    <span
+                                        className="sort-toggle-btn"
+                                        title={regSort === 'asc' ? 'Más antiguo primero' : 'Más reciente primero'}
+                                        onClick={() => setRegSort(s => s === 'asc' ? 'desc' : 'asc')}>
+                                        {regSort === 'asc' ? '↑ Ant.' : '↓ Rec.'}
+                                    </span>
                                     <button className="reg-cfg-btn" onClick={() => setShowRegistroConfig(true)}>
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                         Configurar
@@ -3830,7 +3844,7 @@ const WorkspacePage = () => {
                                 <p className="ws-empty">Sin movimientos registrados</p>
                             ) : (
                                 <div className="reg-list">
-                                    {[...movimientos].reverse().map(mov => (
+                                    {sortedRegs.map(mov => (
                                         <div key={mov._id} className={`reg-entry reg-${mov.tipo}${swipedRegId === mov._id ? ' reg-swiped' : ''}`}>
                                             <div className="reg-actions" onClick={e => e.stopPropagation()}>
                                                 <button className="reg-act-btn" title="Ver detalle" onClick={() => { setRegistroDetailMov(mov); setSwipedRegId(null); }}>
