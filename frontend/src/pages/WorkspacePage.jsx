@@ -219,15 +219,19 @@ const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFi
     </div>
 );
 
-const SuggestionField = ({ name, label, required, placeholder, value, onChange, autoFilled, suggestions, onSelect, labelAction }) => (
+const SuggestionField = ({ name, label, required, placeholder, value, onChange, onClear, autoFilled, suggestions, onSelect, onClearSugs, labelAction }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
         <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}{labelAction}</label>
         <div className="placa-wrapper">
-            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off" />
+            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off"
+                onBlur={() => setTimeout(() => onClearSugs?.(), 150)} />
+            {value && onClear && (
+                <button className="field-clear-btn" type="button" onMouseDown={e => { e.preventDefault(); onClear(); }}>✕</button>
+            )}
             {suggestions.length > 0 && (
                 <div className="placa-suggestions">
                     {suggestions.map((s, i) => (
-                        <div key={i} className="placa-suggestion-item" onClick={() => onSelect(s)}>
+                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); onSelect(s); }}>
                             <div>
                                 <div className="placa-suggestion-placa">{s.nombres || s.cedula}</div>
                                 <div className="placa-suggestion-info">
@@ -864,11 +868,12 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                         </label>
                         <div className="placa-wrapper">
                             <input type="text" name="placa" placeholder="Ej: ABC-1234"
-                                value={form.placa} onChange={handlePlacaChange} autoComplete="off" />
+                                value={form.placa} onChange={handlePlacaChange} autoComplete="off"
+                                onBlur={() => setTimeout(() => setSuggestions([]), 150)} />
                             {suggestions.length > 0 && (
                                 <div className="placa-suggestions">
                                     {suggestions.map((v, i) => (
-                                        <div key={i} className="placa-suggestion-item" onClick={() => selectSuggestion(v)}>
+                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectSuggestion(v); }}>
                                             <div>
                                                 <div className="placa-suggestion-placa">{v.placa}</div>
                                                 <div className="placa-suggestion-info">{formatMov(v)}</div>
@@ -915,6 +920,8 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
                         value={form.conductor} onChange={handleConductorChange} autoFilled={autoFilled}
                         suggestions={conductorSugs} onSelect={selectPersonaSug}
+                        onClearSugs={() => setConductorSugs([])}
+                        onClear={() => { setForm(f => ({ ...f, conductor: '' })); setConductorSugs([]); setAutoFilled(false); }}
                         labelAction={
                             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <button className={`genero-toggle-btn${form.genero === 'm' ? ' active' : ''}`} title="Masculino" onClick={() => setForm(f => ({ ...f, genero: 'm' }))}>♂</button>
@@ -936,7 +943,9 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                         } />
                     <SuggestionField name="cedula" label="CÉDULA" placeholder="Nro. de cédula"
                         value={form.cedula} onChange={handleCedulaChange} autoFilled={autoFilled}
-                        suggestions={cedulaSugs} onSelect={selectPersonaSug} />
+                        suggestions={cedulaSugs} onSelect={selectPersonaSug}
+                        onClearSugs={() => setCedulaSugs([])}
+                        onClear={() => { setForm(f => ({ ...f, cedula: '' })); setCedulaSugs([]); setAutoFilled(false); }} />
                     {personaNotFound && (
                         <div className="quick-info-banner">
                             Persona no encontrada en la BD — se registrará al guardar
