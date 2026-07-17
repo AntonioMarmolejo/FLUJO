@@ -1,18 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, checkBiometricSupport } from '../context/AuthContext';
 import '../styles/LoginPage.css';
 
 const GOOGLE_CONFIGURED = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+const FingerprintIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 1C8.5 1 5.5 2.5 3.5 5M12 1c3.5 0 6.5 1.5 8.5 4M12 1v0M3 9c-.3 1-.5 2-.5 3M21 9c.3 1 .5 2 .5 3M12 7c-2.8 0-5 2.2-5 5 0 1.5.3 2.9.8 4.1M12 7c2.8 0 5 2.2 5 5 0 1.5-.3 2.9-.8 4.1M12 11v0M12 11c-1.1 0-2 .9-2 2 0 1.5.4 2.9 1 4.1M12 11c1.1 0 2 .9 2 2 0 1.5-.4 2.9-1 4.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+);
+
 const LoginPage = () => {
-    const { login, register, loginWithGoogle } = useAuth();
+    const { login, register, loginWithGoogle, loginWithBiometric } = useAuth();
     const [tab, setTab] = useState('login');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [bioLoading, setBioLoading] = useState(false);
     const [error, setError] = useState('');
     const [form, setForm] = useState({ name: '', email: '', password: '' });
+    const [biometricSupported, setBiometricSupported] = useState(false);
+
+    useEffect(() => {
+        checkBiometricSupport().then(ok => setBiometricSupported(ok));
+    }, []);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,6 +44,26 @@ const LoginPage = () => {
             setError(err.response?.data?.message || 'Error al conectar con el servidor');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleBiometric = async () => {
+        if (!form.email) { setError('Ingresa tu correo para usar la huella'); return; }
+        setBioLoading(true);
+        setError('');
+        try {
+            await loginWithBiometric(form.email);
+        } catch (err) {
+            const msg = err.response?.data?.message;
+            if (msg === 'Usuario sin passkey registrado') {
+                setError('Este dispositivo no tiene huella registrada. Inicia sesión con contraseña primero.');
+            } else if (err.name === 'NotAllowedError') {
+                setError('Autenticación cancelada o no permitida.');
+            } else {
+                setError(msg || 'No se pudo autenticar con huella');
+            }
+        } finally {
+            setBioLoading(false);
         }
     };
 
@@ -133,6 +165,7 @@ const LoginPage = () => {
                             placeholder="••••••••"
                             value={form.password}
                             onChange={handleChange}
+                            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                         />
                         <button
                             className="toggle-password"
@@ -161,6 +194,25 @@ const LoginPage = () => {
                         ? 'Cargando...'
                         : tab === 'login' ? 'Ingresar al workspace' : 'Crear cuenta'}
                 </button>
+
+                {/* Login biométrico — solo en login y si el dispositivo lo soporta */}
+                {tab === 'login' && biometricSupported && (
+                    <button
+                        className="btn-biometric"
+                        onClick={handleBiometric}
+                        disabled={bioLoading}
+                        title="Iniciar sesión con huella o Face ID"
+                    >
+                        {bioLoading ? (
+                            <span style={{ fontSize: 13 }}>Verificando…</span>
+                        ) : (
+                            <>
+                                <FingerprintIcon />
+                                Entrar con huella / Face ID
+                            </>
+                        )}
+                    </button>
+                )}
 
                 <div className="divider"><span>o continúa con</span></div>
 

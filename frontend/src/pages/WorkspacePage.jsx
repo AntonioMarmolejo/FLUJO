@@ -4,6 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
 import {
+    encolarMovimiento,
+    getPendingMovimientos,
+    syncPendingMovimientos,
+    cacheVehiculo,
+    buscarPlacaLocal,
+    cachePersona,
+    buscarPersonaLocal,
+} from '../lib/syncEngine.js';
+import {
     LineChart, Line, XAxis, YAxis, Tooltip,
     ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -129,12 +138,20 @@ const IconShield = () => (
 const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', genero: 'm' };
 const TIPO_VEHICULO_OPTS = ['Sedán', 'SUV', 'Camioneta', 'Camión', 'Cama Baja', 'Cama Alta', 'Bus', 'Volquete', 'Tanquero', 'Grúa', 'Moto', 'Otro'];
 
-// ── Cola offline ──────────────────────────────────────────
+// ── Cola offline (Dexie/IndexedDB) ───────────────────────
+// Migración one-time: mover items del localStorage viejo a Dexie
 const OFFLINE_QUEUE_KEY = 'flujo_offline_queue';
-const getOfflineQueue = () => { try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch { return []; } };
-const saveOfflineQueue = q => localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
-const addToOfflineQueue = item => saveOfflineQueue([...getOfflineQueue(), item]);
-const removeFromOfflineQueue = tempId => saveOfflineQueue(getOfflineQueue().filter(i => i.tempId !== tempId));
+(async () => {
+    try {
+        const old = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+        if (old.length) {
+            await Promise.all(old.map(item =>
+                encolarMovimiento({ uuid: item.tempId, payload: item.payload, hora: item.hora, fecha: item.fecha })
+            ));
+            localStorage.removeItem(OFFLINE_QUEUE_KEY);
+        }
+    } catch { /* ignorar errores de migración */ }
+})();
 const getHoraLocal = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
 const getFechaLocal = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
 // Para turno nocturno (18:00-06:00) que cruza medianoche, usar fecha del día anterior entre 00:00-05:59
@@ -561,9 +578,15 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
             try {
                 const { data } = await api.get(`/vehiculos/search?placa=${val}`);
                 const results = data.vehiculos.map(v => ({ ...v, _source: 'db' }));
+                results.forEach(v => cacheVehiculo(v));
                 setSuggestions(results);
                 setPlacaNotFound(results.length === 0);
-            } catch { setSuggestions([]); }
+            } catch {
+                // Sin conexión: buscar en caché local
+                const local = await buscarPlacaLocal(val).catch(() => null);
+                if (local) { setSuggestions([{ ...local, _source: 'local' }]); setPlacaNotFound(false); }
+                else { setSuggestions([]); setPlacaNotFound(true); }
+            }
         }, 300);
     };
 
@@ -596,9 +619,15 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
             try {
                 const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
                 const results = data.personas.map(p => ({ ...p, _source: 'db' }));
+                results.forEach(p => cachePersona(p));
                 setCedulaSugs(results);
                 if (results.length === 0) setPersonaNotFound(true);
-            } catch { setCedulaSugs([]); }
+            } catch {
+                const local = await buscarPersonaLocal(val).catch(() => []);
+                const results = (local || []).map(p => ({ ...p, _source: 'local' }));
+                setCedulaSugs(results);
+                if (results.length === 0) setPersonaNotFound(true);
+            }
         }, 300);
     };
 
@@ -622,9 +651,15 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
             try {
                 const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
                 const results = data.personas.map(p => ({ ...p, _source: 'db' }));
+                results.forEach(p => cachePersona(p));
                 setConductorSugs(results);
                 if (results.length === 0) setPersonaNotFound(true);
-            } catch { setConductorSugs([]); }
+            } catch {
+                const local = await buscarPersonaLocal(val).catch(() => []);
+                const results = (local || []).map(p => ({ ...p, _source: 'local' }));
+                setConductorSugs(results);
+                if (results.length === 0) setPersonaNotFound(true);
+            }
         }, 300);
     };
 
@@ -765,7 +800,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
         }
 
         // Nuevo movimiento: guardado optimista — aparece en UI de inmediato
-        const tempId = `tmp_${Date.now()}`;
+        const tempId = crypto.randomUUID();
         const hora = horaManual || getHoraLocal();
         // fechaFlujo viene del turno activo (fecha de inicio del turno) para que todos los
         // movimientos del turno nocturno queden agrupados bajo la misma fecha, incluso los
@@ -783,7 +818,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
-        const payload = { ...formFinal, puesto, bloque, fecha, hora };
+        const payload = { ...formFinal, puesto, bloque, fecha, hora, clientUUID: tempId };
         if (personaNotFound && form.cedula) {
             api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
@@ -791,7 +826,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
             const { data } = await api.post('/movimientos', payload);
             onMovimientoConfirmado(tempId, data.movimiento);
         } catch {
-            addToOfflineQueue({ tempId, payload, hora, fecha });
+            await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
         }
     };
 
@@ -3120,8 +3155,42 @@ const PantallaStub = ({ title }) => (
 
 // ── Perfil ────────────────────────────────────────────────
 const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
+    const { registerPasskey } = useAuth();
     const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
     const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
+
+    const [bioSupported, setBioSupported] = useState(false);
+    const [bioStatus, setBioStatus] = useState('idle'); // idle | loading | ok | error
+    const [bioMsg, setBioMsg] = useState('');
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const ok = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                setBioSupported(ok);
+            } catch { /* no soportado */ }
+        })();
+    }, []);
+
+    const handleActivarHuella = async () => {
+        setBioStatus('loading');
+        setBioMsg('');
+        try {
+            const deviceName = navigator.platform || 'Este dispositivo';
+            await registerPasskey(deviceName);
+            setBioStatus('ok');
+            setBioMsg('Huella / Face ID activado en este dispositivo');
+        } catch (err) {
+            setBioStatus('error');
+            if (err.name === 'NotAllowedError') {
+                setBioMsg('Cancelado. Vuelve a intentarlo cuando quieras.');
+            } else if (err.name === 'InvalidStateError') {
+                setBioMsg('Ya tienes una huella registrada en este dispositivo.');
+            } else {
+                setBioMsg(err.response?.data?.message || 'No se pudo registrar la huella');
+            }
+        }
+    };
 
     return (
         <div className="perfil-wrapper">
@@ -3138,6 +3207,30 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                     </p>
                 </div>
             )}
+
+            {bioSupported && (
+                <div className="perfil-bio-section">
+                    <p className="perfil-bio-label">ACCESO BIOMÉTRICO</p>
+                    {bioStatus === 'ok' ? (
+                        <p className="perfil-bio-success">{bioMsg}</p>
+                    ) : (
+                        <>
+                            <button
+                                className="perfil-bio-btn"
+                                onClick={handleActivarHuella}
+                                disabled={bioStatus === 'loading'}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 1C8.5 1 5.5 2.5 3.5 5M12 1c3.5 0 6.5 1.5 8.5 4M3 9c-.3 1-.5 2-.5 3M21 9c.3 1 .5 2 .5 3M12 7c-2.8 0-5 2.2-5 5 0 1.5.3 2.9.8 4.1M12 7c2.8 0 5 2.2 5 5 0 1.5-.3 2.9-.8 4.1M12 11c-1.1 0-2 .9-2 2 0 1.5.4 2.9 1 4.1M12 11c1.1 0 2 .9 2 2 0 1.5-.4 2.9-1 4.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                </svg>
+                                {bioStatus === 'loading' ? 'Registrando…' : 'Activar huella / Face ID'}
+                            </button>
+                            {bioStatus === 'error' && <p className="perfil-bio-error">{bioMsg}</p>}
+                        </>
+                    )}
+                </div>
+            )}
+
             <button className="perfil-logout" onClick={onLogout}>Cerrar sesión</button>
         </div>
     );
@@ -3451,29 +3544,28 @@ const WorkspacePage = () => {
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;
-        // Usamos la fecha del turno (no calculada en el momento) para que el nocturno
-        // siempre cargue los movimientos del día de inicio del turno, incluso de madrugada.
         const turnoFecha = turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual);
         try {
             const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
             const serverMovs = mRes.data.movimientos;
             const serverIds = new Set(serverMovs.map(m => m._id));
-            const pendingItems = getOfflineQueue()
-                .filter(item => !serverIds.has(item.tempId))
-                .map(item => ({ _id: item.tempId, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
+            const pending = await getPendingMovimientos();
+            const pendingItems = pending
+                .filter(item => !serverIds.has(item.uuid))
+                .map(item => ({ _id: item.uuid, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
             setMovimientos([...serverMovs, ...pendingItems]);
-            // diasActivos no se puede calcular localmente — lo pedimos en background
             api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`)
                 .then(sRes => setDiasActivos(sRes.data.diasActivos ?? 0))
                 .catch(() => {});
         } catch {
-            // Sin conexión: conservar movimientos confirmados + cola offline
+            // Sin conexión: conservar confirmados + cola Dexie
+            const pending = await getPendingMovimientos();
             setMovimientos(prev => {
                 const confirmed = prev.filter(m => !m._pending);
                 const confirmedIds = new Set(confirmed.map(m => m._id));
-                const queueItems = getOfflineQueue()
-                    .filter(i => !confirmedIds.has(i.tempId))
-                    .map(i => ({ _id: i.tempId, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
+                const queueItems = pending
+                    .filter(i => !confirmedIds.has(i.uuid))
+                    .map(i => ({ _id: i.uuid, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
                 return [...confirmed, ...queueItems];
             });
         }
@@ -3490,24 +3582,16 @@ const WorkspacePage = () => {
         setMovimientos(prev => prev.map(m => m._id === tempId ? realMov : m));
     };
 
-    // Sincronización offline: reintenta la cola cuando vuelve la conexión
-    // Usuarios pendientes de aprobación no sincronizan — sus movimientos quedan en cola
+    // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión
     useEffect(() => {
         if (!turnoActivo || isPending) return;
-        const syncQueue = async () => {
-            const queue = getOfflineQueue();
-            if (!queue.length) return;
-            for (const item of [...queue]) {
-                try {
-                    const { data } = await api.post('/movimientos', item.payload);
-                    removeFromOfflineQueue(item.tempId);
-                    setMovimientos(prev => prev.map(m => m._id === item.tempId ? data.movimiento : m));
-                } catch {}
-            }
+        const onSynced = ({ uuid, serverId }) => {
+            setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
         };
-        if (navigator.onLine) syncQueue();
-        window.addEventListener('online', syncQueue);
-        return () => window.removeEventListener('online', syncQueue);
+        const sync = () => syncPendingMovimientos(onSynced);
+        if (navigator.onLine) sync();
+        window.addEventListener('online', sync);
+        return () => window.removeEventListener('online', sync);
     }, [turnoActivo, isPending]);
 
     useEffect(() => {

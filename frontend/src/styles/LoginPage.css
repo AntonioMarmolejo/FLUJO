@@ -228,6 +228,32 @@
     cursor: not-allowed;
 }
 
+/* Botón biométrico */
+.btn-biometric {
+    width: 100%;
+    padding: 14px;
+    background: rgba(108, 99, 255, 0.1);
+    border: 1px solid rgba(108, 99, 255, 0.35);
+    border-radius: 12px;
+    color: #a5b4fc;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.2s, border-color 0.2s;
+}
+.btn-biometric:hover:not(:disabled) {
+    background: rgba(108, 99, 255, 0.18);
+    border-color: rgba(108, 99, 255, 0.6);
+}
+.btn-biometric:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Error */
 .error-msg {
     background: rgba(239, 68, 68, 0.1);

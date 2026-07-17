@@ -37,6 +37,7 @@ const movimientoSchema = new mongoose.Schema(
         documentoTipo: { type: String, trim: true, default: '' },
         hora: { type: String, required: true },
         fecha: { type: String, required: true },
+        clientUUID: { type: String, default: null },
     },
     { timestamps: true }
 );

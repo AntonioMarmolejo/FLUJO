@@ -10,8 +10,14 @@ const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula
 // POST /api/movimientos
 export const crearMovimiento = async (req, res) => {
     try {
-        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, genero, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque, hora: horaCliente } = req.body;
+        const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, genero, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque, hora: horaCliente, clientUUID } = req.body;
         if (!tipo || !placa || !puesto || !bloque) return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
+
+        // Idempotencia: si ya existe un mov con este UUID del cliente, devolver el existente
+        if (clientUUID) {
+            const existing = await Movimiento.findOne({ clientUUID, usuario: req.user._id });
+            if (existing) return res.status(201).json({ message: 'Movimiento ya registrado', movimiento: existing });
+        }
 
         const movimiento = await Movimiento.create({
             usuario: req.user._id, puesto, bloque, tipo,
@@ -19,6 +25,7 @@ export const crearMovimiento = async (req, res) => {
             marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '',
             empresa: empresa || '', conductor: conductor || '', cedula: cedula || '',
             destino: destino || '', actividad: actividad || '', genero: genero || 'm',
+            clientUUID: clientUUID || null,
             guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '',
             documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
             hora: horaCliente || getHora(), fecha: req.body.fecha || getFecha(),
@@ -146,6 +153,7 @@ export const updateMovimiento = async (req, res) => {
         if ('documentoNombre'  in b) update.documentoNombre  = b.documentoNombre  || '';
         if ('documentoTipo'    in b) update.documentoTipo    = b.documentoTipo    || '';
         if ('hora'             in b && b.hora) update.hora   = b.hora;
+        if ('clientUUID'       in b) update.clientUUID = b.clientUUID || null;
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
             update,

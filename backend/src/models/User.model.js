@@ -58,6 +58,27 @@ const userSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        refreshTokens: {
+            type: [{
+                token: { type: String, required: true },
+                deviceId: { type: String, default: '' },
+                createdAt: { type: Date, default: Date.now },
+            }],
+            default: [],
+            select: false,
+        },
+        passkeys: {
+            type: [{
+                credentialID: { type: String, required: true },
+                publicKey: { type: String, required: true },
+                counter: { type: Number, default: 0 },
+                deviceId: { type: String, default: '' },
+                deviceName: { type: String, default: '' },
+                createdAt: { type: Date, default: Date.now },
+            }],
+            default: [],
+            select: false,
+        },
     },
     { timestamps: true }
 );

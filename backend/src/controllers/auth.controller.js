@@ -1,11 +1,14 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.model.js';
 
-const generateToken = (id, role) => {
-    return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN,
-    });
-};
+const generateAccessToken = (id, role) =>
+    jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' });
+
+const generateRefreshToken = () => crypto.randomBytes(48).toString('hex');
+
+const REFRESH_TTL_DAYS = 30;
+const REFRESH_TTL_MS = REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 const buildUserResponse = (user) => ({
     id: user._id,
@@ -20,6 +23,21 @@ const buildUserResponse = (user) => ({
     onboardingCompleto: user.onboardingCompleto,
 });
 
+const issueTokens = async (user, deviceId = '') => {
+    const accessToken = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken();
+
+    // Guardar refresh token; limpiar los vencidos y limitar a 5 por usuario
+    const ahora = Date.now();
+    const vigentes = (user.refreshTokens || [])
+        .filter(r => new Date(r.createdAt).getTime() + REFRESH_TTL_MS > ahora)
+        .slice(-4); // máx 4 existentes + 1 nuevo = 5
+    vigentes.push({ token: refreshToken, deviceId, createdAt: new Date() });
+
+    await User.findByIdAndUpdate(user._id, { refreshTokens: vigentes });
+    return { accessToken, refreshToken };
+};
+
 // POST /api/auth/register
 export const register = async (req, res) => {
     try {
@@ -30,18 +48,19 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: 'El correo ya está registrado' });
         }
 
-        // Si no existe ningún admin, el primer usuario en registrarse es admin
         const adminCount = await User.countDocuments({ role: 'admin' });
         const isFirst = adminCount === 0;
         const role = isFirst ? 'admin' : 'operador';
         const status = isFirst ? 'active' : 'pending';
 
         const user = await User.create({ name, email, password, role, status });
-        const token = generateToken(user._id, user.role);
+        const deviceId = req.body.deviceId || '';
+        const { accessToken, refreshToken } = await issueTokens(user, deviceId);
 
         res.status(201).json({
             message: 'Usuario creado exitosamente',
-            token,
+            token: accessToken,
+            refreshToken,
             user: buildUserResponse(user),
         });
     } catch (error) {
@@ -52,7 +71,7 @@ export const register = async (req, res) => {
 // POST /api/auth/login
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, deviceId = '' } = req.body;
 
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
@@ -71,13 +90,56 @@ export const login = async (req, res) => {
         user.lastLogin = new Date();
         await user.save({ validateBeforeSave: false });
 
-        const token = generateToken(user._id, user.role);
+        const { accessToken, refreshToken } = await issueTokens(user, deviceId);
 
         res.status(200).json({
             message: 'Sesión iniciada',
-            token,
+            token: accessToken,
+            refreshToken,
             user: buildUserResponse(user),
         });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// POST /api/auth/refresh
+export const refreshAccessToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) return res.status(400).json({ message: 'Refresh token requerido' });
+
+        const user = await User.findOne({ 'refreshTokens.token': refreshToken }).select('+refreshTokens');
+        if (!user) return res.status(401).json({ message: 'Refresh token inválido' });
+
+        const record = user.refreshTokens.find(r => r.token === refreshToken);
+        const ahora = Date.now();
+        if (!record || new Date(record.createdAt).getTime() + REFRESH_TTL_MS <= ahora) {
+            return res.status(401).json({ message: 'Refresh token expirado' });
+        }
+
+        if (user.activo === false) {
+            return res.status(403).json({ message: 'Tu cuenta está desactivada.' });
+        }
+
+        const accessToken = generateAccessToken(user._id, user.role);
+        res.json({ token: accessToken, user: buildUserResponse(user) });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// POST /api/auth/logout
+export const logout = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (refreshToken) {
+            await User.updateOne(
+                { 'refreshTokens.token': refreshToken },
+                { $pull: { refreshTokens: { token: refreshToken } } }
+            );
+        }
+        res.json({ message: 'Sesión cerrada' });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
@@ -115,7 +177,7 @@ export const getMe = async (req, res) => {
 // POST /api/auth/google
 export const googleAuth = async (req, res) => {
     try {
-        const { token } = req.body;
+        const { token, deviceId = '' } = req.body;
         if (!token) return res.status(400).json({ message: 'Token requerido' });
 
         const gRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -145,9 +207,10 @@ export const googleAuth = async (req, res) => {
         user.lastLogin = new Date();
         await user.save({ validateBeforeSave: false });
 
-        const jwtToken = generateToken(user._id, user.role);
+        const { accessToken, refreshToken } = await issueTokens(user, deviceId);
         res.json({
-            token: jwtToken,
+            token: accessToken,
+            refreshToken,
             user: buildUserResponse(user),
         });
     } catch (error) {

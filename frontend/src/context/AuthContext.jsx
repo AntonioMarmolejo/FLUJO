@@ -1,8 +1,30 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import api from '../api/axios';
 
 const AuthContext = createContext();
+
+const getDeviceId = () => {
+    let id = localStorage.getItem('deviceId');
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem('deviceId', id); }
+    return id;
+};
+
+const saveSession = (data) => {
+    localStorage.setItem('token', data.token);
+    if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+};
+
+// Devuelve true si el dispositivo tiene autenticador biométrico de plataforma
+export const checkBiometricSupport = async () => {
+    try {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch {
+        return false;
+    }
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -12,21 +34,47 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const verifyToken = async () => {
             const token = localStorage.getItem('token');
-            if (!token) { setLoading(false); return; }
-            try {
-                const { data } = await api.get('/auth/me', { timeout: 8000 });
-                setUser(data.user);
-            } catch {
-                const cached = localStorage.getItem('user');
-                if (cached) {
-                    try { setUser(JSON.parse(cached)); return; } catch { /* ignorar */ }
+            const refreshToken = localStorage.getItem('refreshToken');
+            const cached = localStorage.getItem('user');
+
+            if (!token && !refreshToken) { setLoading(false); return; }
+
+            // Intento 1: access token válido
+            if (token) {
+                try {
+                    const { data } = await api.get('/auth/me', { timeout: 8000 });
+                    setUser(data.user);
+                    setLoading(false);
+                    return;
+                } catch {
+                    // offline → usar cache
+                    if (!navigator.onLine && cached) {
+                        try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
+                    }
                 }
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                setUser(null);
-            } finally {
-                setLoading(false);
             }
+
+            // Intento 2: renovar con refresh token
+            if (refreshToken) {
+                try {
+                    const { data } = await api.post('/auth/refresh', { refreshToken });
+                    localStorage.setItem('token', data.token);
+                    if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+                    setUser(data.user || (cached ? JSON.parse(cached) : null));
+                    setLoading(false);
+                    return;
+                } catch { /* refresh expirado */ }
+            }
+
+            // Sin sesión válida
+            if (cached && !navigator.onLine) {
+                try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
+            }
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            setUser(null);
+            setLoading(false);
         };
         verifyToken();
     }, []);
@@ -44,33 +92,64 @@ export const AuthProvider = ({ children }) => {
     };
 
     const login = async (email, password) => {
-        const { data } = await api.post('/auth/login', { email, password });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        const { data } = await api.post('/auth/login', { email, password, deviceId: getDeviceId() });
+        saveSession(data);
         setUser(data.user);
         if (data.user.onboardingCompleto) navigate('/workspace');
         else navigate('/onboarding');
     };
 
     const register = async (name, email, password) => {
-        const { data } = await api.post('/auth/register', { name, email, password });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        const { data } = await api.post('/auth/register', { name, email, password, deviceId: getDeviceId() });
+        saveSession(data);
         setUser(data.user);
         navigate('/onboarding');
     };
 
     const loginWithGoogle = async (accessToken) => {
-        const { data } = await api.post('/auth/google', { token: accessToken });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        const { data } = await api.post('/auth/google', { token: accessToken, deviceId: getDeviceId() });
+        saveSession(data);
         setUser(data.user);
         if (data.user.onboardingCompleto) navigate('/workspace');
         else navigate('/onboarding');
     };
 
-    const logout = () => {
+    // Login biométrico: el usuario solo necesita su email + huella/Face ID
+    const loginWithBiometric = async (email) => {
+        const deviceId = getDeviceId();
+        const optRes = await api.post('/webauthn/authenticate/options', { email });
+        const asseResp = await startAuthentication({ optionsJSON: optRes.data });
+        const verifyRes = await api.post('/webauthn/authenticate/verify', {
+            body: asseResp,
+            userId: optRes.data.userId,
+            deviceId,
+        });
+        saveSession(verifyRes.data);
+        setUser(verifyRes.data.user);
+        if (verifyRes.data.user.onboardingCompleto) navigate('/workspace');
+        else navigate('/onboarding');
+    };
+
+    // Registrar la huella del dispositivo actual (debe llamarse con sesión activa)
+    const registerPasskey = async (deviceName = '') => {
+        const deviceId = getDeviceId();
+        const optRes = await api.post('/webauthn/register/options');
+        const attResp = await startRegistration({ optionsJSON: optRes.data });
+        const verifyRes = await api.post('/webauthn/register/verify', {
+            body: attResp,
+            deviceId,
+            deviceName,
+        });
+        return verifyRes.data;
+    };
+
+    const logout = async () => {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+            api.post('/auth/logout', { refreshToken }).catch(() => {});
+        }
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setUser(null);
         navigate('/');
@@ -84,7 +163,12 @@ export const AuthProvider = ({ children }) => {
     const hasPermiso = (panel) => isAdmin || permisosPanel.includes(panel);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout, updateUser, role, isAdmin, isSupervisor, isPending, permisosPanel, hasPermiso }}>
+        <AuthContext.Provider value={{
+            user, loading,
+            login, register, loginWithGoogle, loginWithBiometric, registerPasskey,
+            logout, updateUser,
+            role, isAdmin, isSupervisor, isPending, permisosPanel, hasPermiso,
+        }}>
             {children}
         </AuthContext.Provider>
     );
