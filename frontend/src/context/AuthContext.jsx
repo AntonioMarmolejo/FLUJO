@@ -39,6 +39,11 @@ export const AuthProvider = ({ children }) => {
 
             if (!token && !refreshToken) { setLoading(false); return; }
 
+            // Sin internet: restaurar sesión cacheada sin tocar el servidor
+            if (!navigator.onLine && cached) {
+                try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
+            }
+
             // Intento 1: access token válido
             if (token) {
                 try {
@@ -46,12 +51,7 @@ export const AuthProvider = ({ children }) => {
                     setUser(data.user);
                     setLoading(false);
                     return;
-                } catch {
-                    // offline → usar cache
-                    if (!navigator.onLine && cached) {
-                        try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
-                    }
-                }
+                } catch { /* continuar */ }
             }
 
             // Intento 2: renovar con refresh token
@@ -63,13 +63,14 @@ export const AuthProvider = ({ children }) => {
                     setUser(data.user || (cached ? JSON.parse(cached) : null));
                     setLoading(false);
                     return;
-                } catch { /* refresh expirado */ }
+                } catch { /* refresh expirado o sin internet */ }
             }
 
-            // Sin sesión válida
+            // Último recurso offline
             if (cached && !navigator.onLine) {
                 try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
             }
+
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
