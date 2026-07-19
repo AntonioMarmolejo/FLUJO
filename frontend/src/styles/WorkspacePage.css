@@ -638,6 +638,10 @@
     position: relative;
 }
 
+.placa-wrapper input {
+    padding-right: 36px;
+}
+
 .field-clear-btn {
     position: absolute;
     right: 10px;

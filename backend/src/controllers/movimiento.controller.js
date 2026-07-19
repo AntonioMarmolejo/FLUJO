@@ -161,7 +161,7 @@ export const updateMovimiento = async (req, res) => {
         );
         if (!mov) return res.status(404).json({ message: 'Movimiento no encontrado' });
 
-        if (placa) await Vehiculo.findOneAndUpdate({ placa: placa.trim().toUpperCase() }, vehiculoFields(req.body), { upsert: true });
+        if (b.placa) await Vehiculo.findOneAndUpdate({ placa: b.placa.trim().toUpperCase() }, vehiculoFields(req.body), { upsert: true });
 
         res.json({ message: 'Movimiento actualizado', movimiento: mov });
     } catch (error) {

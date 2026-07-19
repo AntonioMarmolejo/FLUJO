@@ -236,35 +236,42 @@ const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFi
     </div>
 );
 
-const SuggestionField = ({ name, label, required, placeholder, value, onChange, onClear, autoFilled, suggestions, onSelect, onClearSugs, labelAction }) => (
-    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
-        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}{labelAction}</label>
-        <div className="placa-wrapper">
-            <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off"
-                onBlur={() => setTimeout(() => onClearSugs?.(), 150)} />
-            {value && onClear && (
-                <button className="field-clear-btn" type="button" onMouseDown={e => { e.preventDefault(); onClear(); }}>✕</button>
-            )}
-            {suggestions.length > 0 && (
-                <div className="placa-suggestions">
-                    {suggestions.map((s, i) => (
-                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); onSelect(s); }}>
-                            <div>
-                                <div className="placa-suggestion-placa">{s.nombres || s.cedula}</div>
-                                <div className="placa-suggestion-info">
-                                    {[s.cedula, s.empresa].filter(Boolean).join(' · ') || '—'}
+const SuggestionField = ({ name, label, required, placeholder, value, onChange, onClear, autoFilled, suggestions, onSelect, onClearSugs, labelAction }) => {
+    const inputRef = useRef(null);
+    return (
+        <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+            <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}{labelAction}</label>
+            <div className="placa-wrapper">
+                <input ref={inputRef} type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off"
+                    onBlur={() => setTimeout(() => onClearSugs?.(), 150)} />
+                {value && onClear && (
+                    <button className="field-clear-btn" type="button" onMouseDown={e => {
+                        e.preventDefault();
+                        onClear();
+                        setTimeout(() => inputRef.current?.focus(), 0);
+                    }}>✕</button>
+                )}
+                {suggestions.length > 0 && (
+                    <div className="placa-suggestions">
+                        {suggestions.map((s, i) => (
+                            <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); onSelect(s); }}>
+                                <div>
+                                    <div className="placa-suggestion-placa">{s.nombres || s.cedula}</div>
+                                    <div className="placa-suggestion-info">
+                                        {[s.cedula, s.empresa].filter(Boolean).join(' · ') || '—'}
+                                    </div>
                                 </div>
+                                <span className={`placa-suggestion-badge ${s._source}`}>
+                                    {s._source === 'hoy' ? 'Hoy' : 'BD'}
+                                </span>
                             </div>
-                            <span className={`placa-suggestion-badge ${s._source}`}>
-                                {s._source === 'hoy' ? 'Hoy' : 'BD'}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, suggestions, onSelect, multiline }) => (
     <div className="modal-field">
