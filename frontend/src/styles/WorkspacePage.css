@@ -2519,3 +2519,31 @@
     padding: 32px 16px;
     text-align: center;
 }
+
+/* Botón volver arriba */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 76px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #6c63ff;
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 90;
+    box-shadow: 0 4px 16px rgba(108, 99, 255, 0.45);
+    transition: background 0.2s, transform 0.15s;
+    animation: scrollTopIn 0.2s ease;
+}
+.scroll-top-btn:hover { background: #7c6fff; }
+.scroll-top-btn:active { transform: scale(0.88); }
+
+@keyframes scrollTopIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

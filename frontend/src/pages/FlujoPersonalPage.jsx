@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
 import api from '../api/axios';
 
 const COLORS = {
@@ -1296,7 +1295,8 @@ function ImportModal({ open, onClose, onConfirm }) {
         { name: 'cargo',           ex: 'Operador de Planta' },
     ];
 
-    const downloadTemplate = () => {
+    const downloadTemplate = async () => {
+        const XLSX = await import('xlsx');
         const ws = XLSX.utils.aoa_to_sheet([
             ['nombre_completo', 'cargo'],
             ['Marcelo Quintero Ríos', 'Operador de Planta'],
@@ -1314,8 +1314,9 @@ function ImportModal({ open, onClose, onConfirm }) {
         if (!f) return;
         e.target.value = '';
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             try {
+                const XLSX = await import('xlsx');
                 const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });

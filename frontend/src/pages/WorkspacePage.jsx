@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
@@ -12,13 +12,9 @@ import {
     cachePersona,
     buscarPersonaLocal,
 } from '../lib/syncEngine.js';
-import {
-    LineChart, Line, XAxis, YAxis, Tooltip,
-    ResponsiveContainer, CartesianGrid,
-} from 'recharts';
 import '../styles/WorkspacePage.css';
-import * as XLSX from 'xlsx';
-import jsQR from 'jsqr';
+
+const StatsChart = lazy(() => import('../components/StatsChart.jsx'));
 
 // ── Iconos ────────────────────────────────────────────────
 const TruckIcon = ({ color }) => (
@@ -389,32 +385,42 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
 
     useEffect(() => {
         let active = true;
-        const tick = () => {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            if (!video || !canvas || !active) return;
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-                if (code) { active = false; onScanned(code.data); return; }
-            }
-            rafRef.current = requestAnimationFrame(tick);
-        };
+        let jsQR = null;
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(stream => {
+        const start = async () => {
+            const m = await import('jsqr');
+            jsQR = m.default;
+
+            const tick = () => {
+                const video = videoRef.current;
+                const canvas = canvasRef.current;
+                if (!video || !canvas || !active) return;
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+                    if (code) { active = false; onScanned(code.data); return; }
+                }
+                rafRef.current = requestAnimationFrame(tick);
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
                 streamRef.current = stream;
                 videoRef.current.srcObject = stream;
                 videoRef.current.play();
                 setHint('Apunta al código QR');
                 rafRef.current = requestAnimationFrame(tick);
-            })
-            .catch(() => setCamError('No se pudo acceder a la cámara. Verifica los permisos.'));
+            } catch {
+                setCamError('No se pudo acceder a la cámara. Verifica los permisos.');
+            }
+        };
+
+        start();
 
         return () => {
             active = false;
@@ -428,7 +434,8 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
         if (!file) return;
         setImgError('');
         const reader = new FileReader();
-        reader.onload = ev => {
+        reader.onload = async ev => {
+            const { default: jsQR } = await import('jsqr');
             const image = new Image();
             image.onload = () => {
                 const canvas = canvasRef.current;
@@ -551,6 +558,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
     const [tagQuery, setTagQuery] = useState('');
     const [tagSugs, setTagSugs] = useState([]);
     const actividadRef = useRef(null);
+    const horaInputRef = useRef(null);
     const searchTimer = useRef(null);
     const cedulaTimer = useRef(null);
     const conductorTimer = useRef(null);
@@ -877,6 +885,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {showHoraInput ? (
                                     <input
+                                        ref={horaInputRef}
                                         type="time"
                                         className="hora-manual-input"
                                         value={horaManual}
@@ -885,7 +894,10 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                                         autoFocus
                                     />
                                 ) : (
-                                    <button className="activ-add-tag-btn" onClick={() => setShowHoraInput(true)}>
+                                    <button className="activ-add-tag-btn" onClick={() => {
+                                        setShowHoraInput(true);
+                                        setTimeout(() => horaInputRef.current?.showPicker?.(), 50);
+                                    }}>
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
                                         hora
                                     </button>
@@ -1615,8 +1627,9 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
         setError('');
         setParsedRows([]);
         const reader = new FileReader();
-        reader.onload = evt => {
+        reader.onload = async evt => {
             try {
+                const XLSX = await import('xlsx');
                 const wb = XLSX.read(evt.target.result, { type: 'binary' });
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -2044,9 +2057,10 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
 
-    const doExport = fmt => {
+    const doExport = async fmt => {
         setShowExport(false);
         if (vista === 'bitacora' || fmt === 'bitacora') {
+            const XLSX = await import('xlsx');
             const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino', 'Estado'];
             const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
             const rows = bitacora.map((b, i) => [i + 1, b.placa, b.tipoVehiculo || '—', b.marca || '—', b.empresa || '—', b.horaS, b.horaI, b.conductor, b.destino || '—', estadoLabel[b.status] || b.status]);
@@ -2800,8 +2814,9 @@ const ModalImportPersonas = ({ onClose, onGuardado }) => {
         setParsedRows([]);
 
         const reader = new FileReader();
-        reader.onload = evt => {
+        reader.onload = async evt => {
             try {
+                const XLSX = await import('xlsx');
                 const wb = XLSX.read(evt.target.result, { type: 'binary' });
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -3380,6 +3395,13 @@ const WorkspacePage = () => {
     const [dashCollapsed, setDashCollapsed] = useState(true);
     const [movCollapsed, setMovCollapsed] = useState(false);
     const [chartCollapsed, setChartCollapsed] = useState(true);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+
+    useEffect(() => {
+        const onScroll = () => setShowScrollTop(window.scrollY > 280);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
     const [diasActivos, setDiasActivos] = useState(0);
     const [movimientos, setMovimientos] = useState([]);
@@ -3450,12 +3472,14 @@ const WorkspacePage = () => {
         [movimientos, diasActivos]
     );
 
-    const sq = searchQuery.toLowerCase();
-    const movsFiltrados = sq
-        ? movimientos.filter(m =>
-            m.placa.toLowerCase().includes(sq) ||
-            (m.conductor || '').toLowerCase().includes(sq))
-        : movimientos;
+    const movsFiltrados = useMemo(() => {
+        const sq = searchQuery.toLowerCase();
+        return sq
+            ? movimientos.filter(m =>
+                m.placa.toLowerCase().includes(sq) ||
+                (m.conductor || '').toLowerCase().includes(sq))
+            : movimientos;
+    }, [movimientos, searchQuery]);
 
     const sortedMovs = useMemo(() => {
         const arr = [...movsFiltrados];
@@ -3675,7 +3699,8 @@ const WorkspacePage = () => {
         exportMovimientos(movimientos, format, `movimientos_${fecha}`);
     };
 
-    const exportBitacora = () => {
+    const exportBitacora = async () => {
+        const XLSX = await import('xlsx');
         const fecha = new Date().toISOString().split('T')[0];
         const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino / Actividad', 'Estado'];
         const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
@@ -3703,8 +3728,9 @@ const WorkspacePage = () => {
         setRegistroConfig(cfg);
     };
 
-    const exportRegistroExcel = () => {
+    const exportRegistroExcel = async () => {
         if (!movimientos.length) return;
+        const XLSX = await import('xlsx');
         const fecha = new Date().toISOString().split('T')[0];
         const cols = ['#', 'Hora', 'Tipo', 'Placa', 'Tipo Vehículo', 'Conductor', 'Cédula', 'Empresa', 'Destino', 'Guía', 'Empresa Autoriza', 'Quién Autoriza', 'Narrativa'];
         const rows = [...movimientos].map((m, i) => [
@@ -4125,16 +4151,9 @@ const WorkspacePage = () => {
                                         </button>
                                         {!chartCollapsed && (
                                             <>
-                                                <ResponsiveContainer width="100%" height={180}>
-                                                    <LineChart data={stats?.grafico || []} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-                                                        <XAxis dataKey="label" tick={{ fill: '#666', fontSize: 10 }} interval={5} />
-                                                        <YAxis tick={{ fill: '#666', fontSize: 10 }} />
-                                                        <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }} labelStyle={{ color: '#aaa' }} />
-                                                        <Line type="monotone" dataKey="ingresos" stroke="#818cf8" strokeWidth={2} dot={{ r: 3 }} name="Ingresos" />
-                                                        <Line type="monotone" dataKey="salidas" stroke="#f87171" strokeWidth={2} dot={{ r: 3 }} name="Salidas" />
-                                                    </LineChart>
-                                                </ResponsiveContainer>
+                                                <Suspense fallback={<div style={{ height: 180 }} />}>
+                                                    <StatsChart data={stats?.grafico} />
+                                                </Suspense>
                                                 <div className="ws-chart-legend">
                                                     <span><span className="ws-dot" style={{ background: '#818cf8' }} />Ingresos</span>
                                                     <span><span className="ws-dot" style={{ background: '#f87171' }} />Salidas</span>
@@ -4368,6 +4387,19 @@ const WorkspacePage = () => {
                     </svg>
                     <span>Cuenta pendiente de aprobación. Los movimientos se guardan localmente hasta que el administrador active tu acceso.</span>
                 </div>
+            )}
+
+            {/* Botón volver arriba */}
+            {showScrollTop && (
+                <button
+                    className="scroll-top-btn"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    title="Volver arriba"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
             )}
 
             {/* Bottom nav */}
