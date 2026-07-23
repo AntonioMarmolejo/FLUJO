@@ -3712,11 +3712,11 @@ const WorkspacePage = () => {
     }, [movsFiltrados, movSort]);
 
     const sortedRegs = useMemo(() => {
-        const arr = [...movimientos];
+        const arr = [...movsFiltrados];
         return regSort === 'asc'
             ? arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
             : arr.sort((a, b) => (b.hora || '').localeCompare(a.hora || ''));
-    }, [movimientos, regSort]);
+    }, [movsFiltrados, regSort]);
 
     const placaCounts = useMemo(() => {
         const counts = {};
@@ -3783,6 +3783,16 @@ const WorkspacePage = () => {
             return ta.localeCompare(tb);
         });
     }, [movimientos]);
+
+    const bitacoraFiltrada = useMemo(() => {
+        if (!searchQuery) return bitacora;
+        const sq = searchQuery.toLowerCase();
+        return bitacora.filter(b =>
+            b.placa?.toLowerCase().includes(sq) ||
+            (b.conductor || '').toLowerCase().includes(sq) ||
+            (b.empresa || '').toLowerCase().includes(sq)
+        );
+    }, [bitacora, searchQuery]);
 
     const bitPlacaCounts = useMemo(() => {
         const c = {};
@@ -4137,7 +4147,12 @@ const WorkspacePage = () => {
                     {vistaInicio === 'bitacora' && (
                         <div className="ws-bitacora">
                             <div className="bit-toolbar">
-                                <span className="bit-toolbar-count">{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</span>
+                                <span className="bit-toolbar-count">
+                                    {searchQuery
+                                        ? <>{bitacoraFiltrada.length} <span style={{ color: '#818cf8' }}>de {bitacora.length}</span></>
+                                        : <>{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</>
+                                    }
+                                </span>
                                 <button className="bit-export-btn" onClick={exportBitacora} disabled={bitacora.length === 0}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                         <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -4148,9 +4163,11 @@ const WorkspacePage = () => {
                             </div>
                             {bitacora.length === 0 ? (
                                 <p className="ws-empty">Sin movimientos para consolidar</p>
+                            ) : bitacoraFiltrada.length === 0 ? (
+                                <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
                             ) : (
                                 <div className="bit-list">
-                                    {bitacora.map((b, i) => {
+                                    {bitacoraFiltrada.map((b, i) => {
                                         const bText = [
                                             `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
                                             `Estado: ${b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
@@ -4239,7 +4256,12 @@ const WorkspacePage = () => {
                     {vistaInicio === 'registro' && (
                         <div className="ws-registro">
                             <div className="reg-toolbar">
-                                <span className="reg-count">{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</span>
+                                <span className="reg-count">
+                                    {searchQuery
+                                        ? <>{sortedRegs.length} <span style={{ color: '#818cf8' }}>de {movimientos.length}</span></>
+                                        : <>{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</>
+                                    }
+                                </span>
                                 <div className="reg-toolbar-actions">
                                     <span
                                         className="sort-toggle-btn"
@@ -4263,6 +4285,8 @@ const WorkspacePage = () => {
                             </div>
                             {movimientos.length === 0 ? (
                                 <p className="ws-empty">Sin movimientos registrados</p>
+                            ) : sortedRegs.length === 0 ? (
+                                <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
                             ) : (
                                 <div className="reg-list">
                                     {sortedRegs.map(mov => (
