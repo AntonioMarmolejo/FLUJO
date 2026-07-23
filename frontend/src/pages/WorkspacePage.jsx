@@ -1969,6 +1969,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const [vista, setVista] = useState('movimientos');
     const [detailIdx, setDetailIdx] = useState(null);
     const [bitDetailIdx, setBitDetailIdx] = useState(null);
+    const [sortDesc, setSortDesc] = useState(true);
     const [swipedBitIdx, setSwipedBitIdx] = useState(null);
     const bitSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
 
@@ -2043,7 +2044,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const filtrados = sq
         ? movs.filter(m => m.placa.toLowerCase().includes(sq) || (m.conductor || '').toLowerCase().includes(sq))
         : movs;
-    const movsOrdered = [...filtrados].reverse();
+    const movsOrdered = sortDesc ? [...filtrados].reverse() : [...filtrados];
 
     const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
     const uniqueVehicles = Object.values(movs.reduce((acc, m) => {
@@ -2145,16 +2146,40 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                 </button>
             </div>
 
-            {/* Búsqueda (solo movimientos) */}
+            {/* Búsqueda + ordenamiento (solo movimientos) */}
             {vista === 'movimientos' && (
-                <div className="ws-search-bar" style={{ padding: '0 16px 12px', background: 'transparent' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
-                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
-                        value={search} onChange={e => setSearch(e.target.value)} />
-                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                <div style={{ display: 'flex', gap: 8, padding: '0 16px 12px', alignItems: 'center' }}>
+                    <div className="ws-search-bar" style={{ flex: 1, background: 'transparent' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                            <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                        <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
+                            value={search} onChange={e => setSearch(e.target.value)} />
+                        {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                    </div>
+                    <button
+                        onClick={() => setSortDesc(d => !d)}
+                        title={sortDesc ? 'Más reciente primero' : 'Más antiguo primero'}
+                        style={{
+                            flexShrink: 0, width: 36, height: 36, borderRadius: 10,
+                            border: '1px solid #2e2e2e', background: '#1a1a1a',
+                            color: '#818cf8', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            {sortDesc ? (
+                                <>
+                                    <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                </>
+                            ) : (
+                                <>
+                                    <path d="M3 18h18M7 12h10M11 6h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                </>
+                            )}
+                        </svg>
+                    </button>
                 </div>
             )}
 
@@ -2321,11 +2346,19 @@ const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
 );
 
 // ── Pantalla lista de flujos ───────────────────────────────
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 const PantallaFlujos = ({ turnoActivo }) => {
     const [movimientos, setMovimientos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
     const [confirmarFlujo, setConfirmarFlujo] = useState(null);
+    const [vistaFlujos, setVistaFlujos] = useState('archivo');
+    const [expandedYears, setExpandedYears] = useState({});
+    const [expandedMonths, setExpandedMonths] = useState({});
+    const [genCampo, setGenCampo] = useState('todos');
+    const [genQuery, setGenQuery] = useState('');
+    const returnTabRef = useRef('archivo');
 
     // Guarda el último puesto/bloque conocido para poder ver flujos sin turno activo
     useEffect(() => {
@@ -2347,6 +2380,15 @@ const PantallaFlujos = ({ turnoActivo }) => {
             .catch(() => setLoading(false));
     }, [puesto, bloque]);
 
+    // Abrir el año y mes actuales por defecto
+    useEffect(() => {
+        const now = new Date();
+        const year = String(now.getFullYear());
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        setExpandedYears({ [year]: true });
+        setExpandedMonths({ [`${year}-${month}`]: true });
+    }, []);
+
     const handleDeleteFlujo = async () => {
         if (!confirmarFlujo) return;
         try {
@@ -2367,6 +2409,84 @@ const PantallaFlujos = ({ turnoActivo }) => {
             .map(([fecha, movs]) => ({ fecha, movs }));
     }, [movimientos]);
 
+    // Agrupar flujos por año → mes
+    const flujosArchivo = useMemo(() => {
+        const byYear = {};
+        flujos.forEach(f => {
+            const [year, month] = f.fecha.split('-');
+            const ym = `${year}-${month}`;
+            if (!byYear[year]) byYear[year] = {};
+            if (!byYear[year][ym]) byYear[year][ym] = [];
+            byYear[year][ym].push(f);
+        });
+        return byYear;
+    }, [flujos]);
+
+    // Búsqueda global (pestaña General)
+    const genResultados = useMemo(() => {
+        if (!genQuery.trim()) return [];
+        const q = genQuery.toLowerCase().trim();
+        return movimientos.filter(m => {
+            if (genCampo === 'placa')     return m.placa?.toLowerCase().includes(q);
+            if (genCampo === 'conductor') return (m.conductor || '').toLowerCase().includes(q);
+            if (genCampo === 'empresa')   return (m.empresa || '').toLowerCase().includes(q);
+            if (genCampo === 'actividad') return (m.actividad || '').toLowerCase().includes(q);
+            return (
+                m.placa?.toLowerCase().includes(q) ||
+                (m.conductor || '').toLowerCase().includes(q) ||
+                (m.empresa || '').toLowerCase().includes(q) ||
+                (m.actividad || '').toLowerCase().includes(q) ||
+                (m.destino || '').toLowerCase().includes(q)
+            );
+        }).sort((a, b) => a.fecha !== b.fecha ? b.fecha.localeCompare(a.fecha) : b.hora.localeCompare(a.hora));
+    }, [movimientos, genQuery, genCampo]);
+
+    // Tarjeta de flujo (reutilizada en archivo y en resultados generales)
+    const renderFlujoCard = (f) => {
+        const fechaLarga = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        });
+        const ingresos = f.movs.filter(m => m.tipo === 'ingreso').length;
+        const salidas  = f.movs.filter(m => m.tipo === 'salida').length;
+        const isPetro  = m => m.empresa?.toLowerCase().includes('petroecuador');
+        const unicos   = Object.values(f.movs.reduce((acc, m) => {
+            if (!acc[m.placa] || (!acc[m.placa].empresa && m.empresa)) acc[m.placa] = m;
+            return acc;
+        }, {}));
+        const petro = unicos.filter(isPetro).length;
+        const earliestHour = (() => {
+            const sorted = [...f.movs].sort((a, b) => a.hora.localeCompare(b.hora));
+            return parseInt((sorted[0]?.hora || '12:00').split(':')[0]);
+        })();
+        const isDiurno = earliestHour >= 6 && earliestHour < 18;
+        return (
+            <div key={f.fecha} className="flujo-card" onClick={() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(f.fecha); }}>
+                <div style={{ flex: 1 }}>
+                    <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
+                            {isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
+                        </span>
+                        {fechaLarga}
+                    </div>
+                    <div className="flujo-stats">
+                        <span style={{ color: '#818cf8' }}>{ingresos} ing.</span>
+                        <span style={{ color: '#555' }}> · </span>
+                        <span style={{ color: '#f87171' }}>{salidas} sal.</span>
+                        {petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{petro} EP</span></>}
+                    </div>
+                </div>
+                <button
+                    className="flujo-delete-btn"
+                    title="Eliminar flujo"
+                    onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: f.fecha, ids: f.movs.map(m => m._id), fechaLarga }); }}
+                >
+                    <IconMinus />
+                </button>
+                <IconChevronRight />
+            </div>
+        );
+    };
+
     if (!puesto || !bloque) {
         return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
     }
@@ -2377,62 +2497,157 @@ const PantallaFlujos = ({ turnoActivo }) => {
             <PantallaFlujoDetalle
                 fecha={flujoSeleccionado}
                 movs={flujo?.movs || []}
-                onBack={() => setFlujoSeleccionado(null)}
+                onBack={() => { setFlujoSeleccionado(null); setVistaFlujos(returnTabRef.current); returnTabRef.current = 'archivo'; }}
             />
         );
     }
 
     if (loading) return <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>;
-    if (flujos.length === 0) return <p className="ws-empty" style={{ padding: 32 }}>No hay flujos registrados aún</p>;
 
     return (
         <>
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {flujos.map(f => {
-                const fechaLarga = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
-                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                });
-                const ingresos = f.movs.filter(m => m.tipo === 'ingreso').length;
-                const salidas = f.movs.filter(m => m.tipo === 'salida').length;
-                const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
-                const unicos = Object.values(f.movs.reduce((acc, m) => {
-                    if (!acc[m.placa] || (!acc[m.placa].empresa && m.empresa)) acc[m.placa] = m;
-                    return acc;
-                }, {}));
-                const petro = unicos.filter(isPetro).length;
-                const earliestHour = (() => {
-                    const sorted = [...f.movs].sort((a, b) => a.hora.localeCompare(b.hora));
-                    return parseInt((sorted[0]?.hora || '12:00').split(':')[0]);
-                })();
-                const isDiurno = earliestHour >= 6 && earliestHour < 18;
-                return (
-                    <div key={f.fecha} className="flujo-card" onClick={() => setFlujoSeleccionado(f.fecha)}>
-                        <div style={{ flex: 1 }}>
-                            <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ color: isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
-                                    {isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
-                                </span>
-                                {fechaLarga}
-                            </div>
-                            <div className="flujo-stats">
-                                <span style={{ color: '#818cf8' }}>{ingresos} ing.</span>
-                                <span style={{ color: '#555' }}> · </span>
-                                <span style={{ color: '#f87171' }}>{salidas} sal.</span>
-                                {petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{petro} EP</span></>}
-                            </div>
-                        </div>
-                        <button
-                            className="flujo-delete-btn"
-                            title="Eliminar flujo"
-                            onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: f.fecha, ids: f.movs.map(m => m._id), fechaLarga }); }}
-                        >
-                            <IconMinus />
-                        </button>
-                        <IconChevronRight />
-                    </div>
-                );
-            })}
+        {/* Pestañas Archivo / General */}
+        <div style={{ display: 'flex', gap: 8, padding: '12px 16px 10px' }}>
+            <button className={`ws-vista-tab${vistaFlujos === 'archivo' ? ' active' : ''}`}
+                onClick={() => setVistaFlujos('archivo')}>Archivo</button>
+            <button className={`ws-vista-tab${vistaFlujos === 'general' ? ' active' : ''}`}
+                onClick={() => setVistaFlujos('general')}>General</button>
         </div>
+
+        {/* ── TAB ARCHIVO ── */}
+        {vistaFlujos === 'archivo' && (
+            flujos.length === 0
+                ? <p className="ws-empty" style={{ padding: 32 }}>No hay flujos registrados aún</p>
+                : <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {Object.keys(flujosArchivo).sort((a, b) => b.localeCompare(a)).map(year => {
+                        const totalFlujos = Object.values(flujosArchivo[year]).flat().length;
+                        return (
+                            <div key={year}>
+                                <button
+                                    className="flujo-year-header"
+                                    onClick={() => setExpandedYears(prev => ({ ...prev, [year]: !prev[year] }))}
+                                >
+                                    <span className="flujo-year-label">{year}</span>
+                                    <span className="flujo-year-count">{totalFlujos} día{totalFlujos !== 1 ? 's' : ''}</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                        style={{ marginLeft: 'auto', flexShrink: 0, transition: 'transform 0.2s', transform: expandedYears[year] ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                </button>
+
+                                {expandedYears[year] && (
+                                    <div style={{ paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        {Object.keys(flujosArchivo[year]).sort((a, b) => b.localeCompare(a)).map(ym => {
+                                            const monthNum = parseInt(ym.split('-')[1]);
+                                            const mesNombre = MESES_ES[monthNum - 1];
+                                            const diasCount = flujosArchivo[year][ym].length;
+                                            const movsCount = flujosArchivo[year][ym].reduce((s, f) => s + f.movs.length, 0);
+                                            return (
+                                                <div key={ym}>
+                                                    <button
+                                                        className="flujo-month-header"
+                                                        onClick={() => setExpandedMonths(prev => ({ ...prev, [ym]: !prev[ym] }))}
+                                                    >
+                                                        <span className="flujo-month-label">{mesNombre}</span>
+                                                        <span className="flujo-month-count">{diasCount} día{diasCount !== 1 ? 's' : ''} · {movsCount} mov.</span>
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                                            style={{ marginLeft: 'auto', flexShrink: 0, transition: 'transform 0.2s', transform: expandedMonths[ym] ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                        </svg>
+                                                    </button>
+
+                                                    {expandedMonths[ym] && (
+                                                        <div style={{ paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4, paddingBottom: 4 }}>
+                                                            {flujosArchivo[year][ym].map(f => renderFlujoCard(f))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+        )}
+
+        {/* ── TAB GENERAL ── */}
+        {vistaFlujos === 'general' && (
+            <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Chips de filtro */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                        { id: 'todos',      label: 'Todos' },
+                        { id: 'placa',      label: 'Placa' },
+                        { id: 'conductor',  label: 'Conductor' },
+                        { id: 'empresa',    label: 'Empresa' },
+                        { id: 'actividad',  label: 'Actividad' },
+                    ].map(f => (
+                        <button key={f.id} onClick={() => setGenCampo(f.id)} className={`gen-chip${genCampo === f.id ? ' active' : ''}`}>
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Barra de búsqueda */}
+                <div className="ws-search-bar" style={{ background: 'transparent' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <input
+                        className="ws-search-input"
+                        type="text"
+                        placeholder={`Buscar por ${genCampo === 'todos' ? 'cualquier campo' : genCampo}…`}
+                        value={genQuery}
+                        onChange={e => setGenQuery(e.target.value)}
+                    />
+                    {genQuery && <button className="ws-search-clear" onClick={() => setGenQuery('')}>✕</button>}
+                </div>
+
+                {/* Resultados */}
+                {!genQuery.trim() ? (
+                    <p className="ws-empty" style={{ marginTop: 20 }}>Escribe algo para buscar en todos los registros</p>
+                ) : genResultados.length === 0 ? (
+                    <p className="ws-empty" style={{ marginTop: 20 }}>Sin resultados para "{genQuery}"</p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <p style={{ fontSize: 11, color: '#555', margin: 0 }}>
+                            {genResultados.length} resultado{genResultados.length !== 1 ? 's' : ''}
+                        </p>
+                        {genResultados.map(m => {
+                            const fechaCorta = new Date(m.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+                                day: 'numeric', month: 'short', year: 'numeric',
+                            });
+                            return (
+                                <div key={m._id} className="mov-item" style={{ cursor: 'pointer' }}
+                                    onClick={() => { returnTabRef.current = 'general'; setFlujoSeleccionado(m.fecha); }}>
+                                    <div className="mov-item-inner">
+                                        <div className={`mov-icon ${m.tipo}`}>
+                                            <span className="mov-hora-small">{m.hora}</span>
+                                        </div>
+                                        <div className="mov-info">
+                                            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                                            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                                            {(m.empresa || m.destino) && (
+                                                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                                                    {[m.empresa, m.destino].filter(Boolean).join(' · ')}
+                                                </span>
+                                            )}
+                                            {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
+                                                <span className="mov-actividad">{m.actividad}</span>
+                                            )}
+                                            <span style={{ fontSize: 10, color: '#555', marginTop: 1 }}>{fechaCorta}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        )}
 
         {confirmarFlujo && (
             <ModalConfirm
