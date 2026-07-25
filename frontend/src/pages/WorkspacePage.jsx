@@ -4637,7 +4637,7 @@ const WorkspacePage = () => {
             )}
 
             {/* Botón volver arriba */}
-            {showScrollTop && (
+            {showScrollTop && !showModal && !editMov && !detailMov && !registroDetailMov && !showRegistroConfig && bitDetailIdx === null && !editHoraMov && (
                 <button
                     className="scroll-top-btn"
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
