@@ -46,6 +46,11 @@ export const getPendingMovimientos = async () => {
     return db.movimientosPending.where('synced').equals(0).toArray();
 };
 
+// Marca un item como sincronizado (llamar cuando la API responde OK tras el write-ahead)
+export const marcarSincronizado = async (uuid, serverId) => {
+    await db.movimientosPending.update(uuid, { synced: true, serverId });
+};
+
 // Elimina un item de la cola (solo los ya sincronizados o cancelados)
 export const limpiarSincronizados = async () => {
     await db.movimientosPending.where('synced').equals(1).delete();

@@ -5,6 +5,7 @@ import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
 import {
     encolarMovimiento,
+    marcarSincronizado,
     getPendingMovimientos,
     syncPendingMovimientos,
     cacheVehiculo,
@@ -837,11 +838,17 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
         if (personaNotFound && form.cedula) {
             api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
+        // Write-ahead: guardar en Dexie ANTES de intentar la API.
+        // Así, si el usuario refresca durante el vuelo o el servidor no responde,
+        // el movimiento no se pierde — ya está en la cola local.
+        await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
         try {
             const { data } = await api.post('/movimientos', payload);
+            // Éxito: marcar como sincronizado en Dexie y confirmar en UI
+            await marcarSincronizado(tempId, data.movimiento._id);
             onMovimientoConfirmado(tempId, data.movimiento);
         } catch {
-            await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
+            // El movimiento ya está en Dexie; el motor de reintento lo subirá
         }
     };
 
@@ -3847,15 +3854,20 @@ const WorkspacePage = () => {
     };
 
     // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión
+    // y cada 30 s para cubrir casos donde el servidor rechazó el POST sin perder internet
     useEffect(() => {
         if (!turnoActivo || isPending) return;
         const onSynced = ({ uuid, serverId }) => {
             setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
         };
-        const sync = () => syncPendingMovimientos(onSynced);
-        if (navigator.onLine) sync();
+        const sync = () => { if (navigator.onLine) syncPendingMovimientos(onSynced); };
+        sync();
         window.addEventListener('online', sync);
-        return () => window.removeEventListener('online', sync);
+        const interval = setInterval(sync, 30_000);
+        return () => {
+            window.removeEventListener('online', sync);
+            clearInterval(interval);
+        };
     }, [turnoActivo, isPending]);
 
     useEffect(() => {
