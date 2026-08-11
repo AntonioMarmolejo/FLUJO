@@ -166,9 +166,28 @@ const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
 const LAST_TURNO_KEY = 'flujo_last_turno';
-const REGISTRO_CONFIG_KEY = 'ws_registro_config';
-const getRegistroConfig = () => {
-    try { return JSON.parse(localStorage.getItem(REGISTRO_CONFIG_KEY) || '{}'); } catch { return {}; }
+
+// Ubicación por defecto de cada puesto (usada en narrativas y en el destino de ingresos)
+const PUESTO_UBICACION = {
+    'Guardia Garita Principal EPF': 'EPF',
+    'Guardia Garita Interior EPF': 'EPF',
+    'Guardia PAD-E': 'PAD-E',
+    'Guardia PAD-C': 'PAD-C',
+    'Guardia PAD-L': 'PAD-L',
+    'Guardia PAD Puerto Edén': 'PAD Edén',
+    'Guardia Puerto Nuevo': 'Puerto Nuevo',
+    'Guardia Móvil': 'Móvil',
+};
+const getRegistroConfigKey = puesto => `ws_registro_config_${puesto || 'default'}`;
+// Config por puesto: cada puesto guarda su propia configuración de narrativa en localStorage
+const getRegistroConfig = puesto => {
+    try {
+        const saved = JSON.parse(localStorage.getItem(getRegistroConfigKey(puesto)) || '{}');
+        const ubiDefault = PUESTO_UBICACION[puesto] || puesto || 'EPF';
+        return { ubicacion: ubiDefault, ...saved };
+    } catch {
+        return { ubicacion: PUESTO_UBICACION[puesto] || puesto || 'EPF' };
+    }
 };
 const buildStats = (movs, diasActivos = 0) => {
     const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
@@ -534,7 +553,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
         : EMPTY_FORM
@@ -879,7 +898,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, onClose, onGuar
                             onClick={() => setForm(f => ({
                                 ...f,
                                 tipo: val,
-                                ...(val === 'ingreso' && !f.destino ? { destino: 'EPF' } : {}),
+                                ...(val === 'ingreso' && !f.destino ? { destino: ubiIngreso } : {}),
                             }))}>
                             {label}
                         </button>
@@ -3654,7 +3673,8 @@ const WorkspacePage = () => {
     const [vistaInicio, setVistaInicio] = useState('movimientos');
     const [registroDetailMov, setRegistroDetailMov] = useState(null);
     const [showRegistroConfig, setShowRegistroConfig] = useState(false);
-    const [registroConfig, setRegistroConfig] = useState(getRegistroConfig);
+    // Config de narrativa por puesto (se carga cuando llega turnoActivo)
+    const [registroConfig, setRegistroConfig] = useState({});
     const [bitDetailIdx, setBitDetailIdx] = useState(null);
     const [swipedRegId, setSwipedRegId] = useState(null);
     const regSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
@@ -3844,6 +3864,11 @@ const WorkspacePage = () => {
 
     useEffect(() => { cargarDatos(); }, [turnoActivo]);
 
+    // Cargar/recargar la config de narrativa cada vez que cambia el puesto
+    useEffect(() => {
+        if (turnoActivo?.puesto) setRegistroConfig(getRegistroConfig(turnoActivo.puesto));
+    }, [turnoActivo?.puesto]);
+
     // Handlers para guardado optimista (nuevo movimiento aparece al instante)
     const handleGuardadoOptimista = tempMov => {
         setMovimientos(prev => [...prev, tempMov]);
@@ -3969,7 +3994,7 @@ const WorkspacePage = () => {
     };
 
     const handleSaveRegistroConfig = cfg => {
-        localStorage.setItem(REGISTRO_CONFIG_KEY, JSON.stringify(cfg));
+        localStorage.setItem(getRegistroConfigKey(turnoActivo?.puesto), JSON.stringify(cfg));
         setRegistroConfig(cfg);
     };
 
@@ -4585,6 +4610,7 @@ const WorkspacePage = () => {
             {showModal && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
                     onGuardadoOptimista={handleGuardadoOptimista}
@@ -4594,6 +4620,7 @@ const WorkspacePage = () => {
             {editMov && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
                     onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (
