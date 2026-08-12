@@ -2051,11 +2051,12 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                 });
             }
         }
-        return pairs.sort((a, b) => {
-            const ta = a.horaS !== '—' ? a.horaS : a.horaI;
-            const tb = b.horaS !== '—' ? b.horaS : b.horaI;
-            return ta.localeCompare(tb);
-        });
+        // Ordenar por el primer evento registrado (mínimo entre horaS y horaI)
+        const firstHora = p => {
+            const times = [p.horaS, p.horaI].filter(h => h && h !== '—');
+            return times.length ? times.slice().sort()[0] : '99:99';
+        };
+        return pairs.sort((a, b) => firstHora(a).localeCompare(firstHora(b)));
     }, [movs]);
 
     const bitPlacaCounts = useMemo(() => {
@@ -3810,11 +3811,12 @@ const WorkspacePage = () => {
                 });
             }
         }
-        return pairs.sort((a, b) => {
-            const ta = a.horaS !== '—' ? a.horaS : a.horaI;
-            const tb = b.horaS !== '—' ? b.horaS : b.horaI;
-            return ta.localeCompare(tb);
-        });
+        // Ordenar por el primer evento registrado (mínimo entre horaS y horaI)
+        const firstHora = p => {
+            const times = [p.horaS, p.horaI].filter(h => h && h !== '—');
+            return times.length ? times.slice().sort()[0] : '99:99';
+        };
+        return pairs.sort((a, b) => firstHora(a).localeCompare(firstHora(b)));
     }, [movimientos]);
 
     const bitacoraFiltrada = useMemo(() => {

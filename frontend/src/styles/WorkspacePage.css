@@ -449,7 +449,13 @@
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #2e2e2e transparent;
 }
+.modal-card::-webkit-scrollbar { width: 3px; }
+.modal-card::-webkit-scrollbar-track { background: transparent; }
+.modal-card::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 2px; }
+.modal-card::-webkit-scrollbar-thumb:hover { background: #444; }
 
 .modal-header {
     display: flex;
@@ -1872,10 +1878,12 @@
 
     .ws-navbar { max-width: 768px; }
 
-    .ws-speed-dial { right: max(16px, calc(50% - 384px + 16px)); }
-    .placas-fab    { right: max(16px, calc(50% - 384px + 16px)); }
-    .export-menu   { right: max(80px, calc(50% - 384px + 80px)); }
-    .share-menu    { right: max(80px, calc(50% - 384px + 80px)); }
+    .ws-speed-dial  { right: max(16px, calc(50% - 384px + 16px)); }
+    .placas-fab     { right: max(16px, calc(50% - 384px + 16px)); }
+    .export-menu    { right: max(80px, calc(50% - 384px + 80px)); }
+    .share-menu     { right: max(80px, calc(50% - 384px + 80px)); }
+    /* Botón scroll-top: alineado al lado izquierdo del FAB (FAB 56px + 4px gap = 60px) */
+    .scroll-top-btn { right: max(76px, calc(50% - 384px + 76px)); bottom: 80px; }
 
     .drawer-panel { width: 300px; }
 
@@ -1896,10 +1904,11 @@
     .ws-body    { padding: 20px 32px 100px; }
     .ws-navbar  { max-width: 1080px; }
 
-    .ws-speed-dial { right: max(16px, calc(50% - 540px + 16px)); }
-    .placas-fab    { right: max(16px, calc(50% - 540px + 16px)); }
-    .export-menu   { right: max(80px, calc(50% - 540px + 80px)); }
-    .share-menu    { right: max(80px, calc(50% - 540px + 80px)); }
+    .ws-speed-dial  { right: max(16px, calc(50% - 540px + 16px)); }
+    .placas-fab     { right: max(16px, calc(50% - 540px + 16px)); }
+    .export-menu    { right: max(80px, calc(50% - 540px + 80px)); }
+    .share-menu     { right: max(80px, calc(50% - 540px + 80px)); }
+    .scroll-top-btn { right: max(76px, calc(50% - 540px + 76px)); bottom: 80px; }
 
     .modal-card    { max-width: min(40vw, 520px); }
     .drawer-panel  { width: 340px; }
