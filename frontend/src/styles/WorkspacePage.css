@@ -636,10 +636,13 @@
 /* Placa autocomplete */
 .placa-wrapper {
     position: relative;
+    width: 100%;
 }
 
 .placa-wrapper input {
+    width: 100%;
     padding-right: 36px;
+    box-sizing: border-box;
 }
 
 .field-clear-btn {

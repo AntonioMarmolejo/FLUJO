@@ -171,12 +171,17 @@ const LAST_TURNO_KEY = 'flujo_last_turno';
 const PUESTO_UBICACION = {
     'Guardia Garita Principal EPF': 'EPF',
     'Guardia Garita Interior EPF': 'EPF',
-    'Guardia PAD-E': 'PAD-E',
+    'Guardia PAD-E': 'EPF',          // PAD-E: cuando algo ingresa, va hacia EPF
     'Guardia PAD-C': 'PAD-C',
     'Guardia PAD-L': 'PAD-L',
     'Guardia PAD Puerto Edén': 'PAD Edén',
     'Guardia Puerto Nuevo': 'Puerto Nuevo',
     'Guardia Móvil': 'Móvil',
+};
+
+// Destino por defecto para SALIDAS (solo puestos intermedios con destino habitual)
+const PUESTO_SALIDA_DEFAULT = {
+    'Guardia PAD-E': 'Pto. Nuevo',   // PAD-E: cuando algo sale, va hacia Puerto Nuevo
 };
 const getRegistroConfigKey = puesto => `ws_registro_config_${puesto || 'default'}`;
 // Config por puesto: cada puesto guarda su propia configuración de narrativa en localStorage
@@ -553,7 +558,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
         : EMPTY_FORM
@@ -898,7 +903,8 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                             onClick={() => setForm(f => ({
                                 ...f,
                                 tipo: val,
-                                ...(val === 'ingreso' && !f.destino ? { destino: ubiIngreso } : {}),
+                                ...(val === 'ingreso' && !f.destino ? { destino: ubiIngreso } :
+                    val === 'salida' && !f.destino && ubiSalida ? { destino: ubiSalida } : {}),
                             }))}>
                             {label}
                         </button>
@@ -4611,6 +4617,7 @@ const WorkspacePage = () => {
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}
                     ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
+                    ubiSalida={PUESTO_SALIDA_DEFAULT[turnoActivo.puesto] || ''}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarDatos}
                     onGuardadoOptimista={handleGuardadoOptimista}
@@ -4621,6 +4628,7 @@ const WorkspacePage = () => {
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}
                     ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
+                    ubiSalida={PUESTO_SALIDA_DEFAULT[turnoActivo.puesto] || ''}
                     onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (
