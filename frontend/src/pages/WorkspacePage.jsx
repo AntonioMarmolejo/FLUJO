@@ -1433,13 +1433,15 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     )}
                 </div>
                 <div className="mov-info">
-                    <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-                    <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-                    {(m.empresa || m.destino) && (
-                        <span className="mov-detalle" style={{ fontSize: 11 }}>
-                            {[m.empresa, m.destino].filter(Boolean).join(' · ')}
-                        </span>
-                    )}
+                    <div className="mov-info-row">
+                        <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                        {(m.conductor || m.cedula) && (
+                            <span className="mov-persona">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                        )}
+                        {(m.empresa || m.destino) && (
+                            <span className="mov-empresa-dest">{[m.empresa, m.destino].filter(Boolean).join(' · ')}</span>
+                        )}
+                    </div>
                     {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
                         <span className="mov-actividad">{m.actividad}</span>
                     )}
