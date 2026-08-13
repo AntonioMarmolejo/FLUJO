@@ -4,15 +4,14 @@ import Dexie from 'dexie';
 const db = new Dexie('FlujoSecurityDB');
 
 db.version(1).stores({
-    // Cola de movimientos pendientes de sincronizar con el servidor
-    // uuid = clave primaria generada en el cliente (evita duplicados en sync)
     movimientosPending: 'uuid, synced, fecha, createdAt',
-
-    // Caché de vehículos para búsqueda offline de placas
     vehiculosCache: 'placa, updatedAt',
-
-    // Caché de personas para búsqueda offline de conductores
     personasCache: 'cedula, updatedAt',
+});
+
+// v2: cola para ediciones offline (usa put para que la última edición gane)
+db.version(2).stores({
+    edicionesPending: 'id, synced, createdAt',
 });
 
 export default db;

@@ -8,6 +8,9 @@ import {
     marcarSincronizado,
     getPendingMovimientos,
     syncPendingMovimientos,
+    encolarEdicion,
+    marcarEdicionSincronizada,
+    syncPendingEdiciones,
     cacheVehiculo,
     buscarPlacaLocal,
     cachePersona,
@@ -558,7 +561,7 @@ const compressImage = (dataUrl, maxDim = 1200) => new Promise(resolve => {
 });
 
 // ── Modal formulario (crear + editar) ────────────────────
-const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onEditadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
         : EMPTY_FORM
@@ -824,18 +827,17 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         ].filter(Boolean).join(' · ');
         const formFinal = { ...form, actividad: actividadFinal };
 
-        // Edición: espera respuesta del servidor (comportamiento original)
+        // Edición optimista: cierra el formulario de inmediato y sincroniza en background
         if (editData?._id) {
-            setLoading(true);
-            try {
-                await api.put(`/movimientos/${editData._id}`, formFinal);
-                onGuardado();
-                onClose();
-            } catch (err) {
-                setError(err.response?.data?.message || 'Error al guardar');
-            } finally {
-                setLoading(false);
-            }
+            // 1. Actualizar la UI sin esperar la red
+            onEditadoOptimista({ ...editData, ...formFinal });
+            onClose();
+            // 2. Write-ahead en Dexie (sobrevive page refresh)
+            await encolarEdicion({ id: editData._id, payload: formFinal });
+            // 3. Intentar API en background; si falla, el sync periódico lo recogerá
+            api.put(`/movimientos/${editData._id}`, formFinal)
+                .then(async () => { await marcarEdicionSincronizada(editData._id); })
+                .catch(() => { /* queda en cola Dexie para reintento */ });
             return;
         }
 
@@ -3935,7 +3937,15 @@ const WorkspacePage = () => {
         const onSynced = ({ uuid, serverId }) => {
             setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
         };
-        const sync = () => { if (navigator.onLine) syncPendingMovimientos(onSynced); };
+        const onSyncedEdicion = (id, movData) => {
+            setMovimientos(prev => prev.map(m => m._id === id ? { ...m, ...movData } : m));
+        };
+        const sync = () => {
+            if (navigator.onLine) {
+                syncPendingMovimientos(onSynced);
+                syncPendingEdiciones(onSyncedEdicion);
+            }
+        };
         sync();
         window.addEventListener('online', sync);
         const interval = setInterval(sync, 30_000);
@@ -4005,6 +4015,12 @@ const WorkspacePage = () => {
     };
 
     const handleEdit = m => setEditMov(m);
+
+    // Actualiza el movimiento en estado local de inmediato (antes de que la API confirme)
+    const handleEditadoOptimista = updatedMov => {
+        setMovimientos(prev => prev.map(m => m._id === updatedMov._id ? { ...m, ...updatedMov } : m));
+        setEditMov(null);
+    };
 
     const handleEditHora = async (id, newHora) => {
         setMovimientos(prev => prev.map(m => m._id === id ? { ...m, hora: newHora } : m));
@@ -4686,7 +4702,7 @@ const WorkspacePage = () => {
                     fechaFlujo={turnoActivo.fecha}
                     ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
                     ubiSalida={PUESTO_SALIDA_DEFAULT[turnoActivo.puesto] || ''}
-                    onClose={() => setEditMov(null)} onGuardado={cargarDatos} movimientos={movimientos} editData={editMov} />
+                    onClose={() => setEditMov(null)} onEditadoOptimista={handleEditadoOptimista} movimientos={movimientos} editData={editMov} />
             )}
             {detailMov && (
                 <ModalDetalle

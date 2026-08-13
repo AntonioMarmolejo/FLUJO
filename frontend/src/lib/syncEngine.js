@@ -51,6 +51,31 @@ export const marcarSincronizado = async (uuid, serverId) => {
     await db.movimientosPending.update(uuid, { synced: true, serverId });
 };
 
+// ── Cola de ediciones offline ─────────────────────────────
+// Persiste una edición en Dexie. Si el mismo movimiento se edita varias veces
+// offline, la más reciente reemplaza a la anterior (put = upsert).
+export const encolarEdicion = async ({ id, payload }) => {
+    await db.edicionesPending.put({ id, payload, synced: 0, createdAt: Date.now() });
+};
+
+// Marca una edición como sincronizada (llamar cuando la API responde OK)
+export const marcarEdicionSincronizada = async (id) => {
+    await db.edicionesPending.update(id, { synced: 1 });
+};
+
+// Sube todas las ediciones pendientes al servidor
+export const syncPendingEdiciones = async (onSynced) => {
+    if (!navigator.onLine) return;
+    const pending = await db.edicionesPending.where('synced').equals(0).toArray();
+    for (const item of pending) {
+        try {
+            const { data } = await api.put(`/movimientos/${item.id}`, item.payload);
+            await db.edicionesPending.update(item.id, { synced: 1 });
+            if (onSynced) onSynced(item.id, data.movimiento);
+        } catch { /* se reintentará en el próximo ciclo */ }
+    }
+};
+
 // Elimina un item de la cola (solo los ya sincronizados o cancelados)
 export const limpiarSincronizados = async () => {
     await db.movimientosPending.where('synced').equals(1).delete();
