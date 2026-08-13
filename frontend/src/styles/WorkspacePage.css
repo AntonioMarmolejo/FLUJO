@@ -1841,6 +1841,97 @@
     .plist-inner:active { cursor: grabbing; }
 }
 
+/* ── Pseudo-tabla flex (Personas / Extensiones / Placas) ── */
+/* Soporta swipe-to-reveal igual que los cards de Movimientos  */
+.ftable-scroll {
+    overflow-x: auto;
+    padding: 0 12px 4px;
+}
+.ftable { display: flex; flex-direction: column; min-width: 480px; }
+
+.ftable-head {
+    display: flex;
+    align-items: center;
+    padding: 7px 12px;
+    background: #161616;
+    border-bottom: 1px solid #1e1e1e;
+    border-radius: 8px 8px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.ftable-head-cell {
+    font-size: 10px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Contenedor de cada fila: igual a .plist-item */
+.ftable-row-wrap {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #181818;
+}
+.ftable-row-wrap:last-child { border-bottom: none; }
+
+/* Botones ocultos a la izquierda */
+.ftable-actions {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    display: flex; align-items: center;
+    gap: 4px; padding: 0 10px;
+    background: #111;
+    z-index: 0;
+}
+
+/* Fila deslizable (igual a .plist-inner) */
+.ftable-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    background: #141414;
+    position: relative;
+    z-index: 1;
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+    -webkit-user-select: none;
+    user-select: none;
+    min-height: 44px;
+}
+.ftable-row:hover { background: #161616; }
+
+/* desplazamiento para 4 botones */
+.ftable-swiped-4 { transform: translateX(160px); }
+/* desplazamiento para 5 botones */
+.ftable-swiped-5 { transform: translateX(196px); }
+
+/* Celdas de datos */
+.ftable-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: #bbb;
+    padding-right: 8px;
+    flex-shrink: 0;
+}
+.ftable-cell-flex { flex: 1; min-width: 0; flex-shrink: 1; }
+.ftable-cell-bold { font-weight: 700; color: #e2e8f0 !important; }
+.ftable-cell-accent { color: #818cf8 !important; font-weight: 600; letter-spacing: 0.3px; }
+.ftable-cell-dim { color: #666; font-size: 11px; }
+
+@media (hover: hover) {
+    .ftable-row { cursor: grab; }
+    .ftable-row:active { cursor: grabbing; }
+}
+
 /* ── Tabla de placas ── */
 .placas-scroll {
     overflow-x: auto;

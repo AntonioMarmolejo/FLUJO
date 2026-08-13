@@ -1919,6 +1919,8 @@ const PantallaPlacasDB = () => {
     const [editVehiculo, setEditVehiculo] = useState(null);
     const [qrVehiculo, setQrVehiculo] = useState(null);
     const [showImport, setShowImport] = useState(false);
+    const [swipedVehId, setSwipedVehId] = useState(null);
+    const vehSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
 
     const cargar = () => {
         api.get('/vehiculos')
@@ -1973,53 +1975,70 @@ const PantallaPlacasDB = () => {
                 </span>
             </div>
 
-            {/* Tabla */}
+            {/* Tabla de vehículos */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay vehículos registrados'}</p>
                     : (
-                        <div className="placas-scroll">
-                            <table className="placas-table">
-                                <thead>
-                                    <tr>
-                                        <th>PLACA</th>
-                                        <th>MARCA</th>
-                                        <th>COLOR</th>
-                                        <th>TIPO</th>
-                                        <th>EMPRESA</th>
-                                        <th>QR</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtrados.map(v => (
-                                        <tr key={v._id}>
-                                            <td className="placas-td-placa">{v.placa}</td>
-                                            <td>{(v.marca || '—').toUpperCase()}</td>
-                                            <td>{(v.color || '—').toUpperCase()}</td>
-                                            <td>{(v.tipoVehiculo || '—').toUpperCase()}</td>
-                                            <td>{(v.empresa || '—').toUpperCase()}</td>
-                                            <td>
-                                                <img
-                                                    className="placas-qr"
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(qrData(v))}`}
-                                                    alt="QR"
-                                                    onClick={() => setQrVehiculo(v)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <div className="placas-actions">
-                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditVehiculo(v)}><IconPencil /></button>
-                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(v._id)}><IconMinus /></button>
-                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(vToText(v))}><IconCopy /></button>
-                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(vToText(v))}><IconShare /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="ftable-scroll">
+                            {/* Encabezado */}
+                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '90px 110px 90px 120px 1fr' }}>
+                                {['PLACA', 'MARCA', 'COLOR', 'TIPO', 'EMPRESA'].map(h => (
+                                    <span key={h} className="ftable-head-cell">{h}</span>
+                                ))}
+                            </div>
+                            <div className="ftable">
+                                {filtrados.map(v => {
+                                    const isSwiped = swipedVehId === v._id;
+                                    return (
+                                        <div key={v._id} className="ftable-row-wrap">
+                                            <div className="ftable-actions" onClick={ev => ev.stopPropagation()}>
+                                                <button className="plist-act-btn" title="Editar"    onClick={() => { setEditVehiculo(v); setSwipedVehId(null); }}><IconPencil /></button>
+                                                <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(vToText(v)); setSwipedVehId(null); }}><IconCopy /></button>
+                                                <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(vToText(v)); setSwipedVehId(null); }}><IconShare /></button>
+                                                <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrVehiculo(v); setSwipedVehId(null); }}><IconQR /></button>
+                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(v._id); setSwipedVehId(null); }}><IconMinus /></button>
+                                            </div>
+                                            <div
+                                                className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
+                                                style={{ display: 'grid', gridTemplateColumns: '90px 110px 90px 120px 1fr' }}
+                                                onTouchStart={ev => { vehSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                onTouchMove={ev => {
+                                                    const dx = ev.touches[0].clientX - vehSwipeRef.current.startX;
+                                                    const dy = ev.touches[0].clientY - vehSwipeRef.current.startY;
+                                                    if (!vehSwipeRef.current.moved && !vehSwipeRef.current.vertScroll) {
+                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                        if (Math.abs(dy) > Math.abs(dx)) { vehSwipeRef.current.vertScroll = true; return; }
+                                                        vehSwipeRef.current.moved = true;
+                                                    }
+                                                    if (vehSwipeRef.current.moved) ev.preventDefault();
+                                                }}
+                                                onTouchEnd={ev => {
+                                                    if (!vehSwipeRef.current.moved) return;
+                                                    const dx = ev.changedTouches[0].clientX - vehSwipeRef.current.startX;
+                                                    if (isSwiped) { if (dx < -30) setSwipedVehId(null); }
+                                                    else { if (dx > 55) setSwipedVehId(v._id); }
+                                                }}
+                                                {...addMouseSwipe(vehSwipeRef, dx => {
+                                                    if (isSwiped) { if (dx < -30) setSwipedVehId(null); }
+                                                    else { if (dx > 55) setSwipedVehId(v._id); }
+                                                })}
+                                                onClick={() => {
+                                                    if (vehSwipeRef.current?.didDrag) { vehSwipeRef.current.didDrag = false; return; }
+                                                    if (isSwiped) { setSwipedVehId(null); return; }
+                                                }}
+                                            >
+                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 90 }}>{v.placa}</span>
+                                                <span className="ftable-cell" style={{ width: 110 }}>{(v.marca || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 90 }}>{(v.color || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 120 }}>{(v.tipoVehiculo || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-flex">{(v.empresa || '—').toUpperCase()}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )
             }
@@ -3059,69 +3078,71 @@ const PantallaExtensiones = () => {
                 </span>
             </div>
 
-            {/* Lista de cards */}
+            {/* Tabla de extensiones */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay extensiones registradas'}</p>
                     : (
-                        <div className="plist">
-                            {filtrados.map(e => {
-                                const isSwiped = swipedExtId === e._id;
-                                return (
-                                    <div key={e._id} className="plist-item">
-                                        <div className="plist-actions" onClick={ev => ev.stopPropagation()}>
-                                            <button className="plist-act-btn" title="Editar"    onClick={() => { setEditExt(e); setSwipedExtId(null); }}><IconPencil /></button>
-                                            <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(extToText(e)); setSwipedExtId(null); }}><IconCopy /></button>
-                                            <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(extToText(e)); setSwipedExtId(null); }}><IconShare /></button>
-                                            <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(e._id); setSwipedExtId(null); }}><IconMinus /></button>
-                                        </div>
-                                        <div
-                                            className={`plist-inner${isSwiped ? ' plist-swiped' : ''}`}
-                                            onTouchStart={ev => { extSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
-                                            onTouchMove={ev => {
-                                                const dx = ev.touches[0].clientX - extSwipeRef.current.startX;
-                                                const dy = ev.touches[0].clientY - extSwipeRef.current.startY;
-                                                if (!extSwipeRef.current.moved && !extSwipeRef.current.vertScroll) {
-                                                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-                                                    if (Math.abs(dy) > Math.abs(dx)) { extSwipeRef.current.vertScroll = true; return; }
-                                                    extSwipeRef.current.moved = true;
-                                                }
-                                                if (extSwipeRef.current.moved) ev.preventDefault();
-                                            }}
-                                            onTouchEnd={ev => {
-                                                if (!extSwipeRef.current.moved) return;
-                                                const dx = ev.changedTouches[0].clientX - extSwipeRef.current.startX;
-                                                if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
-                                                else { if (dx > 55) setSwipedExtId(e._id); }
-                                            }}
-                                            {...addMouseSwipe(extSwipeRef, dx => {
-                                                if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
-                                                else { if (dx > 55) setSwipedExtId(e._id); }
-                                            })}
-                                            onClick={() => {
-                                                if (extSwipeRef.current?.didDrag) { extSwipeRef.current.didDrag = false; return; }
-                                                if (isSwiped) { setSwipedExtId(null); return; }
-                                                setDetailExt(e);
-                                            }}
-                                        >
-                                            <div className="plist-main">
-                                                <span className="plist-nombre">{(e.nombre || '').toUpperCase()}</span>
-                                                <div className="plist-sub">
-                                                    {e.cargo && <span>{e.cargo}</span>}
-                                                    {e.cargo && e.departamento && <span className="plist-sep">·</span>}
-                                                    {e.departamento && <span>{e.departamento.toUpperCase()}</span>}
-                                                </div>
+                        <div className="ftable-scroll">
+                            {/* Encabezado */}
+                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 100px 70px 100px 110px' }}>
+                                {['NOMBRE', 'CARGO', 'DEPTO', 'EXT.', 'CELULAR', 'EMPRESA'].map(h => (
+                                    <span key={h} className="ftable-head-cell">{h}</span>
+                                ))}
+                            </div>
+                            <div className="ftable">
+                                {filtrados.map(e => {
+                                    const isSwiped = swipedExtId === e._id;
+                                    return (
+                                        <div key={e._id} className="ftable-row-wrap">
+                                            <div className="ftable-actions" onClick={ev => ev.stopPropagation()}>
+                                                <button className="plist-act-btn" title="Editar"    onClick={() => { setEditExt(e); setSwipedExtId(null); }}><IconPencil /></button>
+                                                <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(extToText(e)); setSwipedExtId(null); }}><IconCopy /></button>
+                                                <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(extToText(e)); setSwipedExtId(null); }}><IconShare /></button>
+                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(e._id); setSwipedExtId(null); }}><IconMinus /></button>
                                             </div>
-                                            <div className="plist-contact">
-                                                {e.extension && <span className="plist-ext">Ext. {e.extension}</span>}
-                                                {e.celular   && <span className="plist-cel">{e.celular}</span>}
-                                                {e.empresa   && <span className="plist-empresa">{e.empresa.toUpperCase()}</span>}
+                                            <div
+                                                className={`ftable-row${isSwiped ? ' ftable-swiped-4' : ''}`}
+                                                style={{ display: 'grid', gridTemplateColumns: '1fr 130px 100px 70px 100px 110px' }}
+                                                onTouchStart={ev => { extSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                onTouchMove={ev => {
+                                                    const dx = ev.touches[0].clientX - extSwipeRef.current.startX;
+                                                    const dy = ev.touches[0].clientY - extSwipeRef.current.startY;
+                                                    if (!extSwipeRef.current.moved && !extSwipeRef.current.vertScroll) {
+                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                        if (Math.abs(dy) > Math.abs(dx)) { extSwipeRef.current.vertScroll = true; return; }
+                                                        extSwipeRef.current.moved = true;
+                                                    }
+                                                    if (extSwipeRef.current.moved) ev.preventDefault();
+                                                }}
+                                                onTouchEnd={ev => {
+                                                    if (!extSwipeRef.current.moved) return;
+                                                    const dx = ev.changedTouches[0].clientX - extSwipeRef.current.startX;
+                                                    if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
+                                                    else { if (dx > 55) setSwipedExtId(e._id); }
+                                                }}
+                                                {...addMouseSwipe(extSwipeRef, dx => {
+                                                    if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
+                                                    else { if (dx > 55) setSwipedExtId(e._id); }
+                                                })}
+                                                onClick={() => {
+                                                    if (extSwipeRef.current?.didDrag) { extSwipeRef.current.didDrag = false; return; }
+                                                    if (isSwiped) { setSwipedExtId(null); return; }
+                                                    setDetailExt(e);
+                                                }}
+                                            >
+                                                <span className="ftable-cell ftable-cell-flex ftable-cell-bold">{(e.nombre || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell" style={{ width: 130 }}>{e.cargo || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{(e.departamento || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 70 }}>{e.extension ? `Ext. ${e.extension}` : '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{e.celular || '—'}</span>
+                                                <span className="ftable-cell" style={{ width: 110 }}>{(e.empresa || '—').toUpperCase()}</span>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     )
             }
@@ -3508,67 +3529,72 @@ const PantallaPersonas = () => {
                 </span>
             </div>
 
-            {/* Lista de cards */}
+            {/* Tabla de personas */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay personas registradas'}</p>
                     : (
-                        <div className="plist">
-                            {filtrados.map(p => {
-                                const isSwiped = swipedPersonaId === p._id;
-                                return (
-                                    <div key={p._id} className="plist-item">
-                                        <div className="plist-actions" onClick={ev => ev.stopPropagation()}>
-                                            <button className="plist-act-btn" title="Editar"    onClick={() => { setEditPersona(p); setSwipedPersonaId(null); }}><IconPencil /></button>
-                                            <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(pToText(p)); setSwipedPersonaId(null); }}><IconCopy /></button>
-                                            <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(pToText(p)); setSwipedPersonaId(null); }}><IconShare /></button>
-                                            <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrPersona(p); setSwipedPersonaId(null); }}><IconQR /></button>
-                                            <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id); setSwipedPersonaId(null); }}><IconMinus /></button>
-                                        </div>
-                                        <div
-                                            className={`plist-inner${isSwiped ? ' plist-swiped' : ''}`}
-                                            onTouchStart={ev => { personaSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
-                                            onTouchMove={ev => {
-                                                const dx = ev.touches[0].clientX - personaSwipeRef.current.startX;
-                                                const dy = ev.touches[0].clientY - personaSwipeRef.current.startY;
-                                                if (!personaSwipeRef.current.moved && !personaSwipeRef.current.vertScroll) {
-                                                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-                                                    if (Math.abs(dy) > Math.abs(dx)) { personaSwipeRef.current.vertScroll = true; return; }
-                                                    personaSwipeRef.current.moved = true;
-                                                }
-                                                if (personaSwipeRef.current.moved) ev.preventDefault();
-                                            }}
-                                            onTouchEnd={ev => {
-                                                if (!personaSwipeRef.current.moved) return;
-                                                const dx = ev.changedTouches[0].clientX - personaSwipeRef.current.startX;
-                                                if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
-                                                else { if (dx > 55) setSwipedPersonaId(p._id); }
-                                            }}
-                                            {...addMouseSwipe(personaSwipeRef, dx => {
-                                                if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
-                                                else { if (dx > 55) setSwipedPersonaId(p._id); }
-                                            })}
-                                            onClick={() => {
-                                                if (personaSwipeRef.current?.didDrag) { personaSwipeRef.current.didDrag = false; return; }
-                                                if (isSwiped) { setSwipedPersonaId(null); return; }
-                                                setDetailPersona(p);
-                                            }}
-                                        >
-                                            <div className="plist-main">
-                                                <span className="plist-nombre">{(p.nombres || '').toUpperCase()}</span>
-                                                <span className="plist-cedula">{p.cedula}</span>
+                        <div className="ftable-scroll">
+                            {/* Encabezado */}
+                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '100px 1fr 130px 120px 100px 80px' }}>
+                                {['CÉDULA', 'NOMBRES', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'].map(h => (
+                                    <span key={h} className="ftable-head-cell">{h}</span>
+                                ))}
+                            </div>
+                            <div className="ftable">
+                                {filtrados.map(p => {
+                                    const isSwiped = swipedPersonaId === p._id;
+                                    return (
+                                        <div key={p._id} className="ftable-row-wrap">
+                                            <div className="ftable-actions" onClick={ev => ev.stopPropagation()}>
+                                                <button className="plist-act-btn" title="Editar"    onClick={() => { setEditPersona(p); setSwipedPersonaId(null); }}><IconPencil /></button>
+                                                <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(pToText(p)); setSwipedPersonaId(null); }}><IconCopy /></button>
+                                                <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(pToText(p)); setSwipedPersonaId(null); }}><IconShare /></button>
+                                                <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrPersona(p); setSwipedPersonaId(null); }}><IconQR /></button>
+                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id); setSwipedPersonaId(null); }}><IconMinus /></button>
                                             </div>
-                                            <div className="plist-contact">
-                                                {p.empresa      && <span className="plist-empresa">{p.empresa.toUpperCase()}</span>}
-                                                {p.cargo        && <span className="plist-cel">{p.cargo}</span>}
-                                                {p.departamento && <span className="plist-cel">{p.departamento.toUpperCase()}</span>}
-                                                {p.nominativo   && <span className="plist-cel" style={{ color: '#818cf8' }}>{p.nominativo}</span>}
+                                            <div
+                                                className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
+                                                style={{ display: 'grid', gridTemplateColumns: '100px 1fr 130px 120px 100px 80px' }}
+                                                onTouchStart={ev => { personaSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                onTouchMove={ev => {
+                                                    const dx = ev.touches[0].clientX - personaSwipeRef.current.startX;
+                                                    const dy = ev.touches[0].clientY - personaSwipeRef.current.startY;
+                                                    if (!personaSwipeRef.current.moved && !personaSwipeRef.current.vertScroll) {
+                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                        if (Math.abs(dy) > Math.abs(dx)) { personaSwipeRef.current.vertScroll = true; return; }
+                                                        personaSwipeRef.current.moved = true;
+                                                    }
+                                                    if (personaSwipeRef.current.moved) ev.preventDefault();
+                                                }}
+                                                onTouchEnd={ev => {
+                                                    if (!personaSwipeRef.current.moved) return;
+                                                    const dx = ev.changedTouches[0].clientX - personaSwipeRef.current.startX;
+                                                    if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
+                                                    else { if (dx > 55) setSwipedPersonaId(p._id); }
+                                                }}
+                                                {...addMouseSwipe(personaSwipeRef, dx => {
+                                                    if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
+                                                    else { if (dx > 55) setSwipedPersonaId(p._id); }
+                                                })}
+                                                onClick={() => {
+                                                    if (personaSwipeRef.current?.didDrag) { personaSwipeRef.current.didDrag = false; return; }
+                                                    if (isSwiped) { setSwipedPersonaId(null); return; }
+                                                    setDetailPersona(p);
+                                                }}
+                                            >
+                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 100 }}>{p.cedula}</span>
+                                                <span className="ftable-cell ftable-cell-flex ftable-cell-bold">{(p.nombres || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell" style={{ width: 130 }}>{(p.empresa || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 120 }}>{p.cargo || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{(p.departamento || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 80, color: p.nominativo ? '#818cf8' : undefined }}>{p.nominativo || '—'}</span>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     )
             }
