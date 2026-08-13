@@ -1401,11 +1401,15 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+    width: 100%;              /* ocupa toda la fila */
 }
 .detalle-field-full .detalle-value {
+    display: block;           /* asegura que el span se comporte como bloque */
+    width: 100%;              /* llena el ancho disponible, no solo max-width */
     max-width: 100%;
     text-align: left;
     word-break: break-word;
+    overflow-wrap: anywhere;  /* rompe incluso palabras sin espacios */
     white-space: pre-wrap;
     line-height: 1.5;
 }
@@ -1430,26 +1434,27 @@
     display: flex;
     flex-direction: row;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .detalle-act-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    background: #222;
-    border: 1px solid #2e2e2e;
-    border-radius: 10px;
-    color: #aaa;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    color: #888;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
 }
-.detalle-act-btn:hover { background: #2a2a2a; color: #fff; }
-.detalle-act-btn.danger { border-color: rgba(248,113,113,0.2); }
-.detalle-act-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; }
+.detalle-act-btn:hover { background: #2a2a2a; color: #fff; border-color: #3a3a3a; }
+.detalle-act-btn.danger { border-color: rgba(248,113,113,0.15); }
+.detalle-act-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.3); }
 
 .share-menu {
     position: fixed;
