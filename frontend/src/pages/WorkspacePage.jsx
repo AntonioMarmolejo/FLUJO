@@ -55,6 +55,21 @@ const IconShare = () => (
     </svg>
 );
 
+const IconQR = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="2"/>
+        <rect x="5.5" y="5.5" width="3" height="3" fill="currentColor"/>
+        <rect x="13" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="2"/>
+        <rect x="15.5" y="5.5" width="3" height="3" fill="currentColor"/>
+        <rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="2"/>
+        <rect x="5.5" y="15.5" width="3" height="3" fill="currentColor"/>
+        <rect x="13" y="13" width="3" height="3" fill="currentColor"/>
+        <rect x="18" y="13" width="3" height="3" fill="currentColor"/>
+        <rect x="13" y="18" width="3" height="3" fill="currentColor"/>
+        <rect x="18" y="18" width="3" height="3" fill="currentColor"/>
+    </svg>
+);
+
 const IconPhone = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C9.61 21 3 14.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.24 1.02l-2.2 2.2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -2852,6 +2867,63 @@ const handleShareText = async text => {
     }
 };
 
+// ── Modal detalle Extensión ───────────────────────────────
+const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => (
+    <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-card modal-card-detalle" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <span className="detalle-badge ingreso">EXTENSIÓN</span>
+                <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            <div>
+                <div className="detalle-placa" style={{ fontSize: 20 }}>{(ext.nombre || '').toUpperCase()}</div>
+                {ext.empresa && <div className="detalle-hora">{ext.empresa.toUpperCase()}</div>}
+            </div>
+            <div className="detalle-fields">
+                <DetalleRow label="Cargo"        value={ext.cargo} />
+                <DetalleRow label="Departamento" value={ext.departamento} />
+                <DetalleRow label="Extensión"    value={ext.extension} />
+                <DetalleRow label="Celular"      value={ext.celular} />
+            </div>
+            <div className="detalle-actions">
+                {onEdit   && <button className="detalle-act-btn" title="Editar"    onClick={() => { onEdit(ext); onClose(); }}><IconPencil /></button>}
+                <button className="detalle-act-btn" title="Copiar"    onClick={() => handleCopyText(extToText(ext))}><IconCopy /></button>
+                <button className="detalle-act-btn" title="Compartir" onClick={() => handleShareText(extToText(ext))}><IconShare /></button>
+                {onDelete && <button className="detalle-act-btn danger" title="Eliminar" onClick={() => { onDelete(ext._id); onClose(); }}><IconMinus /></button>}
+            </div>
+        </div>
+    </div>
+);
+
+// ── Modal detalle Persona ─────────────────────────────────
+const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR }) => (
+    <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-card modal-card-detalle" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+                <span className="detalle-badge ingreso">PERSONA</span>
+                <button className="modal-close" onClick={onClose}>✕</button>
+            </div>
+            <div>
+                <div className="detalle-placa" style={{ fontSize: 20 }}>{(p.nombres || '').toUpperCase()}</div>
+                <div className="detalle-hora">{p.cedula}</div>
+            </div>
+            <div className="detalle-fields">
+                <DetalleRow label="Empresa"      value={p.empresa} />
+                <DetalleRow label="Cargo"        value={p.cargo} />
+                <DetalleRow label="Departamento" value={p.departamento} />
+                <DetalleRow label="Nominativo"   value={p.nominativo} />
+            </div>
+            <div className="detalle-actions">
+                {onEdit   && <button className="detalle-act-btn" title="Editar"    onClick={() => { onEdit(p); onClose(); }}><IconPencil /></button>}
+                <button className="detalle-act-btn" title="Copiar"    onClick={() => handleCopyText(pToText(p))}><IconCopy /></button>
+                <button className="detalle-act-btn" title="Compartir" onClick={() => handleShareText(pToText(p))}><IconShare /></button>
+                {onQR     && <button className="detalle-act-btn" title="Ver QR"    onClick={() => { onQR(p); onClose(); }}><IconQR /></button>}
+                {onDelete && <button className="detalle-act-btn danger" title="Eliminar" onClick={() => { onDelete(p._id); onClose(); }}><IconMinus /></button>}
+            </div>
+        </div>
+    </div>
+);
+
 // ── Modal extensión (agregar / editar) ────────────────────
 const EMPTY_EXT = { nombre: '', empresa: '', cargo: '', departamento: '', extension: '', celular: '' };
 
@@ -2923,6 +2995,9 @@ const PantallaExtensiones = () => {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editExt, setEditExt] = useState(null);
+    const [swipedExtId, setSwipedExtId] = useState(null);
+    const extSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
+    const [detailExt, setDetailExt] = useState(null);
 
     const cargar = () => {
         api.get('/extensiones')
@@ -2964,51 +3039,73 @@ const PantallaExtensiones = () => {
                 </span>
             </div>
 
-            {/* Tabla */}
+            {/* Lista de cards */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay extensiones registradas'}</p>
                     : (
-                        <div className="placas-scroll">
-                            <table className="placas-table">
-                                <thead>
-                                    <tr>
-                                        <th>NOMBRE</th>
-                                        <th>EMPRESA</th>
-                                        <th>CARGO</th>
-                                        <th>DEPT.</th>
-                                        <th>EXT.</th>
-                                        <th>CELULAR</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtrados.map(e => (
-                                        <tr key={e._id}>
-                                            <td className="placas-td-nombre">{e.nombre.toUpperCase()}</td>
-                                            <td>{(e.empresa || '—').toUpperCase()}</td>
-                                            <td>{e.cargo || '—'}</td>
-                                            <td>{(e.departamento || '—').toUpperCase()}</td>
-                                            <td className="placas-td-ext">{e.extension || '—'}</td>
-                                            <td>{e.celular || '—'}</td>
-                                            <td>
-                                                <div className="placas-actions">
-                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditExt(e)}><IconPencil /></button>
-                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(e._id)}><IconMinus /></button>
-                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(extToText(e))}><IconCopy /></button>
-                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(extToText(e))}><IconShare /></button>
+                        <div className="plist">
+                            {filtrados.map(e => {
+                                const isSwiped = swipedExtId === e._id;
+                                return (
+                                    <div key={e._id} className="plist-item">
+                                        <div className="plist-actions" onClick={ev => ev.stopPropagation()}>
+                                            <button className="plist-act-btn" title="Editar"    onClick={() => { setEditExt(e); setSwipedExtId(null); }}><IconPencil /></button>
+                                            <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(extToText(e)); setSwipedExtId(null); }}><IconCopy /></button>
+                                            <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(extToText(e)); setSwipedExtId(null); }}><IconShare /></button>
+                                            <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(e._id); setSwipedExtId(null); }}><IconMinus /></button>
+                                        </div>
+                                        <div
+                                            className={`plist-inner${isSwiped ? ' plist-swiped' : ''}`}
+                                            onTouchStart={ev => { extSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                            onTouchMove={ev => {
+                                                const dx = ev.touches[0].clientX - extSwipeRef.current.startX;
+                                                const dy = ev.touches[0].clientY - extSwipeRef.current.startY;
+                                                if (!extSwipeRef.current.moved && !extSwipeRef.current.vertScroll) {
+                                                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                    if (Math.abs(dy) > Math.abs(dx)) { extSwipeRef.current.vertScroll = true; return; }
+                                                    extSwipeRef.current.moved = true;
+                                                }
+                                                if (extSwipeRef.current.moved) ev.preventDefault();
+                                            }}
+                                            onTouchEnd={ev => {
+                                                if (!extSwipeRef.current.moved) return;
+                                                const dx = ev.changedTouches[0].clientX - extSwipeRef.current.startX;
+                                                if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
+                                                else { if (dx > 55) setSwipedExtId(e._id); }
+                                            }}
+                                            {...addMouseSwipe(extSwipeRef, dx => {
+                                                if (isSwiped) { if (dx < -30) setSwipedExtId(null); }
+                                                else { if (dx > 55) setSwipedExtId(e._id); }
+                                            })}
+                                            onClick={() => {
+                                                if (extSwipeRef.current?.didDrag) { extSwipeRef.current.didDrag = false; return; }
+                                                if (isSwiped) { setSwipedExtId(null); return; }
+                                                setDetailExt(e);
+                                            }}
+                                        >
+                                            <div className="plist-main">
+                                                <span className="plist-nombre">{(e.nombre || '').toUpperCase()}</span>
+                                                <div className="plist-sub">
+                                                    {e.cargo && <span>{e.cargo}</span>}
+                                                    {e.cargo && e.departamento && <span className="plist-sep">·</span>}
+                                                    {e.departamento && <span>{e.departamento.toUpperCase()}</span>}
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                            </div>
+                                            <div className="plist-contact">
+                                                {e.extension && <span className="plist-ext">Ext. {e.extension}</span>}
+                                                {e.celular   && <span className="plist-cel">{e.celular}</span>}
+                                                {e.empresa   && <span className="plist-empresa">{e.empresa.toUpperCase()}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )
             }
 
-            {/* FAB agregar */}
             <button className="placas-fab" onClick={() => setShowForm(true)}>+</button>
 
             {(showForm || editExt) && (
@@ -3016,6 +3113,14 @@ const PantallaExtensiones = () => {
                     onClose={() => { setShowForm(false); setEditExt(null); }}
                     onGuardado={cargar}
                     editData={editExt}
+                />
+            )}
+            {detailExt && (
+                <ModalDetalleExt
+                    ext={detailExt}
+                    onClose={() => setDetailExt(null)}
+                    onEdit={ex => { setEditExt(ex); setDetailExt(null); }}
+                    onDelete={id => { handleDelete(id); setDetailExt(null); }}
                 />
             )}
         </div>
@@ -3324,6 +3429,9 @@ const PantallaPersonas = () => {
     const [editPersona, setEditPersona] = useState(null);
     const [showImport, setShowImport] = useState(false);
     const [qrPersona, setQrPersona] = useState(null);
+    const [swipedPersonaId, setSwipedPersonaId] = useState(null);
+    const personaSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
+    const [detailPersona, setDetailPersona] = useState(null);
 
     const cargar = () => {
         api.get('/personas')
@@ -3380,55 +3488,67 @@ const PantallaPersonas = () => {
                 </span>
             </div>
 
-            {/* Tabla */}
+            {/* Lista de cards */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay personas registradas'}</p>
                     : (
-                        <div className="placas-scroll">
-                            <table className="placas-table">
-                                <thead>
-                                    <tr>
-                                        <th>CÉDULA</th>
-                                        <th>NOMBRES</th>
-                                        <th>EMPRESA</th>
-                                        <th className="col-xs-hide">CARGO</th>
-                                        <th className="col-xs-hide">DEPT.</th>
-                                        <th className="col-md-hide">NOMINATIVO</th>
-                                        <th>QR</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtrados.map(p => (
-                                        <tr key={p._id}>
-                                            <td className="placas-td-placa">{p.cedula}</td>
-                                            <td className="placas-td-nombre personas-td-name">{(p.nombres || '').toUpperCase()}</td>
-                                            <td>{(p.empresa || '—').toUpperCase()}</td>
-                                            <td className="col-xs-hide">{p.cargo || '—'}</td>
-                                            <td className="col-xs-hide">{(p.departamento || '—').toUpperCase()}</td>
-                                            <td className="col-md-hide">{p.nominativo || '—'}</td>
-                                            <td>
-                                                <img
-                                                    className="placas-qr"
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(pQrData(p))}`}
-                                                    alt="QR"
-                                                    onClick={() => setQrPersona(p)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <div className="placas-actions">
-                                                    <button className="mov-act-btn" title="Editar" onClick={() => setEditPersona(p)}><IconPencil /></button>
-                                                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => handleDelete(p._id)}><IconMinus /></button>
-                                                    <button className="mov-act-btn" title="Copiar" onClick={() => handleCopyText(pToText(p))}><IconCopy /></button>
-                                                    <button className="mov-act-btn" title="Compartir" onClick={() => handleShareText(pToText(p))}><IconShare /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="plist">
+                            {filtrados.map(p => {
+                                const isSwiped = swipedPersonaId === p._id;
+                                return (
+                                    <div key={p._id} className="plist-item">
+                                        <div className="plist-actions" onClick={ev => ev.stopPropagation()}>
+                                            <button className="plist-act-btn" title="Editar"    onClick={() => { setEditPersona(p); setSwipedPersonaId(null); }}><IconPencil /></button>
+                                            <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(pToText(p)); setSwipedPersonaId(null); }}><IconCopy /></button>
+                                            <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(pToText(p)); setSwipedPersonaId(null); }}><IconShare /></button>
+                                            <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrPersona(p); setSwipedPersonaId(null); }}><IconQR /></button>
+                                            <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id); setSwipedPersonaId(null); }}><IconMinus /></button>
+                                        </div>
+                                        <div
+                                            className={`plist-inner${isSwiped ? ' plist-swiped' : ''}`}
+                                            onTouchStart={ev => { personaSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                            onTouchMove={ev => {
+                                                const dx = ev.touches[0].clientX - personaSwipeRef.current.startX;
+                                                const dy = ev.touches[0].clientY - personaSwipeRef.current.startY;
+                                                if (!personaSwipeRef.current.moved && !personaSwipeRef.current.vertScroll) {
+                                                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                    if (Math.abs(dy) > Math.abs(dx)) { personaSwipeRef.current.vertScroll = true; return; }
+                                                    personaSwipeRef.current.moved = true;
+                                                }
+                                                if (personaSwipeRef.current.moved) ev.preventDefault();
+                                            }}
+                                            onTouchEnd={ev => {
+                                                if (!personaSwipeRef.current.moved) return;
+                                                const dx = ev.changedTouches[0].clientX - personaSwipeRef.current.startX;
+                                                if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
+                                                else { if (dx > 55) setSwipedPersonaId(p._id); }
+                                            }}
+                                            {...addMouseSwipe(personaSwipeRef, dx => {
+                                                if (isSwiped) { if (dx < -30) setSwipedPersonaId(null); }
+                                                else { if (dx > 55) setSwipedPersonaId(p._id); }
+                                            })}
+                                            onClick={() => {
+                                                if (personaSwipeRef.current?.didDrag) { personaSwipeRef.current.didDrag = false; return; }
+                                                if (isSwiped) { setSwipedPersonaId(null); return; }
+                                                setDetailPersona(p);
+                                            }}
+                                        >
+                                            <div className="plist-main">
+                                                <span className="plist-nombre">{(p.nombres || '').toUpperCase()}</span>
+                                                <span className="plist-cedula">{p.cedula}</span>
+                                            </div>
+                                            <div className="plist-contact">
+                                                {p.empresa      && <span className="plist-empresa">{p.empresa.toUpperCase()}</span>}
+                                                {p.cargo        && <span className="plist-cel">{p.cargo}</span>}
+                                                {p.departamento && <span className="plist-cel">{p.departamento.toUpperCase()}</span>}
+                                                {p.nominativo   && <span className="plist-cel" style={{ color: '#818cf8' }}>{p.nominativo}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )
             }
@@ -3446,6 +3566,15 @@ const PantallaPersonas = () => {
                 <ModalImportPersonas
                     onClose={() => setShowImport(false)}
                     onGuardado={cargar}
+                />
+            )}
+            {detailPersona && (
+                <ModalDetallePersona
+                    persona={detailPersona}
+                    onClose={() => setDetailPersona(null)}
+                    onEdit={per => { setEditPersona(per); setDetailPersona(null); }}
+                    onDelete={id => { handleDelete(id); setDetailPersona(null); }}
+                    onQR={per => { setQrPersona(per); setDetailPersona(null); }}
                 />
             )}
             {qrPersona && (
