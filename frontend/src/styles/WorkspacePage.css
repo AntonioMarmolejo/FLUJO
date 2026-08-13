@@ -203,6 +203,10 @@
     cursor: pointer;
 }
 .mov-item-inner:active { background: #242424; }
+@media (hover: hover) {
+    .mov-item-inner:hover { cursor: grab; }
+    .mov-item-inner:active { cursor: grabbing; }
+}
 .mov-item-inner.mov-item-swiped {
     transform: translateX(152px);
     border-top-left-radius: 0;

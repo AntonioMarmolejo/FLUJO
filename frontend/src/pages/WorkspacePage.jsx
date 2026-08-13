@@ -1337,6 +1337,35 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
     );
 };
 
+// ── Helper: drag con mouse equivalente al swipe táctil ─────
+// Adjunta onMouseDown que escucha mousemove/mouseup en window.
+// onDragEnd(dx) recibe el desplazamiento horizontal al soltar.
+// Marca ref.current.didDrag=true para que onClick lo ignore.
+const addMouseSwipe = (ref, onDragEnd) => ({
+    onMouseDown: (e) => {
+        if (e.button !== 0) return; // solo botón izquierdo
+        ref.current = { startX: e.clientX, startY: e.clientY, moved: false, vertScroll: false, didDrag: false };
+        const onMove = (me) => {
+            const dx = me.clientX - ref.current.startX;
+            const dy = me.clientY - ref.current.startY;
+            if (!ref.current.moved && !ref.current.vertScroll) {
+                if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                if (Math.abs(dy) > Math.abs(dx)) { ref.current.vertScroll = true; return; }
+                ref.current.moved = true;
+            }
+        };
+        const onUp = (me) => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            if (!ref.current.moved) return;
+            ref.current.didDrag = true;
+            onDragEnd(me.clientX - ref.current.startX);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    },
+});
+
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora, onGoToReg }) => {
     const isSwiped = swipedMovId === m._id;
@@ -1375,7 +1404,16 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                         else if (dx < -55 && !m._pending) { onGoToReg(m._id); }
                     }
                 }}
+                {...addMouseSwipe(movSwipeRef, dx => {
+                    if (isSwiped) {
+                        if (dx < -30) setSwipedMovId(null);
+                    } else {
+                        if (dx > 55) setSwipedMovId(m._id);
+                        else if (dx < -55 && !m._pending) onGoToReg(m._id);
+                    }
+                })}
                 onClick={() => {
+                    if (movSwipeRef.current?.didDrag) { movSwipeRef.current.didDrag = false; return; }
                     if (isSwiped) { setSwipedMovId(null); return; }
                     selectMode ? onToggleSelect(m._id) : onOpenDetail(m);
                 }}
@@ -2288,7 +2326,11 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                 if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
                                                 else { if (dx > 55) setSwipedBitIdx(i); }
                                             }}
-                                            onClick={() => { if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
+                                            {...addMouseSwipe(bitSwipeRef, dx => {
+                                                if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
+                                                else { if (dx > 55) setSwipedBitIdx(i); }
+                                            })}
+                                            onClick={() => { if (bitSwipeRef.current?.didDrag) { bitSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
                                             style={{ cursor: 'pointer' }}
                                         >
                                             <div className="bit-row-top">
@@ -4251,7 +4293,11 @@ const WorkspacePage = () => {
                                                     if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
                                                     else { if (dx > 55) setSwipedBitMainIdx(i); }
                                                 }}
-                                                onClick={() => { if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
+                                                {...addMouseSwipe(bitMainSwipeRef, dx => {
+                                                    if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
+                                                    else { if (dx > 55) setSwipedBitMainIdx(i); }
+                                                })}
+                                                onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
                                                 style={{ cursor: 'pointer' }}
                                             >
                                                 <div className="bit-row-top">
@@ -4383,7 +4429,16 @@ const WorkspacePage = () => {
                                                         else if (dx < -55) goToMov(mov._id);
                                                     }
                                                 }}
+                                                {...addMouseSwipe(regSwipeRef, dx => {
+                                                    if (swipedRegId === mov._id) {
+                                                        if (dx < -30) setSwipedRegId(null);
+                                                    } else {
+                                                        if (dx > 55) setSwipedRegId(mov._id);
+                                                        else if (dx < -55) goToMov(mov._id);
+                                                    }
+                                                })}
                                                 onClick={() => {
+                                                    if (regSwipeRef.current?.didDrag) { regSwipeRef.current.didDrag = false; return; }
                                                     if (swipedRegId === mov._id) { setSwipedRegId(null); return; }
                                                     setRegistroDetailMov(mov);
                                                 }}
