@@ -219,17 +219,37 @@ const buildStats = (movs, diasActivos = 0) => {
         if (!placaMap[m.placa] || (!placaMap[m.placa].empresa && m.empresa)) placaMap[m.placa] = m;
     });
     const unicos = Object.values(placaMap);
+    // Datos por hora (las 24h — el filtrado al turno ocurre en StatsChart)
     const grafico = Array.from({ length: 24 }, (_, h) => ({
         label: `${h}h`,
+        hora: h,
         ingresos: movs.filter(m => parseInt(m.hora?.split(':')[0] ?? 0) === h && m.tipo === 'ingreso').length,
         salidas:  movs.filter(m => parseInt(m.hora?.split(':')[0] ?? 0) === h && m.tipo === 'salida').length,
     }));
+    // Top destinos / plataformas
+    const destMap = {};
+    movs.forEach(m => { if (m.destino?.trim()) destMap[m.destino.trim()] = (destMap[m.destino.trim()] || 0) + 1; });
+    const topDestinos = Object.entries(destMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+    // Top actividades
+    const actMap = {};
+    movs.forEach(m => {
+        const a = m.actividad?.trim();
+        if (a && !/^vac[ií]o$/i.test(a)) actMap[a] = (actMap[a] || 0) + 1;
+    });
+    const topActividades = Object.entries(actMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+    // Top vehículos (por nº de movimientos)
+    const placaMovMap = {};
+    movs.forEach(m => { if (m.placa?.trim()) placaMovMap[m.placa.trim()] = (placaMovMap[m.placa.trim()] || 0) + 1; });
+    const topPlacas = Object.entries(placaMovMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
     return {
         totalFlujos: movs.length,
         diasActivos,
         petroecuador: unicos.filter(isPetro).length,
         contratistas: unicos.filter(m => !isPetro(m)).length,
         grafico,
+        topDestinos,
+        topActividades,
+        topPlacas,
     };
 };
 
@@ -4644,15 +4664,15 @@ const WorkspacePage = () => {
                                             </svg>
                                         </button>
                                         {!chartCollapsed && (
-                                            <>
-                                                <Suspense fallback={<div style={{ height: 180 }} />}>
-                                                    <StatsChart data={stats?.grafico} />
-                                                </Suspense>
-                                                <div className="ws-chart-legend">
-                                                    <span><span className="ws-dot" style={{ background: '#818cf8' }} />Ingresos</span>
-                                                    <span><span className="ws-dot" style={{ background: '#f87171' }} />Salidas</span>
-                                                </div>
-                                            </>
+                                            <Suspense fallback={<div style={{ height: 220 }} />}>
+                                                <StatsChart
+                                                    data={stats?.grafico}
+                                                    turno={turnoActivo?.turnoActual || 'diurno'}
+                                                    topDestinos={stats?.topDestinos || []}
+                                                    topActividades={stats?.topActividades || []}
+                                                    topPlacas={stats?.topPlacas || []}
+                                                />
+                                            </Suspense>
                                         )}
                                     </div>
                                 </div>
