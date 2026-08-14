@@ -35,7 +35,11 @@ export const createVehiculo = async (req, res) => {
         });
         res.status(201).json({ message: 'Vehículo registrado', vehiculo });
     } catch (error) {
-        if (error.code === 11000) return res.status(400).json({ message: 'Esa placa ya está registrada' });
+        if (error.code === 11000) {
+            // Devolver el vehículo existente para que el frontend pueda ofrecer edición
+            const existing = await Vehiculo.findOne({ placa: (req.body.placa || '').trim().toUpperCase() }).catch(() => null);
+            return res.status(409).json({ message: 'Esa placa ya está registrada', existing });
+        }
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };

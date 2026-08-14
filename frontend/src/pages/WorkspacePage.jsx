@@ -1611,6 +1611,7 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [tipoSugs, setTipoSugs] = useState([]);
+    const [existente, setExistente] = useState(null); // vehículo duplicado devuelto por el servidor
 
     const handleChange = e => {
         const { name, value } = e.target;
@@ -1628,12 +1629,36 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
     const handleSubmit = async () => {
         if (!form.placa) { setError('La placa es obligatoria'); return; }
         setLoading(true);
+        setExistente(null);
         try {
             if (editData?._id) {
                 await api.put(`/vehiculos/${editData._id}`, form);
             } else {
                 await api.post('/vehiculos', form);
             }
+            onGuardado();
+            onClose();
+        } catch (err) {
+            const status = err.response?.status;
+            const msg    = err.response?.data?.message || 'Error al guardar';
+            // 409 → la placa ya existe (creada automáticamente desde un movimiento)
+            if (status === 409 && err.response?.data?.existing) {
+                setExistente(err.response.data.existing);
+                setError('Esta placa ya está en la base de datos (creada desde un movimiento). Puedes editar sus datos:');
+            } else {
+                setError(msg);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Confirmar edición del vehículo duplicado
+    const handleEditarExistente = async () => {
+        if (!existente?._id) return;
+        setLoading(true);
+        try {
+            await api.put(`/vehiculos/${existente._id}`, form);
             onGuardado();
             onClose();
         } catch (err) {
@@ -1671,9 +1696,16 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
                     <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
                 </div>
                 {error && <p className="modal-error">{error}</p>}
-                <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar vehículo'}
-                </button>
+                {existente ? (
+                    /* La placa ya existe en BD (auto-creada desde un movimiento): ofrecer editar */
+                    <button className="modal-btn active" onClick={handleEditarExistente} disabled={loading}>
+                        {loading ? 'Guardando...' : '✏️ Actualizar datos de este vehículo'}
+                    </button>
+                ) : (
+                    <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
+                        {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar vehículo'}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -1914,6 +1946,7 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
 const PantallaPlacasDB = () => {
     const [vehiculos, setVehiculos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editVehiculo, setEditVehiculo] = useState(null);
@@ -1923,9 +1956,11 @@ const PantallaPlacasDB = () => {
     const vehSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
 
     const cargar = () => {
+        setLoading(true);
+        setLoadError(false);
         api.get('/vehiculos')
             .then(res => { setVehiculos(res.data.vehiculos); setLoading(false); })
-            .catch(() => setLoading(false));
+            .catch(() => { setLoading(false); setLoadError(true); });
     };
 
     useEffect(() => { cargar(); }, []);
@@ -1934,7 +1969,9 @@ const PantallaPlacasDB = () => {
     const filtrados = sq
         ? vehiculos.filter(v =>
             v.placa.toLowerCase().includes(sq) ||
-            (v.empresa || '').toLowerCase().includes(sq))
+            (v.empresa || '').toLowerCase().includes(sq) ||
+            (v.marca || '').toLowerCase().includes(sq) ||
+            (v.conductor || '').toLowerCase().includes(sq))
         : vehiculos;
 
     const handleDelete = async id => {
@@ -1960,7 +1997,7 @@ const PantallaPlacasDB = () => {
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                     <input className="ws-search-input" type="text"
-                        placeholder="Filtrar por placa o empresa..."
+                        placeholder="Placa, marca, empresa o conductor..."
                         value={search} onChange={e => setSearch(e.target.value)} />
                     {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
                 </div>
@@ -1978,6 +2015,20 @@ const PantallaPlacasDB = () => {
             {/* Tabla de vehículos */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
+                : loadError
+                    ? (
+                        <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+                            <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>
+                                ⚠️ No se pudo cargar la lista de vehículos
+                            </p>
+                            <button
+                                onClick={cargar}
+                                style={{ background: '#222', border: '1px solid #444', color: '#ddd', borderRadius: 8, padding: '7px 18px', fontSize: 12, cursor: 'pointer' }}
+                            >
+                                Reintentar
+                            </button>
+                        </div>
+                    )
                 : filtrados.length === 0
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay vehículos registrados'}</p>
                     : (
