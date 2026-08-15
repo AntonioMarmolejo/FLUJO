@@ -1173,43 +1173,182 @@ const DetalleRow = ({ label, value, full }) =>
         </div>
     ) : null;
 
-const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev, hasNext, onPrev, onNext, counter }) => (
-    <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-card modal-card-detalle" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-                <span className={`detalle-badge ${mov.tipo}`}>{mov.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
-                <button className="modal-close" onClick={onClose}>✕</button>
-            </div>
-            <div>
-                <div className="detalle-placa">{mov.placa}</div>
-                <div className="detalle-hora">{mov.hora} · {mov.fecha}</div>
-            </div>
-            <div className="detalle-fields">
-                <DetalleRow label="Marca"            value={mov.marca} />
-                <DetalleRow label="Color"            value={mov.color} />
-                <DetalleRow label="Tipo vehículo"    value={mov.tipoVehiculo} />
-                <DetalleRow label="Empresa"          value={mov.empresa} />
-                <DetalleRow label="Conductor"        value={mov.conductor} />
-                <DetalleRow label="Cédula"           value={mov.cedula} />
-                <DetalleRow label="Destino"          value={mov.destino || '—'} />
-                <DetalleRow label="Actividad / Obs." value={mov.actividad || '—'} full />
-            </div>
-            <div className="detalle-actions">
-                {onEdit   && <button className="detalle-act-btn" title="Editar"     onClick={() => { onEdit(mov); onClose(); }}><IconPencil /></button>}
-                {onCopy   && <button className="detalle-act-btn" title="Copiar"     onClick={() => onCopy(mov)}><IconCopy /></button>}
-                {onShare  && <button className="detalle-act-btn" title="Compartir"  onClick={() => onShare(mov)}><IconShare /></button>}
-                {onDelete && <button className="detalle-act-btn danger" title="Eliminar" onClick={() => { onDelete(mov._id); onClose(); }}><IconMinus /></button>}
-            </div>
-            {(hasPrev || hasNext) && (
-                <div className="detalle-nav">
-                    <button className="detalle-nav-btn" onClick={onPrev} disabled={!hasPrev}>← Ant.</button>
-                    {counter && <span className="detalle-nav-counter">{counter}</span>}
-                    <button className="detalle-nav-btn" onClick={onNext} disabled={!hasNext}>Sig. →</button>
+const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev, hasNext, onPrev, onNext, counter }) => {
+    const isIngreso = mov.tipo === 'ingreso';
+    const SK = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+
+    const campos = [
+        { label: 'Marca',         valor: mov.marca },
+        { label: 'Color',         valor: mov.color },
+        { label: 'Tipo vehículo', valor: mov.tipoVehiculo },
+        { label: 'Empresa',       valor: mov.empresa },
+        { label: 'Conductor',     valor: mov.conductor },
+        { label: 'Cédula',        valor: mov.cedula },
+        { label: 'Destino',       valor: mov.destino, span: true },
+    ].filter(c => c.valor);
+
+    const actBtn = (title, onClick, svg) => (
+        <button
+            key={title}
+            title={title}
+            onClick={onClick}
+            style={{
+                width: 26, height: 26, padding: 0, border: 'none', flexShrink: 0,
+                borderRadius: 8, background: 'rgba(255,255,255,0.05)',
+                color: '#d4d4d8', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            dangerouslySetInnerHTML={{ __html: svg }}
+        />
+    );
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    width: '94vw', maxWidth: 580,
+                    background: '#18181b',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 20,
+                    boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
+                    overflow: 'hidden',
+                }}
+            >
+                {/* ── Cabecera: hora · badge · placa + cerrar ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 24px 0 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#60a5fa', flexShrink: 0 }}>{mov.hora}</span>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', padding: '5px 11px',
+                            borderRadius: 100, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0,
+                            background: isIngreso ? 'rgba(59,130,246,0.15)' : 'rgba(244,63,94,0.15)',
+                            color: isIngreso ? '#60a5fa' : '#fb7185',
+                        }}>
+                            {isIngreso ? 'INGRESO' : 'SALIDA'}
+                        </span>
+                        <span style={{
+                            fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{mov.placa}</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            width: 32, height: 32, borderRadius: '100%', border: 'none', flexShrink: 0,
+                            background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 12,
+                        }}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                            <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-            )}
+
+                {/* ── Fecha ── */}
+                <div style={{
+                    padding: '10px 24px 18px 24px',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    display: 'flex', justifyContent: 'flex-end',
+                }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#8b8b92' }}>{mov.fecha}</span>
+                </div>
+
+                {/* ── Grid de campos ── */}
+                {campos.length > 0 && (
+                    <div style={{
+                        padding: '20px 24px 6px 24px',
+                        display: 'grid', gridTemplateColumns: '1fr 1fr',
+                        columnGap: 24, rowGap: 18,
+                    }}>
+                        {campos.map(c => (
+                            <div key={c.label} style={{ gridColumn: c.span ? 'span 2' : undefined }}>
+                                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
+                                    {c.label}
+                                </div>
+                                <div style={{ marginTop: 5, fontSize: 15, fontWeight: 600, color: '#f4f4f5' }}>
+                                    {c.valor}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Caja actividad ── */}
+                <div style={{
+                    margin: '18px 24px 20px 24px',
+                    padding: '14px 16px',
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 12,
+                }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
+                        Actividad / Obs.
+                    </div>
+                    <div style={{
+                        marginTop: 10, fontSize: 14.5, lineHeight: '26px', color: '#e4e4e7',
+                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.25) 0.8px, transparent 0.8px)',
+                        backgroundSize: '6px 26px', backgroundRepeat: 'repeat', backgroundPosition: '0 30px',
+                        minHeight: 26,
+                    }}>
+                        {mov.actividad || '—'}
+                    </div>
+                </div>
+
+                {/* ── Acciones ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 24px 20px 24px' }}>
+                    {onEdit   && actBtn('Editar',    () => { onEdit(mov); onClose(); },
+                        `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`)}
+                    {onCopy   && actBtn('Copiar',    () => onCopy(mov),
+                        `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`)}
+                    {onShare  && actBtn('Compartir', () => onShare(mov),
+                        `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>`)}
+                    {onDelete && actBtn('Eliminar',  () => { onDelete(mov._id); onClose(); },
+                        `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><path d="M5 12h14"/></svg>`)}
+                </div>
+
+                {/* ── Navegación anterior / siguiente ── */}
+                {(hasPrev || hasNext || counter) && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '14px 24px', borderTop: '1px solid rgba(255,255,255,0.07)',
+                        background: 'rgba(255,255,255,0.015)',
+                    }}>
+                        <button
+                            onClick={onPrev} disabled={!hasPrev}
+                            style={{
+                                width: 34, height: 34, padding: 0, borderRadius: 10,
+                                border: '1px solid rgba(255,255,255,0.09)', background: 'transparent',
+                                color: hasPrev ? '#d4d4d8' : '#3f3f46', cursor: hasPrev ? 'pointer' : 'default',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 6c-2 2-5.5 4.5-8 6 2.5 1.5 6 4 8 6" />
+                            </svg>
+                        </button>
+                        <span style={{ fontSize: 13, color: '#8b8b92', fontWeight: 600 }}>{counter}</span>
+                        <button
+                            onClick={onNext} disabled={!hasNext}
+                            style={{
+                                width: 34, height: 34, padding: 0, borderRadius: 10,
+                                border: '1px solid rgba(255,255,255,0.09)', background: 'transparent',
+                                color: hasNext ? '#d4d4d8' : '#3f3f46', cursor: hasNext ? 'pointer' : 'default',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 6c2 2 5.5 4.5 8 6-2.5 1.5-6 4-8 6" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 
 // ── Modal editar hora ─────────────────────────────────────
