@@ -7,6 +7,8 @@ const vehiculoSchema = new mongoose.Schema(
         color: { type: String, trim: true, default: '' },
         tipoVehiculo: { type: String, trim: true, default: '' },
         empresa: { type: String, trim: true, default: '' },
+        caf: { type: String, trim: true, default: '' },
+        // Campos legacy (conservados por compatibilidad con datos históricos)
         conductor: { type: String, trim: true, default: '' },
         cedula: { type: String, trim: true, default: '' },
     },

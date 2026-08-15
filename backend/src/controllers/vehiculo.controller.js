@@ -25,13 +25,13 @@ export const searchVehiculos = async (req, res) => {
 // POST /api/vehiculos
 export const createVehiculo = async (req, res) => {
     try {
-        const { placa, marca, color, tipoVehiculo, empresa, conductor, cedula } = req.body;
+        const { placa, marca, color, tipoVehiculo, empresa, caf } = req.body;
         if (!placa) return res.status(400).json({ message: 'La placa es obligatoria' });
 
         const vehiculo = await Vehiculo.create({
             placa: placa.trim().toUpperCase(),
             marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '',
-            empresa: empresa || '', conductor: conductor || '', cedula: cedula || '',
+            empresa: empresa || '', caf: caf || '',
         });
         res.status(201).json({ message: 'Vehículo registrado', vehiculo });
     } catch (error) {
@@ -47,10 +47,10 @@ export const createVehiculo = async (req, res) => {
 // PUT /api/vehiculos/:id
 export const updateVehiculo = async (req, res) => {
     try {
-        const { marca, color, tipoVehiculo, empresa, conductor, cedula } = req.body;
+        const { marca, color, tipoVehiculo, empresa, caf } = req.body;
         const vehiculo = await Vehiculo.findByIdAndUpdate(
             req.params.id,
-            { marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '' },
+            { marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', caf: caf || '' },
             { new: true }
         );
         if (!vehiculo) return res.status(404).json({ message: 'Vehículo no encontrado' });

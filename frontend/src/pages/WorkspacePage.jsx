@@ -13,6 +13,8 @@ import {
     syncPendingEdiciones,
     cacheVehiculo,
     buscarPlacaLocal,
+    getVehiculosCache,
+    deleteCachedVehiculo,
     cachePersona,
     buscarPersonaLocal,
 } from '../lib/syncEngine.js';
@@ -1601,17 +1603,17 @@ const PantallaAvance = ({ turnoActivo, user }) => {
 };
 
 // ── Modal formulario vehículo ─────────────────────────────
-const EMPTY_VEHICULO = { placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '' };
+const EMPTY_VEHICULO = { placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', caf: '' };
 
 const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
     const [form, setForm] = useState(editData
-        ? { placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '' }
+        ? { placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', caf: editData.caf || '' }
         : EMPTY_VEHICULO
     );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [tipoSugs, setTipoSugs] = useState([]);
-    const [existente, setExistente] = useState(null); // vehículo duplicado devuelto por el servidor
+    const [existente, setExistente] = useState(null);
 
     const handleChange = e => {
         const { name, value } = e.target;
@@ -1632,19 +1634,21 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
         setExistente(null);
         try {
             if (editData?._id) {
-                await api.put(`/vehiculos/${editData._id}`, form);
+                const { data } = await api.put(`/vehiculos/${editData._id}`, form);
+                await cacheVehiculo(data.vehiculo).catch(() => {});
+                onGuardado(data.vehiculo);
             } else {
-                await api.post('/vehiculos', form);
+                const { data } = await api.post('/vehiculos', form);
+                await cacheVehiculo(data.vehiculo).catch(() => {});
+                onGuardado(data.vehiculo);
             }
-            onGuardado();
             onClose();
         } catch (err) {
             const status = err.response?.status;
             const msg    = err.response?.data?.message || 'Error al guardar';
-            // 409 → la placa ya existe (creada automáticamente desde un movimiento)
             if (status === 409 && err.response?.data?.existing) {
                 setExistente(err.response.data.existing);
-                setError('Esta placa ya está en la base de datos (creada desde un movimiento). Puedes editar sus datos:');
+                setError('Esta placa ya está en la base de datos (fue creada al registrar un movimiento). Puedes actualizar sus datos:');
             } else {
                 setError(msg);
             }
@@ -1653,13 +1657,13 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
         }
     };
 
-    // Confirmar edición del vehículo duplicado
     const handleEditarExistente = async () => {
         if (!existente?._id) return;
         setLoading(true);
         try {
-            await api.put(`/vehiculos/${existente._id}`, form);
-            onGuardado();
+            const { data } = await api.put(`/vehiculos/${existente._id}`, form);
+            await cacheVehiculo(data.vehiculo).catch(() => {});
+            onGuardado(data.vehiculo);
             onClose();
         } catch (err) {
             setError(err.response?.data?.message || 'Error al guardar');
@@ -1692,12 +1696,10 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
                             onSelect={s => { setForm(f => ({ ...f, tipoVehiculo: s })); setTipoSugs([]); }} />
                         <ModalField name="empresa" label="EMPRESA" placeholder="Empresa S.A." value={form.empresa} {...fp} />
                     </div>
-                    <ModalField name="conductor" label="CONDUCTOR" placeholder="Nombre completo" value={form.conductor} {...fp} />
-                    <ModalField name="cedula" label="CÉDULA" placeholder="Nro. de cédula" value={form.cedula} {...fp} />
+                    <ModalField name="caf" label="CAF" placeholder="Código de acceso" value={form.caf} {...fp} />
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {existente ? (
-                    /* La placa ya existe en BD (auto-creada desde un movimiento): ofrecer editar */
                     <button className="modal-btn active" onClick={handleEditarExistente} disabled={loading}>
                         {loading ? 'Guardando...' : '✏️ Actualizar datos de este vehículo'}
                     </button>
@@ -1719,7 +1721,7 @@ const ModalQR = ({ vehiculo, onClose }) => {
         vehiculo.color ? `COLOR: ${vehiculo.color}` : '',
         vehiculo.tipoVehiculo ? `TIPO: ${vehiculo.tipoVehiculo}` : '',
         vehiculo.empresa ? `EMPRESA: ${vehiculo.empresa}` : '',
-        vehiculo.conductor ? `CONDUCTOR: ${vehiculo.conductor}` : '',
+        vehiculo.caf ? `CAF: ${vehiculo.caf}` : '',
     ].filter(Boolean).join('\n');
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
@@ -1942,28 +1944,137 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
     );
 };
 
+// ── Modal detalle vehículo ────────────────────────────────
+const ModalDetalleVehiculo = ({ vehiculos, id, onClose, onEdit, onNavigate }) => {
+    const idx = vehiculos.findIndex(v => v._id === id);
+    const v   = vehiculos[idx];
+    if (!v) return null;
+
+    const campos = [
+        { label: 'Marca',   val: v.marca },
+        { label: 'Color',   val: v.color },
+        { label: 'Tipo',    val: v.tipoVehiculo },
+        { label: 'Empresa', val: v.empresa },
+        { label: 'CAF',     val: v.caf },
+    ].filter(c => c.val);
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+                {/* Cabecera */}
+                <div className="modal-header">
+                    <h3 style={{ fontFamily: 'monospace', fontSize: 20, letterSpacing: 3, color: '#818cf8' }}>{v.placa}</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+
+                {/* Campos */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '6px 0 14px' }}>
+                    {campos.length > 0 ? campos.map(({ label, val }) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e1e1e', paddingBottom: 10 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
+                            <span style={{ fontSize: 13, color: '#ddd', maxWidth: '68%', textAlign: 'right', wordBreak: 'break-word' }}>{val}</span>
+                        </div>
+                    )) : (
+                        <p style={{ color: '#444', fontSize: 12, textAlign: 'center', padding: '8px 0' }}>Sin datos adicionales registrados</p>
+                    )}
+                </div>
+
+                {/* Botón editar */}
+                <button
+                    className="modal-btn active"
+                    style={{ marginBottom: 10 }}
+                    onClick={() => { onEdit(v); onClose(); }}
+                >
+                    ✏️ Editar este vehículo
+                </button>
+
+                {/* Navegación anterior / siguiente */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <button
+                        onClick={() => onNavigate(vehiculos[idx - 1]?._id)}
+                        disabled={idx === 0}
+                        style={{
+                            flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #2a2a2a',
+                            background: idx === 0 ? '#111' : '#1a1a1a', color: idx === 0 ? '#333' : '#aaa',
+                            cursor: idx === 0 ? 'default' : 'pointer', fontSize: 16,
+                        }}
+                    >←</button>
+                    <span style={{ fontSize: 11, color: '#444', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        {idx + 1} / {vehiculos.length}
+                    </span>
+                    <button
+                        onClick={() => onNavigate(vehiculos[idx + 1]?._id)}
+                        disabled={idx === vehiculos.length - 1}
+                        style={{
+                            flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #2a2a2a',
+                            background: idx === vehiculos.length - 1 ? '#111' : '#1a1a1a',
+                            color: idx === vehiculos.length - 1 ? '#333' : '#aaa',
+                            cursor: idx === vehiculos.length - 1 ? 'default' : 'pointer', fontSize: 16,
+                        }}
+                    >→</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Pantalla Placas DB ────────────────────────────────────
 const PantallaPlacasDB = () => {
     const [vehiculos, setVehiculos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [fromCache, setFromCache] = useState(false);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editVehiculo, setEditVehiculo] = useState(null);
     const [qrVehiculo, setQrVehiculo] = useState(null);
     const [showImport, setShowImport] = useState(false);
     const [swipedVehId, setSwipedVehId] = useState(null);
+    const [detalleId, setDetalleId] = useState(null);   // ID del vehículo en modal detalle
     const vehSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
 
-    const cargar = () => {
+    const cargar = async () => {
         setLoading(true);
         setLoadError(false);
-        api.get('/vehiculos')
-            .then(res => { setVehiculos(res.data.vehiculos); setLoading(false); })
-            .catch(() => { setLoading(false); setLoadError(true); });
+        setFromCache(false);
+        try {
+            const { data } = await api.get('/vehiculos');
+            setVehiculos(data.vehiculos);
+            // Actualizar caché offline con todos los vehículos recibidos
+            data.vehiculos.forEach(v => cacheVehiculo(v).catch(() => {}));
+        } catch {
+            // Sin conexión: intentar cargar desde caché local
+            try {
+                const cached = await getVehiculosCache();
+                if (cached.length > 0) {
+                    setVehiculos(cached);
+                    setFromCache(true);
+                } else {
+                    setLoadError(true);
+                }
+            } catch {
+                setLoadError(true);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { cargar(); }, []);
+
+    // Actualización optimista local tras guardar (sin recargar todo)
+    const onGuardado = (savedVehiculo) => {
+        if (!savedVehiculo) { cargar(); return; }
+        setVehiculos(prev => {
+            const idx = prev.findIndex(v => v._id === savedVehiculo._id);
+            if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = savedVehiculo;
+                return next;
+            }
+            return [...prev, savedVehiculo].sort((a, b) => a.placa.localeCompare(b.placa));
+        });
+    };
 
     const sq = search.toLowerCase();
     const filtrados = sq
@@ -1974,8 +2085,12 @@ const PantallaPlacasDB = () => {
             (v.conductor || '').toLowerCase().includes(sq))
         : vehiculos;
 
-    const handleDelete = async id => {
-        try { await api.delete(`/vehiculos/${id}`); cargar(); } catch { }
+    const handleDelete = async (id, placa) => {
+        try {
+            await api.delete(`/vehiculos/${id}`);
+            setVehiculos(prev => prev.filter(v => v._id !== id));
+            deleteCachedVehiculo(placa).catch(() => {});
+        } catch { }
     };
 
     const qrData = v => [
@@ -1984,6 +2099,7 @@ const PantallaPlacasDB = () => {
         v.color ? `COLOR: ${v.color}` : '',
         v.tipoVehiculo ? `TIPO: ${v.tipoVehiculo}` : '',
         v.empresa ? `EMPRESA: ${v.empresa}` : '',
+        v.caf ? `CAF: ${v.caf}` : '',
     ].filter(Boolean).join('\n');
 
     return (
@@ -2011,6 +2127,16 @@ const PantallaPlacasDB = () => {
                     {filtrados.length} reg.
                 </span>
             </div>
+
+            {/* Aviso de datos cargados desde caché offline */}
+            {fromCache && (
+                <div style={{ margin: '0 16px 6px', padding: '7px 12px', background: '#1a1400', border: '1px solid #3a2e00', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: '#a87f00' }}>📴 Mostrando datos guardados localmente</span>
+                    <button onClick={cargar} style={{ background: 'none', border: 'none', color: '#fbbf24', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+                        Actualizar
+                    </button>
+                </div>
+            )}
 
             {/* Tabla de vehículos */}
             {loading
@@ -2049,7 +2175,7 @@ const PantallaPlacasDB = () => {
                                                 <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(vToText(v)); setSwipedVehId(null); }}><IconCopy /></button>
                                                 <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(vToText(v)); setSwipedVehId(null); }}><IconShare /></button>
                                                 <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrVehiculo(v); setSwipedVehId(null); }}><IconQR /></button>
-                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(v._id); setSwipedVehId(null); }}><IconMinus /></button>
+                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(v._id, v.placa); setSwipedVehId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
                                                 className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
@@ -2078,6 +2204,7 @@ const PantallaPlacasDB = () => {
                                                 onClick={() => {
                                                     if (vehSwipeRef.current?.didDrag) { vehSwipeRef.current.didDrag = false; return; }
                                                     if (isSwiped) { setSwipedVehId(null); return; }
+                                                    setDetalleId(v._id);
                                                 }}
                                             >
                                                 <span className="ftable-cell ftable-cell-accent" style={{ width: 90 }}>{v.placa}</span>
@@ -2097,10 +2224,21 @@ const PantallaPlacasDB = () => {
             {/* FAB agregar */}
             <button className="placas-fab" onClick={() => setShowForm(true)}>+</button>
 
+            {/* Modal detalle vehículo */}
+            {detalleId && (
+                <ModalDetalleVehiculo
+                    vehiculos={filtrados}
+                    id={detalleId}
+                    onClose={() => setDetalleId(null)}
+                    onEdit={v => { setEditVehiculo(v); setDetalleId(null); }}
+                    onNavigate={newId => { if (newId) setDetalleId(newId); }}
+                />
+            )}
+
             {(showForm || editVehiculo) && (
                 <ModalVehiculo
                     onClose={() => { setShowForm(false); setEditVehiculo(null); }}
-                    onGuardado={cargar}
+                    onGuardado={onGuardado}
                     editData={editVehiculo}
                 />
             )}
@@ -2927,7 +3065,7 @@ const vToText = v => [
     v.color ? `COLOR: ${v.color}` : '',
     v.tipoVehiculo ? `TIPO: ${v.tipoVehiculo}` : '',
     v.empresa ? `EMPRESA: ${v.empresa}` : '',
-    v.conductor ? `CONDUCTOR: ${v.conductor}` : '',
+    v.caf ? `CAF: ${v.caf}` : '',
 ].filter(Boolean).join('\n');
 
 const extToText = e => [

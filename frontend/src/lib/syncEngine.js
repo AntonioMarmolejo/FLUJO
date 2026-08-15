@@ -91,6 +91,17 @@ export const buscarPlacaLocal = async (placa) => {
     return db.vehiculosCache.get(placa.trim().toUpperCase());
 };
 
+// Devuelve todos los vehículos cacheados (para listado offline completo)
+export const getVehiculosCache = async () => {
+    return db.vehiculosCache.orderBy('placa').toArray();
+};
+
+// Elimina un vehículo del caché local (tras borrado en servidor)
+export const deleteCachedVehiculo = async (placa) => {
+    if (!placa) return;
+    await db.vehiculosCache.delete(placa.trim().toUpperCase());
+};
+
 // Cachea personas para búsqueda offline de conductor/cédula
 export const cachePersona = async (p) => {
     if (!p.cedula) return;
