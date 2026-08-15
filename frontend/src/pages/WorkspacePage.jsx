@@ -2683,76 +2683,91 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                     {bitacora.length === 0 ? (
                         <p className="ws-empty">Sin movimientos para consolidar</p>
                     ) : (
-                        <div className="bit-list">
-                            {bitacora.map((b, i) => {
-                                const bText = [`Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`, `Conductor: ${b.conductor}`, b.empresa && `Empresa: ${b.empresa}`, b.destino && `Destino: ${b.destino}`, `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`].filter(Boolean).join('\n');
-                                const isSwiped = swipedBitIdx === i;
-                                return (
-                                    <div key={i} className="bit-item">
-                                        <div className="bit-actions" onClick={e => e.stopPropagation()}>
-                                            <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconCopy /></button>
-                                            <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconShare /></button>
-                                        </div>
-                                        <div
-                                            className={`bit-row bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
-                                            onTouchStart={e => { bitSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
-                                            onTouchMove={e => {
-                                                const dx = e.touches[0].clientX - bitSwipeRef.current.startX;
-                                                const dy = e.touches[0].clientY - bitSwipeRef.current.startY;
-                                                if (!bitSwipeRef.current.moved && !bitSwipeRef.current.vertScroll) {
-                                                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-                                                    if (Math.abs(dy) > Math.abs(dx)) { bitSwipeRef.current.vertScroll = true; return; }
-                                                    bitSwipeRef.current.moved = true;
-                                                }
-                                                if (bitSwipeRef.current.moved) e.preventDefault();
-                                            }}
-                                            onTouchEnd={e => {
-                                                if (!bitSwipeRef.current.moved) return;
-                                                const dx = e.changedTouches[0].clientX - bitSwipeRef.current.startX;
-                                                if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
-                                                else { if (dx > 55) setSwipedBitIdx(i); }
-                                            }}
-                                            {...addMouseSwipe(bitSwipeRef, dx => {
-                                                if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
-                                                else { if (dx > 55) setSwipedBitIdx(i); }
-                                            })}
-                                            onClick={() => { if (bitSwipeRef.current?.didDrag) { bitSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <div className="bit-row-top">
-                                                <span className="bit-count">{bitPlacaCounts[b.placa] || 1}</span>
-                                                <span className="bit-placa">{b.placa}</span>
-                                                {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
-                                                <span className={`bit-badge bit-badge-${b.status}`}>
-                                                    {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
-                                                </span>
-                                            </div>
-                                            <div className="bit-row-times">
-                                                <div className="bit-time bit-time-s">
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    <span className="bit-time-label">Salida</span>
-                                                    <span className="bit-time-val">{b.horaS}</span>
+                        <div className="bit-table-scroll">
+                            <div className="bit-table">
+                                <div className="bit-table-header">
+                                    <div className="bit-hcell">N°</div>
+                                    <div className="bit-hcell">Salida</div>
+                                    <div className="bit-hcell">Ingreso</div>
+                                    <div className="bit-hcell">Placa</div>
+                                    <div className="bit-hcell">Conductor / Empresa</div>
+                                    <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
+                                </div>
+                                <div className="bit-list">
+                                    {bitacora.map((b, i) => {
+                                        const bText = [`Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`, `Conductor: ${b.conductor}`, b.empresa && `Empresa: ${b.empresa}`, b.destino && `Destino: ${b.destino}`, `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`].filter(Boolean).join('\n');
+                                        const isSwiped = swipedBitIdx === i;
+                                        const stMap = {
+                                            completo:       { color: '#3ecf8e', bg: 'rgba(62,207,142,0.12)',  label: 'Completado'   },
+                                            'en-campo':     { color: '#e0a83e', bg: 'rgba(224,168,62,0.12)',  label: 'En campo'     },
+                                            'solo-ingreso': { color: '#818cf8', bg: 'rgba(129,140,248,0.12)', label: 'Solo ingreso' },
+                                        };
+                                        const st = stMap[b.status] || stMap['solo-ingreso'];
+                                        return (
+                                            <div key={i} className="bit-item">
+                                                <div className="bit-actions" onClick={e => e.stopPropagation()}>
+                                                    <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconCopy /></button>
+                                                    <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconShare /></button>
                                                 </div>
-                                                <div className="bit-time-arrow">→</div>
-                                                <div className="bit-time bit-time-i">
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    <span className="bit-time-label">Ingreso</span>
-                                                    <span className="bit-time-val">{b.horaI}</span>
+                                                <div
+                                                    className={`bit-row bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
+                                                    onTouchStart={e => { bitSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                    onTouchMove={e => {
+                                                        const dx = e.touches[0].clientX - bitSwipeRef.current.startX;
+                                                        const dy = e.touches[0].clientY - bitSwipeRef.current.startY;
+                                                        if (!bitSwipeRef.current.moved && !bitSwipeRef.current.vertScroll) {
+                                                            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                            if (Math.abs(dy) > Math.abs(dx)) { bitSwipeRef.current.vertScroll = true; return; }
+                                                            bitSwipeRef.current.moved = true;
+                                                        }
+                                                        if (bitSwipeRef.current.moved) e.preventDefault();
+                                                    }}
+                                                    onTouchEnd={e => {
+                                                        if (!bitSwipeRef.current.moved) return;
+                                                        const dx = e.changedTouches[0].clientX - bitSwipeRef.current.startX;
+                                                        if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
+                                                        else { if (dx > 55) setSwipedBitIdx(i); }
+                                                    }}
+                                                    {...addMouseSwipe(bitSwipeRef, dx => {
+                                                        if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
+                                                        else { if (dx > 55) setSwipedBitIdx(i); }
+                                                    })}
+                                                    onClick={() => { if (bitSwipeRef.current?.didDrag) { bitSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
+                                                >
+                                                    {/* N° */}
+                                                    <div className="bit-tcell-num">{i + 1}</div>
+                                                    {/* Salida */}
+                                                    <div><span className="bit-hora-s">{b.horaS || '—'}</span></div>
+                                                    {/* Ingreso */}
+                                                    <div><span className="bit-hora-i">{b.horaI || '—'}</span></div>
+                                                    {/* Placa + Tipo */}
+                                                    <div>
+                                                        <div className="bit-tplaca">{b.placa}</div>
+                                                        {b.tipoVehiculo && <div className="bit-ttipo">{b.tipoVehiculo}</div>}
+                                                    </div>
+                                                    {/* Conductor + Empresa */}
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                            {b.conductorChanged && (
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                            )}
+                                                            {b.conductor || '—'}
+                                                        </div>
+                                                        {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
+                                                    </div>
+                                                    {/* Estado */}
+                                                    <div className="bit-tcell-estado">
+                                                        <div className="bit-status-pill" style={{ background: st.bg, color: st.color }}>
+                                                            <div className="bit-status-dot" style={{ background: st.color }} />
+                                                            {st.label}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="bit-row-bottom">
-                                                <span className={`bit-conductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                    {b.conductorChanged && (
-                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    )}
-                                                    {b.conductor}
-                                                </span>
-                                                {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -4881,93 +4896,102 @@ const WorkspacePage = () => {
                             ) : bitacoraFiltrada.length === 0 ? (
                                 <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
                             ) : (
-                                <div className="bit-list">
-                                    {bitacoraFiltrada.map((b, i) => {
-                                        const bText = [
-                                            `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
-                                            `Estado: ${b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
-                                            `Conductor: ${b.conductor}`,
-                                            b.empresa && `Empresa: ${b.empresa}`,
-                                            b.destino && `Destino: ${b.destino}`,
-                                            `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
-                                        ].filter(Boolean).join('\n');
-                                        const isSwiped = swipedBitMainIdx === i;
-                                        return (
-                                        <div key={i} className="bit-item">
-                                            <div className="bit-actions" onClick={e => e.stopPropagation()}>
-                                                <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconCopy /></button>
-                                                <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconShare /></button>
-                                                <button className="bit-act-btn" title="Editar" onClick={() => { setBitDetailIdx(i); setSwipedBitMainIdx(null); }}>
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                </button>
-                                                <button className="bit-act-btn danger" title="Eliminar" onClick={() => { handleDeleteBitPair(b, i); setSwipedBitMainIdx(null); }}><IconMinus /></button>
-                                            </div>
-                                            <div
-                                                className={`bit-row bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
-                                                onTouchStart={e => { bitMainSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
-                                                onTouchMove={e => {
-                                                    const dx = e.touches[0].clientX - bitMainSwipeRef.current.startX;
-                                                    const dy = e.touches[0].clientY - bitMainSwipeRef.current.startY;
-                                                    if (!bitMainSwipeRef.current.moved && !bitMainSwipeRef.current.vertScroll) {
-                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-                                                        if (Math.abs(dy) > Math.abs(dx)) { bitMainSwipeRef.current.vertScroll = true; return; }
-                                                        bitMainSwipeRef.current.moved = true;
-                                                    }
-                                                    if (bitMainSwipeRef.current.moved) e.preventDefault();
-                                                }}
-                                                onTouchEnd={e => {
-                                                    if (!bitMainSwipeRef.current.moved) return;
-                                                    const dx = e.changedTouches[0].clientX - bitMainSwipeRef.current.startX;
-                                                    if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                    else { if (dx > 55) setSwipedBitMainIdx(i); }
-                                                }}
-                                                {...addMouseSwipe(bitMainSwipeRef, dx => {
-                                                    if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                    else { if (dx > 55) setSwipedBitMainIdx(i); }
-                                                })}
-                                                onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
-                                                style={{ cursor: 'pointer' }}
-                                            >
-                                                <div className="bit-row-top">
-                                                    <span className="bit-count">{bitPlacaCounts[b.placa] || 1}</span>
-                                                    <span className="bit-placa">{b.placa}</span>
-                                                    {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
-                                                    <span className={`bit-badge bit-badge-${b.status}`}>
-                                                        {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
-                                                    </span>
-                                                </div>
-                                                <div className="bit-row-times">
-                                                    <div className="bit-time bit-time-s">
-                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                                                            <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                                                        </svg>
-                                                        <span className="bit-time-label">Salida</span>
-                                                        <span className="bit-time-val">{b.horaS}</span>
-                                                    </div>
-                                                    <div className="bit-time-arrow">→</div>
-                                                    <div className="bit-time bit-time-i">
-                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                                                            <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                                                        </svg>
-                                                        <span className="bit-time-label">Ingreso</span>
-                                                        <span className="bit-time-val">{b.horaI}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="bit-row-bottom">
-                                                    <span className={`bit-conductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                        {b.conductorChanged && (
-                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                                                                <path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                        )}
-                                                        {b.conductor}
-                                                    </span>
-                                                    {b.empresa && <span className="bit-empresa">{b.empresa}</span>}
-                                                </div>
-                                            </div>
+                                <div className="bit-table-scroll">
+                                    <div className="bit-table">
+                                        <div className="bit-table-header">
+                                            <div className="bit-hcell">N°</div>
+                                            <div className="bit-hcell">Salida</div>
+                                            <div className="bit-hcell">Ingreso</div>
+                                            <div className="bit-hcell">Placa</div>
+                                            <div className="bit-hcell">Conductor / Empresa</div>
+                                            <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
                                         </div>
-                                        );
-                                    })}
+                                        <div className="bit-list">
+                                            {bitacoraFiltrada.map((b, i) => {
+                                                const bText = [
+                                                    `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
+                                                    `Estado: ${b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
+                                                    `Conductor: ${b.conductor}`,
+                                                    b.empresa && `Empresa: ${b.empresa}`,
+                                                    b.destino && `Destino: ${b.destino}`,
+                                                    `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
+                                                ].filter(Boolean).join('\n');
+                                                const isSwiped = swipedBitMainIdx === i;
+                                                const stMap = {
+                                                    completo:       { color: '#3ecf8e', bg: 'rgba(62,207,142,0.12)',  label: 'Completado'   },
+                                                    'en-campo':     { color: '#e0a83e', bg: 'rgba(224,168,62,0.12)',  label: 'En campo'     },
+                                                    'solo-ingreso': { color: '#818cf8', bg: 'rgba(129,140,248,0.12)', label: 'Solo ingreso' },
+                                                };
+                                                const st = stMap[b.status] || stMap['solo-ingreso'];
+                                                return (
+                                                <div key={i} className="bit-item">
+                                                    <div className="bit-actions" onClick={e => e.stopPropagation()}>
+                                                        <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconCopy /></button>
+                                                        <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconShare /></button>
+                                                        <button className="bit-act-btn" title="Editar" onClick={() => { setBitDetailIdx(i); setSwipedBitMainIdx(null); }}>
+                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                        </button>
+                                                        <button className="bit-act-btn danger" title="Eliminar" onClick={() => { handleDeleteBitPair(b, i); setSwipedBitMainIdx(null); }}><IconMinus /></button>
+                                                    </div>
+                                                    <div
+                                                        className={`bit-row bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
+                                                        onTouchStart={e => { bitMainSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                        onTouchMove={e => {
+                                                            const dx = e.touches[0].clientX - bitMainSwipeRef.current.startX;
+                                                            const dy = e.touches[0].clientY - bitMainSwipeRef.current.startY;
+                                                            if (!bitMainSwipeRef.current.moved && !bitMainSwipeRef.current.vertScroll) {
+                                                                if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                                if (Math.abs(dy) > Math.abs(dx)) { bitMainSwipeRef.current.vertScroll = true; return; }
+                                                                bitMainSwipeRef.current.moved = true;
+                                                            }
+                                                            if (bitMainSwipeRef.current.moved) e.preventDefault();
+                                                        }}
+                                                        onTouchEnd={e => {
+                                                            if (!bitMainSwipeRef.current.moved) return;
+                                                            const dx = e.changedTouches[0].clientX - bitMainSwipeRef.current.startX;
+                                                            if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
+                                                            else { if (dx > 55) setSwipedBitMainIdx(i); }
+                                                        }}
+                                                        {...addMouseSwipe(bitMainSwipeRef, dx => {
+                                                            if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
+                                                            else { if (dx > 55) setSwipedBitMainIdx(i); }
+                                                        })}
+                                                        onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
+                                                    >
+                                                        {/* N° */}
+                                                        <div className="bit-tcell-num">{i + 1}</div>
+                                                        {/* Salida */}
+                                                        <div><span className="bit-hora-s">{b.horaS || '—'}</span></div>
+                                                        {/* Ingreso */}
+                                                        <div><span className="bit-hora-i">{b.horaI || '—'}</span></div>
+                                                        {/* Placa + Tipo */}
+                                                        <div>
+                                                            <div className="bit-tplaca">{b.placa}</div>
+                                                            {b.tipoVehiculo && <div className="bit-ttipo">{b.tipoVehiculo}</div>}
+                                                        </div>
+                                                        {/* Conductor + Empresa */}
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                                {b.conductorChanged && (
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                )}
+                                                                {b.conductor || '—'}
+                                                            </div>
+                                                            {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
+                                                        </div>
+                                                        {/* Estado */}
+                                                        <div className="bit-tcell-estado">
+                                                            <div className="bit-status-pill" style={{ background: st.bg, color: st.color }}>
+                                                                <div className="bit-status-dot" style={{ background: st.color }} />
+                                                                {st.label}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

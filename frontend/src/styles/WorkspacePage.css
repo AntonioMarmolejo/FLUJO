@@ -2304,14 +2304,49 @@
 .bit-export-btn:hover { background: rgba(74,222,128,0.18); }
 .bit-export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.bit-list { display: flex; flex-direction: column; gap: 8px; }
+/* ── Bitácora: tabla ─────────────────────────────────────── */
 
+/* Scroll horizontal en pantallas pequeñas */
+.bit-table-scroll {
+    overflow-x: auto;
+}
+
+/* Contenedor principal de la tabla */
+.bit-table {
+    border: 1px solid #1c202a;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0d1016;
+    min-width: 540px;
+}
+
+/* Cabecera de columnas */
+.bit-table-header {
+    display: grid;
+    grid-template-columns: 44px 82px 82px minmax(80px, 1fr) minmax(130px, 1.6fr) 128px;
+    align-items: center;
+    padding: 8px 16px;
+    background: #10131a;
+    border-bottom: 1px solid #1c202a;
+}
+.bit-hcell {
+    color: #5a6070;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+/* Lista de filas (sin gap — el separador lo da el borde de cada fila) */
+.bit-list { display: flex; flex-direction: column; }
+
+/* Contenedor de fila con soporte de swipe */
 .bit-item {
     position: relative;
     overflow: hidden;
-    border-radius: 12px;
 }
 
+/* Acciones ocultas (swipe) */
 .bit-actions {
     position: absolute;
     left: 0;
@@ -2326,122 +2361,73 @@
     z-index: 0;
 }
 
+/* Fila de datos — grid de 6 columnas */
 .bit-row {
-    background: #141414;
-    border: 1px solid #222;
-    border-radius: 12px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 44px 82px 82px minmax(80px, 1fr) minmax(130px, 1.6fr) 128px;
+    align-items: center;
+    padding: 11px 16px;
+    border-bottom: 1px solid #15181f;
+    border-left: 2px solid transparent;
     position: relative;
     z-index: 1;
     transform: translateX(0);
-    transition: border-color 140ms ease, transform 0.25s ease;
+    transition: transform 0.25s ease, background 0.15s ease;
+    cursor: pointer;
+    background: transparent;
 }
-.bit-row:hover { border-color: #2e2e2e; }
-.bit-row.bit-row-swiped {
-    transform: translateX(180px);
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-.bit-row.bit-en-campo  { border-left: 3px solid #f87171; }
-.bit-row.bit-completo  { border-left: 3px solid #4ade80; }
-.bit-row.bit-solo-ingreso { border-left: 3px solid #818cf8; }
+.bit-row:last-child  { border-bottom: none; }
+.bit-row:hover       { background: rgba(255,255,255,0.025); }
+.bit-row.bit-row-swiped { transform: translateX(180px); }
 
-.bit-row-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.bit-placa {
-    font-size: 14px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 1px;
-}
-.bit-tipo {
-    font-size: 10px;
-    font-weight: 600;
-    color: #666;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid #2a2a2a;
-    padding: 2px 7px;
-    border-radius: 4px;
-}
-.bit-badge {
-    margin-left: auto;
-    font-size: 9.5px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 999px;
-    letter-spacing: 0.4px;
-}
-.bit-badge-completo   { background: rgba(74,222,128,0.12);  color: #4ade80;  border: 1px solid rgba(74,222,128,0.25); }
-.bit-badge-en-campo   { background: rgba(248,113,113,0.12); color: #f87171;  border: 1px solid rgba(248,113,113,0.25); }
-.bit-badge-solo-ingreso { background: rgba(129,140,248,0.12); color: #818cf8; border: 1px solid rgba(129,140,248,0.25); }
+/* Borde izquierdo según estado */
+.bit-row.bit-completo     { border-left-color: #3ecf8e; }
+.bit-row.bit-en-campo     { border-left-color: #e0a83e; }
+.bit-row.bit-solo-ingreso { border-left-color: #818cf8; }
 
-.bit-row-times {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+/* Contenido de celdas */
+.bit-tcell-num    { color: #8b93a3; font-size: 13px; font-weight: 600; }
+.bit-hora-s       { color: #ff9f43; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bit-hora-i       { color: #7d9dff; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bit-tplaca       { color: #e8eaed; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
+.bit-ttipo        { color: #5a6070; font-size: 10.5px; margin-top: 2px; }
+.bit-tconductor   {
+    color: #c4c8d2; font-size: 12px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
 }
-.bit-time {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex: 1;
-}
-.bit-time-s { color: #f87171; }
-.bit-time-i { color: #818cf8; }
-.bit-time-label {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    opacity: 0.7;
-}
-.bit-time-val {
-    font-size: 13px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-.bit-time-arrow {
-    font-size: 12px;
-    color: #444;
-    flex-shrink: 0;
-}
+.bit-tconductor.changed { color: #fbbf24; }
+.bit-tempresa     { color: #5a6070; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.bit-row-bottom {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+/* Estado (columna derecha) */
+.bit-tcell-estado { display: flex; justify-content: flex-end; }
+.bit-status-pill  {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 100px; white-space: nowrap;
+    font-size: 11px; font-weight: 600;
 }
-.bit-conductor {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #ccc;
-    flex: 1;
-    min-width: 0;
-}
-.bit-conductor.changed { color: #fbbf24; }
-.bit-empresa {
-    font-size: 10.5px;
-    font-weight: 600;
-    color: #555;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid #222;
-    padding: 2px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
+.bit-status-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
+@media (max-width: 599px) {
+    .bit-table-header { display: none; }
+    .bit-table { min-width: unset; border-radius: 8px; }
+    .bit-row {
+        grid-template-columns: 1fr 1fr auto !important;
+        grid-template-rows: auto auto;
+        gap: 5px 8px;
+        padding: 10px 14px;
+        border-left-width: 3px;
+    }
+    /* Reposicionar las 6 celdas: N°=1, Salida=2, Ingreso=3, Placa=4, Conductor=5, Estado=6 */
+    .bit-row > *:nth-child(1) { display: none; }                            /* N° oculto */
+    .bit-row > *:nth-child(2) { grid-column: 2; grid-row: 1; }             /* Salida */
+    .bit-row > *:nth-child(3) { display: none; }                            /* Ingreso → se ve en detalle */
+    .bit-row > *:nth-child(4) { grid-column: 1; grid-row: 1; }             /* Placa */
+    .bit-row > *:nth-child(5) { grid-column: 1 / span 2; grid-row: 2; }   /* Conductor */
+    .bit-row > *:nth-child(6) { grid-column: 3; grid-row: 1 / span 2; align-self: center; } /* Estado */
+    .bit-status-pill { font-size: 10px; padding: 3px 7px; }
+    .bit-hora-s      { font-size: 12px; }
 }
 
 
