@@ -3124,33 +3124,140 @@ const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => (
 );
 
 // ── Modal detalle Persona ─────────────────────────────────
-const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR }) => (
-    <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-card modal-card-detalle" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-                <span className="detalle-badge ingreso">PERSONA</span>
-                <button className="modal-close" onClick={onClose}>✕</button>
-            </div>
-            <div>
-                <div className="detalle-placa" style={{ fontSize: 20 }}>{(p.nombres || '').toUpperCase()}</div>
-                <div className="detalle-hora">{p.cedula}</div>
-            </div>
-            <div className="detalle-fields">
-                <DetalleRow label="Empresa"      value={p.empresa} />
-                <DetalleRow label="Cargo"        value={p.cargo} />
-                <DetalleRow label="Departamento" value={p.departamento} />
-                <DetalleRow label="Nominativo"   value={p.nominativo} />
-            </div>
-            <div className="detalle-actions">
-                {onEdit   && <button className="detalle-act-btn" title="Editar"    onClick={() => { onEdit(p); onClose(); }}><IconPencil /></button>}
-                <button className="detalle-act-btn" title="Copiar"    onClick={() => handleCopyText(pToText(p))}><IconCopy /></button>
-                <button className="detalle-act-btn" title="Compartir" onClick={() => handleShareText(pToText(p))}><IconShare /></button>
-                {onQR     && <button className="detalle-act-btn" title="Ver QR"    onClick={() => { onQR(p); onClose(); }}><IconQR /></button>}
-                {onDelete && <button className="detalle-act-btn danger" title="Eliminar" onClick={() => { onDelete(p._id); onClose(); }}><IconMinus /></button>}
+const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR }) => {
+    const initials = (p.nombres || '')
+        .split(' ').filter(Boolean).slice(0, 2)
+        .map(w => w[0].toUpperCase()).join('');
+
+    const fields = [
+        { label: 'Empresa',      value: p.empresa },
+        { label: 'Cargo',        value: p.cargo },
+        { label: 'Departamento', value: p.departamento },
+        { label: 'Nominativo',   value: p.nominativo },
+    ].filter(f => f.value);
+
+    const S = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+    const actionBtnStyle = (color) => ({
+        background: 'none', border: 'none', padding: '10px', cursor: 'pointer',
+        color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 10, transition: 'opacity 0.15s ease',
+    });
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    width: '90vw', maxWidth: 380,
+                    background: 'linear-gradient(180deg, #1a1c23 0%, #16171d 100%)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 20,
+                    boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    overflow: 'hidden',
+                }}
+            >
+                {/* Barra superior: badge + botón cerrar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0 20px' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: 'rgba(122,138,255,0.12)', border: '1px solid rgba(122,138,255,0.25)',
+                        color: '#a3b0ff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+                        padding: '6px 12px', borderRadius: 999,
+                    }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                        </svg>
+                        PERSONA
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            width: 32, height: 32, borderRadius: 999, flexShrink: 0,
+                            background: 'rgba(255,255,255,0.05)', border: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: '#8b8d96',
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M18 6 6 18" /><path d="M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Avatar + nombre + cédula */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '20px 24px 22px 24px',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                    <div style={{
+                        width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                        background: 'linear-gradient(135deg, #6d7cff, #4a5be0)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, fontWeight: 800, color: '#fff',
+                    }}>{initials || '?'}</div>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{
+                            fontSize: 20, fontWeight: 800, color: '#f5f5f7',
+                            letterSpacing: '-0.01em',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{p.nombres}</div>
+                        <div style={{ fontSize: 13, color: '#6c6e78', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                            {p.cedula}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Campos */}
+                <div style={{ padding: '8px 24px 4px 24px' }}>
+                    {fields.length > 0 ? fields.map(f => (
+                        <div key={f.label} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        }}>
+                            <span style={{ fontSize: 12, color: '#75767f', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>
+                                {f.label}
+                            </span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#eeeef1', letterSpacing: '0.01em', textAlign: 'right', marginLeft: 12 }}>
+                                {f.value}
+                            </span>
+                        </div>
+                    )) : (
+                        <div style={{ padding: '16px 0', textAlign: 'center', color: '#444', fontSize: 12 }}>
+                            Sin datos adicionales
+                        </div>
+                    )}
+                </div>
+
+                {/* Acciones */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '18px 24px 22px 24px' }}>
+                    {onEdit && (
+                        <button title="Editar" style={actionBtnStyle('#c7c8ce')} onClick={() => { onEdit(p); onClose(); }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M12 20h9" ${S}/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" ${S}/>` }} />
+                        </button>
+                    )}
+                    <button title="Copiar" style={actionBtnStyle('#c7c8ce')} onClick={() => handleCopyText(pToText(p))}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<rect x="9" y="9" width="12" height="12" rx="2" ${S}/><path d="M5 15V5a2 2 0 0 1 2-2h10" ${S}/>` }} />
+                    </button>
+                    <button title="Compartir" style={actionBtnStyle('#c7c8ce')} onClick={() => handleShareText(pToText(p))}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" ${S}/><path d="M16 6l-4-4-4 4" ${S}/><path d="M12 2v14" ${S}/>` }} />
+                    </button>
+                    {onQR && (
+                        <button title="Ver QR" style={actionBtnStyle('#c7c8ce')} onClick={() => { onQR(p); onClose(); }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<rect x="3" y="3" width="7" height="7" ${S}/><rect x="14" y="3" width="7" height="7" ${S}/><rect x="14" y="14" width="7" height="7" ${S}/><rect x="3" y="14" width="7" height="7" ${S}/>` }} />
+                        </button>
+                    )}
+                    {onDelete && (
+                        <button title="Eliminar" style={actionBtnStyle('#ff8a8a')} onClick={() => { onDelete(p._id); onClose(); }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M5 12h14" ${S}/>` }} />
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ── Modal extensión (agregar / editar) ────────────────────
 const EMPTY_EXT = { nombre: '', empresa: '', cargo: '', departamento: '', extension: '', celular: '' };
