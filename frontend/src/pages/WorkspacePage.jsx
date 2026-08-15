@@ -3986,9 +3986,9 @@ const PantallaPersonas = () => {
                     ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'No hay personas registradas'}</p>
                     : (
                         <div className="ftable-scroll">
-                            {/* Encabezado */}
-                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '100px 1fr 130px 120px 100px 80px' }}>
-                                {['CÉDULA', 'NOMBRES', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'].map(h => (
+                            {/* Encabezado fijo — mismo template que las filas para alineación perfecta */}
+                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '100px 160px 140px 110px 100px 80px' }}>
+                                {['CÉDULA', 'NOMBRE', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'].map(h => (
                                     <span key={h} className="ftable-head-cell">{h}</span>
                                 ))}
                             </div>
@@ -4006,7 +4006,7 @@ const PantallaPersonas = () => {
                                             </div>
                                             <div
                                                 className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '100px 1fr 130px 120px 100px 80px' }}
+                                                style={{ display: 'grid', gridTemplateColumns: '100px 160px 140px 110px 100px 80px' }}
                                                 onTouchStart={ev => { personaSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
                                                 onTouchMove={ev => {
                                                     const dx = ev.touches[0].clientX - personaSwipeRef.current.startX;
@@ -4034,12 +4034,12 @@ const PantallaPersonas = () => {
                                                     setDetailPersona(p);
                                                 }}
                                             >
-                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 100 }}>{p.cedula}</span>
-                                                <span className="ftable-cell ftable-cell-flex ftable-cell-bold">{(p.nombres || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell" style={{ width: 130 }}>{(p.empresa || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 120 }}>{p.cargo || '—'}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{(p.departamento || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 80, color: p.nominativo ? '#818cf8' : undefined }}>{p.nominativo || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-accent">{p.cedula || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-bold">{(p.nombres || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell">{(p.empresa || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{p.cargo || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{(p.departamento || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim" style={{ color: p.nominativo ? '#818cf8' : undefined }}>{p.nominativo || '—'}</span>
                                             </div>
                                         </div>
                                     );

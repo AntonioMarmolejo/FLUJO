@@ -1847,7 +1847,8 @@
     overflow-x: auto;
     padding: 0 12px 4px;
 }
-.ftable { display: flex; flex-direction: column; min-width: 480px; }
+/* min-width = suma de todas las columnas fijas: 100+160+140+110+100+80 = 690px */
+.ftable { display: flex; flex-direction: column; min-width: 690px; }
 
 .ftable-head {
     display: flex;
@@ -1859,6 +1860,7 @@
     position: sticky;
     top: 0;
     z-index: 2;
+    min-width: 690px; /* Igual al .ftable para que las columnas siempre alineen */
 }
 .ftable-head-cell {
     font-size: 10px;
