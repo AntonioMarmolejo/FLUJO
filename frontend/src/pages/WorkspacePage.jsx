@@ -1382,6 +1382,212 @@ const ModalEditHora = ({ mov, onClose, onSave }) => {
     );
 };
 
+// ── Modal registrar / editar ingreso desde bitácora ──────
+const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
+    const isNew = !b.ingreso;
+    const [hora, setHora]           = useState(() => b.horaI && b.horaI !== '—' ? b.horaI : getHoraLocal());
+    const [conductor, setConductor] = useState(b.ingreso?.conductor || b.salida?.conductor || '');
+    const [cedula, setCedula]       = useState(b.ingreso?.cedula    || b.salida?.cedula    || '');
+    const [actividad, setActividad] = useState(b.ingreso?.actividad || '');
+    const [conductorSugs, setConductorSugs] = useState([]);
+    const [cedulaSugs,    setCedulaSugs]    = useState([]);
+    const [actividadSugs, setActividadSugs] = useState([]);
+    const [personaNotFound, setPersonaNotFound] = useState(false);
+    const conductorTimer = useRef(null);
+    const cedulaTimer    = useRef(null);
+
+    const recentUniq = (field, val) => {
+        const seen = new Set();
+        return (movimientos || [])
+            .filter(m => m[field] && (!val || m[field].toLowerCase().includes(val.toLowerCase()))
+                && !seen.has(m[field]) && seen.add(m[field]))
+            .slice(0, 5).map(m => m[field]);
+    };
+
+    const searchPersonas = async (val, setList) => {
+        try {
+            const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
+            setList(data.personas || []);
+            if (!(data.personas || []).length) setPersonaNotFound(true);
+        } catch {
+            const local = await buscarPersonaLocal(val).catch(() => []);
+            setList(local || []);
+            if (!(local || []).length) setPersonaNotFound(true);
+        }
+    };
+
+    const handleConductorChange = val => {
+        setConductor(val); setPersonaNotFound(false);
+        if (val.length < 3) { setConductorSugs([]); return; }
+        const seen = new Set();
+        const hits = (movimientos || [])
+            .filter(m => m.conductor && m.conductor.toLowerCase().includes(val.toLowerCase())
+                && !seen.has(m.conductor) && seen.add(m.conductor))
+            .slice(0, 5)
+            .map(m => ({ cedula: m.cedula || '', nombres: m.conductor, empresa: m.empresa || '' }));
+        if (hits.length) { setConductorSugs(hits); return; }
+        clearTimeout(conductorTimer.current);
+        conductorTimer.current = setTimeout(() => searchPersonas(val, setConductorSugs), 300);
+    };
+
+    const handleCedulaChange = val => {
+        setCedula(val); setPersonaNotFound(false);
+        if (val.length < 3) { setCedulaSugs([]); return; }
+        const seen = new Set();
+        const hits = (movimientos || [])
+            .filter(m => m.cedula && m.cedula.includes(val) && !seen.has(m.cedula) && seen.add(m.cedula))
+            .slice(0, 5)
+            .map(m => ({ cedula: m.cedula, nombres: m.conductor || '', empresa: m.empresa || '' }));
+        if (hits.length) { setCedulaSugs(hits); return; }
+        clearTimeout(cedulaTimer.current);
+        cedulaTimer.current = setTimeout(() => searchPersonas(val, setCedulaSugs), 300);
+    };
+
+    const selectPersona = p => {
+        setConductor(p.nombres || ''); setCedula(p.cedula || '');
+        setConductorSugs([]); setCedulaSugs([]); setPersonaNotFound(false);
+    };
+
+    const handleSubmit = () => {
+        if (!hora) return;
+        if (personaNotFound && cedula) {
+            api.post('/personas', { nombres: conductor, cedula, empresa: b.empresa || '' }).catch(() => {});
+        }
+        onGuardar({ b, hora, conductor: conductor.trim(), cedula: cedula.trim(), actividad: actividad.trim() });
+    };
+
+    const fld = {
+        width: '100%', padding: '10px 12px', background: '#141820',
+        border: '1px solid #2a2f3d', borderRadius: 8, color: '#e8eaed',
+        fontSize: 13, boxSizing: 'border-box', outline: 'none',
+    };
+
+    const PersonaSugList = ({ items }) => !items.length ? null : (
+        <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
+            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
+        }}>
+            {items.map((p, i) => (
+                <div key={i} onClick={() => selectPersona(p)}
+                    style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#232838'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#e8eaed' }}>{p.nombres}</div>
+                    {p.cedula && <div style={{ fontSize: 11, color: '#5a6070' }}>CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
+                </div>
+            ))}
+        </div>
+    );
+
+    const StrSugList = ({ items, onSel }) => !items.length ? null : (
+        <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
+            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
+        }}>
+            {items.map((s, i) => (
+                <div key={i} onClick={() => onSel(s)}
+                    style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, color: '#c4c8d2',
+                        borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#232838'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>{s}</div>
+            ))}
+        </div>
+    );
+
+    const LBL = ({ t }) => (
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', color: '#5a6070', textTransform: 'uppercase', marginBottom: 6 }}>{t}</div>
+    );
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div onClick={e => e.stopPropagation()} style={{
+                width: '94vw', maxWidth: 400,
+                background: 'linear-gradient(180deg,#1a1c23 0%,#16171d 100%)',
+                border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16,
+                boxShadow: '0 24px 60px rgba(0,0,0,0.55)', overflow: 'visible',
+            }}>
+                {/* Cabecera */}
+                <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                            borderRadius: 100, background: 'rgba(59,130,246,0.15)', color: '#60a5fa',
+                            fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0,
+                        }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                            INGRESO
+                        </span>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{b.placa}</span>
+                        {b.tipoVehiculo && <span style={{ fontSize: 11, color: '#5a6070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.tipoVehiculo}</span>}
+                    </div>
+                    <button onClick={onClose} style={{
+                        width: 30, height: 30, borderRadius: '50%', border: 'none', flexShrink: 0,
+                        background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 10,
+                    }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {/* Hora */}
+                    <div>
+                        <LBL t="Hora de retorno" />
+                        <input type="time" value={hora} onChange={e => setHora(e.target.value)} autoFocus
+                            style={{ ...fld, fontSize: 26, fontWeight: 700, textAlign: 'center', padding: '12px' }} />
+                    </div>
+
+                    {/* Conductor */}
+                    <div style={{ position: 'relative' }}>
+                        <LBL t="Conductor de retorno" />
+                        <input type="text" placeholder="Nombre del conductor..." value={conductor}
+                            onChange={e => handleConductorChange(e.target.value)} style={fld} />
+                        <PersonaSugList items={conductorSugs} />
+                    </div>
+
+                    {/* Cédula */}
+                    <div style={{ position: 'relative' }}>
+                        <LBL t="Cédula" />
+                        <input type="text" placeholder="Nro. de cédula..." value={cedula}
+                            onChange={e => handleCedulaChange(e.target.value)} style={fld} />
+                        <PersonaSugList items={cedulaSugs} />
+                        {personaNotFound && cedula.length >= 3 && (
+                            <div style={{ marginTop: 5, fontSize: 11, color: '#e0a83e' }}>
+                                ⚠️ Persona no encontrada — se guardará automáticamente
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Actividad */}
+                    <div style={{ position: 'relative' }}>
+                        <LBL t="Actividad / Observación" />
+                        <input type="text" placeholder="Descripción de la actividad..." value={actividad}
+                            onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
+                            style={fld} />
+                        <StrSugList items={actividadSugs} onSel={s => { setActividad(s); setActividadSugs([]); }} />
+                    </div>
+
+                    {/* Botón guardar */}
+                    <button onClick={handleSubmit} disabled={!hora} style={{
+                        padding: '12px', borderRadius: 10, border: 'none', marginTop: 2,
+                        background: hora ? '#4a5be0' : '#1e2030',
+                        color: hora ? '#fff' : '#3a3f4a',
+                        fontSize: 14, fontWeight: 700, cursor: hora ? 'pointer' : 'not-allowed',
+                        transition: 'background 0.15s ease',
+                    }}>
+                        {isNew ? 'Registrar ingreso' : 'Guardar cambios'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Modal detalle Bitácora ────────────────────────────────
 const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onDeletePair }) => {
     const b = bitacora[idx];
@@ -4490,6 +4696,7 @@ const WorkspacePage = () => {
     const [swipedMovId, setSwipedMovId] = useState(null);
     const movSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [editHoraMov, setEditHoraMov] = useState(null);
+    const [editIngresoBit, setEditIngresoBit] = useState(null);
     const [highlightMovId, setHighlightMovId] = useState(null);
     const [highlightRegId, setHighlightRegId] = useState(null);
 
@@ -4582,6 +4789,7 @@ const WorkspacePage = () => {
                         empresa: sal.empresa || mov.empresa,
                         tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
                         destino: sal.destino || mov.destino,
+                        actividad: mov.actividad || sal.actividad || '',
                         status: 'completo',
                     });
                 } else {
@@ -4591,6 +4799,7 @@ const WorkspacePage = () => {
                         conductor: mov.conductor || '—', conductorChanged: false,
                         marca: mov.marca, empresa: mov.empresa,
                         tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
+                        actividad: mov.actividad || '',
                         status: 'solo-ingreso',
                     });
                 }
@@ -4604,6 +4813,7 @@ const WorkspacePage = () => {
                     conductor: s.conductor || '—', conductorChanged: false,
                     marca: s.marca, empresa: s.empresa,
                     tipoVehiculo: s.tipoVehiculo, destino: s.destino,
+                    actividad: s.actividad || '',
                     status: 'en-campo',
                 });
             }
@@ -4780,6 +4990,45 @@ const WorkspacePage = () => {
         setEditHoraMov(null);
         try { await api.put(`/movimientos/${id}`, { hora: newHora }); }
         catch { cargarDatos(); }
+    };
+
+    // Registrar / editar ingreso directo desde la bitácora
+    const handleGuardarIngreso = async ({ b, hora, conductor, cedula, actividad }) => {
+        setEditIngresoBit(null);
+        if (b.ingreso) {
+            // Actualizar ingreso existente — optimista
+            const updated = { ...b.ingreso, hora, conductor, cedula, actividad };
+            setMovimientos(prev => prev.map(m => m._id === b.ingreso._id ? updated : m));
+            api.put(`/movimientos/${b.ingreso._id}`, { hora, conductor, cedula, actividad }).catch(() => cargarDatos());
+        } else {
+            // Crear nuevo movimiento de ingreso
+            const tempId = crypto.randomUUID();
+            const fechaFlujo = turnoActivo?.fecha || getTurnoFecha(turnoActivo?.turnoActual);
+            const payload = {
+                tipo: 'ingreso',
+                puesto: turnoActivo?.puesto,
+                bloque: turnoActivo?.bloque,
+                placa: b.placa,
+                marca: b.salida?.marca || '',
+                color: b.salida?.color || '',
+                tipoVehiculo: b.salida?.tipoVehiculo || '',
+                empresa: b.salida?.empresa || '',
+                conductor: conductor || b.salida?.conductor || '',
+                cedula: cedula || b.salida?.cedula || '',
+                actividad,
+                fecha: fechaFlujo,
+                hora,
+                clientUUID: tempId,
+            };
+            const tempMov = { ...payload, _id: tempId, _pending: true };
+            setMovimientos(prev => [...prev, tempMov]);
+            await encolarMovimiento({ uuid: tempId, payload, hora, fecha: fechaFlujo });
+            try {
+                const { data } = await api.post('/movimientos', payload);
+                await marcarSincronizado(tempId, data.movimiento._id);
+                handleMovimientoConfirmado(tempId, data.movimiento);
+            } catch { /* queda en cola Dexie */ }
+        }
     };
 
     const exportData = format => {
@@ -5087,23 +5336,52 @@ const WorkspacePage = () => {
                                                         {/* N° */}
                                                         <div className="bit-tcell-num">{i + 1}</div>
                                                         {/* Salida */}
-                                                        <div><span className="bit-hora-s">{b.horaS || '—'}</span></div>
-                                                        {/* Ingreso */}
-                                                        <div><span className="bit-hora-i">{b.horaI || '—'}</span></div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                            <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                            {b.salida && (
+                                                                <button className="bit-cell-edit-btn" title="Editar hora salida"
+                                                                    onClick={e => { e.stopPropagation(); setEditHoraMov(b.salida); }}>
+                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {/* Ingreso — siempre visible para poder registrar el retorno */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
+                                                            <button className="bit-cell-edit-btn"
+                                                                title={b.ingreso ? 'Editar ingreso' : 'Registrar ingreso'}
+                                                                style={!b.ingreso ? { opacity: 0.45 } : undefined}
+                                                                onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
                                                         {/* Placa + Tipo */}
                                                         <div>
                                                             <div className="bit-tplaca">{b.placa}</div>
                                                             {b.tipoVehiculo && <div className="bit-ttipo">{b.tipoVehiculo}</div>}
                                                         </div>
-                                                        {/* Conductor + Empresa */}
+                                                        {/* Conductor + Empresa + Actividad */}
                                                         <div style={{ minWidth: 0 }}>
-                                                            <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                                {b.conductorChanged && (
-                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                )}
-                                                                {b.conductor || '—'}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+                                                                <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`} style={{ minWidth: 0 }}>
+                                                                    {b.conductorChanged && (
+                                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                    )}
+                                                                    {b.conductor || '—'}
+                                                                </div>
+                                                                <button className="bit-cell-edit-btn" title="Editar conductor / ingreso"
+                                                                    onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
+                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                                                    </svg>
+                                                                </button>
                                                             </div>
                                                             {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
+                                                            {b.actividad && <div className="bit-tactividad">{b.actividad}</div>}
                                                         </div>
                                                         {/* Estado */}
                                                         <div className="bit-tcell-estado">
@@ -5502,6 +5780,14 @@ const WorkspacePage = () => {
                     onDeletePair={handleDeleteBitPair}
                 />
             )}
+            {editIngresoBit && (
+                <ModalRegistrarIngreso
+                    b={editIngresoBit}
+                    movimientos={movimientos}
+                    onClose={() => setEditIngresoBit(null)}
+                    onGuardar={handleGuardarIngreso}
+                />
+            )}
 
             {/* Banner cuenta pendiente */}
             {isPending && (
@@ -5519,7 +5805,7 @@ const WorkspacePage = () => {
             )}
 
             {/* Botón volver arriba */}
-            {showScrollTop && !showModal && !editMov && !detailMov && !registroDetailMov && !showRegistroConfig && bitDetailIdx === null && !editHoraMov && (
+            {showScrollTop && !showModal && !editMov && !detailMov && !registroDetailMov && !showRegistroConfig && bitDetailIdx === null && !editHoraMov && !editIngresoBit && (
                 <button
                     className="scroll-top-btn"
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
