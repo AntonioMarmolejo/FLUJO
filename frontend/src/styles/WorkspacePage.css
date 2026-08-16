@@ -2376,10 +2376,10 @@
     transform: translateX(0);
     transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
-    background: transparent;
+    background: #0d1016; /* Mismo fondo que .bit-table — opaco para tapar los botones de acción */
 }
 .bit-row:last-child  { border-bottom: none; }
-.bit-row:hover       { background: rgba(255,255,255,0.025); }
+.bit-row:hover       { background: #111520; }
 .bit-row.bit-row-swiped { transform: translateX(180px); }
 
 /* Borde izquierdo según estado */
@@ -2409,6 +2409,19 @@
     font-size: 11px; font-weight: 600;
 }
 .bit-status-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Botón edición inline en celdas de fila ── */
+.bit-cell-edit-btn {
+    background: none; border: none; padding: 2px 3px; cursor: pointer;
+    color: #3a3f4a; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; opacity: 0; transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    line-height: 1;
+}
+.bit-row:hover .bit-cell-edit-btn { opacity: 1; }
+.bit-cell-edit-btn:hover { color: #818cf8; background: rgba(129,140,248,0.12); }
+/* En mobile siempre visible (no hay hover) */
+@media (max-width: 599px) { .bit-cell-edit-btn { opacity: 1; color: #4a5060; } }
 
 /* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
 @media (max-width: 599px) {
