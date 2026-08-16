@@ -2224,12 +2224,11 @@ const PantallaPlacasDB = () => {
             (v.conductor || '').toLowerCase().includes(sq))
         : vehiculos;
 
+    // Eliminación optimista: quita la fila de inmediato, luego sincroniza con el servidor
     const handleDelete = async (id, placa) => {
-        try {
-            await api.delete(`/vehiculos/${id}`);
-            setVehiculos(prev => prev.filter(v => v._id !== id));
-            deleteCachedVehiculo(placa).catch(() => {});
-        } catch { }
+        setVehiculos(prev => prev.filter(v => v._id !== id));
+        deleteCachedVehiculo(placa).catch(() => {});
+        try { await api.delete(`/vehiculos/${id}`); } catch { }
     };
 
     const qrData = v => [
@@ -3539,11 +3538,12 @@ const ModalExtension = ({ onClose, onGuardado, editData }) => {
         setLoading(true);
         try {
             if (editData?._id) {
-                await api.put(`/extensiones/${editData._id}`, form);
+                const { data } = await api.put(`/extensiones/${editData._id}`, form);
+                onGuardado(data.extension);
             } else {
-                await api.post('/extensiones', form);
+                const { data } = await api.post('/extensiones', form);
+                onGuardado(data.extension);
             }
-            onGuardado();
             onClose();
         } catch (err) {
             setError(err.response?.data?.message || 'Error al guardar');
@@ -3601,16 +3601,37 @@ const PantallaExtensiones = () => {
 
     useEffect(() => { cargar(); }, []);
 
+    // Actualización optimista: refleja el cambio en la UI de inmediato
+    const onGuardado = (savedExt) => {
+        if (!savedExt) { cargar(); return; }
+        setExtensiones(prev => {
+            const idx = prev.findIndex(e => e._id === savedExt._id);
+            if (idx >= 0) {
+                // Edición: reemplaza el registro existente
+                const next = [...prev];
+                next[idx] = savedExt;
+                return next;
+            }
+            // Nuevo: inserta ordenado por nombre
+            return [...prev, savedExt].sort((a, b) =>
+                (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+            );
+        });
+    };
+
     const sq = search.toLowerCase();
     const filtrados = sq
         ? extensiones.filter(e =>
             (e.nombre || '').toLowerCase().includes(sq) ||
             (e.cargo || '').toLowerCase().includes(sq) ||
+            (e.empresa || '').toLowerCase().includes(sq) ||
             (e.departamento || '').toLowerCase().includes(sq))
         : extensiones;
 
+    // Eliminación optimista: quita la fila inmediatamente, luego sincroniza
     const handleDelete = async id => {
-        try { await api.delete(`/extensiones/${id}`); cargar(); } catch { }
+        setExtensiones(prev => prev.filter(e => e._id !== id));
+        try { await api.delete(`/extensiones/${id}`); } catch { }
     };
 
     return (
@@ -3707,7 +3728,7 @@ const PantallaExtensiones = () => {
             {(showForm || editExt) && (
                 <ModalExtension
                     onClose={() => { setShowForm(false); setEditExt(null); }}
-                    onGuardado={cargar}
+                    onGuardado={onGuardado}
                     editData={editExt}
                 />
             )}
