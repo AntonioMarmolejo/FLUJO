@@ -5347,19 +5347,6 @@ const WorkspacePage = () => {
                                                                 </button>
                                                             )}
                                                         </div>
-<<<<<<< HEAD
-                                                        {/* Ingreso */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
-                                                            {b.ingreso && (
-                                                                <button className="bit-cell-edit-btn" title="Editar hora ingreso"
-                                                                    onClick={e => { e.stopPropagation(); setEditHoraMov(b.ingreso); }}>
-                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                    </svg>
-                                                                </button>
-                                                            )}
-=======
                                                         {/* Ingreso — siempre visible para poder registrar el retorno */}
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                                             <span className="bit-hora-i">{b.horaI || '—'}</span>
@@ -5371,7 +5358,6 @@ const WorkspacePage = () => {
                                                                     <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                                                                 </svg>
                                                             </button>
->>>>>>> develop
                                                         </div>
                                                         {/* Placa + Tipo */}
                                                         <div>
@@ -5387,23 +5373,12 @@ const WorkspacePage = () => {
                                                                     )}
                                                                     {b.conductor || '—'}
                                                                 </div>
-<<<<<<< HEAD
-                                                                {(b.salida || b.ingreso) && (
-                                                                    <button className="bit-cell-edit-btn" title="Editar conductor"
-                                                                        onClick={e => { e.stopPropagation(); handleEdit(b.salida || b.ingreso); }}>
-                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                        </svg>
-                                                                    </button>
-                                                                )}
-=======
                                                                 <button className="bit-cell-edit-btn" title="Editar conductor / ingreso"
                                                                     onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
                                                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                                                         <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                                                                     </svg>
                                                                 </button>
->>>>>>> develop
                                                             </div>
                                                             {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
                                                             {b.actividad && <div className="bit-tactividad">{b.actividad}</div>}
