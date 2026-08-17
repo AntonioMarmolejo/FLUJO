@@ -1604,7 +1604,7 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
 };
 
 // ── Modal detalle Bitácora ────────────────────────────────
-const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onDeletePair }) => {
+const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onEditIngreso, onDeletePair }) => {
     const b = bitacora[idx];
     if (!b) return null;
     const total = bitacora.length;
@@ -1631,11 +1631,15 @@ const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onD
 
     const MovSection = ({ mov, label, color }) => {
         if (!mov) return null;
+        const handleEditClick = () => {
+            if (color === 'ingreso' && onEditIngreso) { onEditIngreso(b); }
+            else if (onEditMov) { onEditMov(mov); }
+        };
         return (
             <div className={`bit-det-section bit-det-${color}`}>
                 <div className="bit-det-section-header">
                     <span className="bit-det-section-label">{label} · {color === 'salida' ? b.horaS : b.horaI}</span>
-                    <button className="bit-det-edit-btn" onClick={() => { onEditMov(mov); onClose(); }}>
+                    <button className="bit-det-edit-btn" onClick={handleEditClick}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         Editar
                     </button>
@@ -1649,7 +1653,7 @@ const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditMov, onD
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay bit-det-overlay" onClick={onClose}>
             <div className="modal-card bit-det-card" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="bit-det-header">
@@ -2663,7 +2667,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const bitSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
 
     const bitacora = useMemo(() => {
-        const sorted = [...movs].reverse();
+        const sorted = [...movs].sort((a, b) => (a.hora || '').localeCompare(b.hora || '') || (a._id || '').localeCompare(b._id || ''));
         const openSalidas = {};
         const pairs = [];
         for (const mov of sorted) {
@@ -4797,7 +4801,8 @@ const WorkspacePage = () => {
     }, [movimientos]);
 
     const bitacora = useMemo(() => {
-        const sorted = [...movimientos].reverse();
+        // Ordenar cronológicamente (más antiguo primero) para que salida siempre preceda su ingreso
+        const sorted = [...movimientos].sort((a, b) => (a.hora || '').localeCompare(b.hora || '') || (a._id || '').localeCompare(b._id || ''));
         const openSalidas = {};
         const pairs = [];
         for (const mov of sorted) {
@@ -5811,7 +5816,8 @@ const WorkspacePage = () => {
                     idx={bitDetailIdx}
                     onClose={() => setBitDetailIdx(null)}
                     onChange={setBitDetailIdx}
-                    onEditMov={m => { handleEdit(m); setBitDetailIdx(null); }}
+                    onEditMov={handleEdit}
+                    onEditIngreso={b => setEditIngresoBit(b)}
                     onDeletePair={handleDeleteBitPair}
                 />
             )}
