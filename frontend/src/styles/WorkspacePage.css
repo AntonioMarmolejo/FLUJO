@@ -185,164 +185,161 @@
 .mov-item {
     position: relative;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: 14px;
 }
 
 .mov-item-inner {
-    display: grid;
-    grid-template-columns: 52px minmax(0,1fr) auto;
-    align-items: center;
-    gap: 16px;
-    padding: 6px 16px 6px 14px;
-    background: #17181b;
-    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    background: #161b23;
+    border-radius: 14px;
     border-left: 3px solid transparent;
     position: relative;
     z-index: 1;
     transform: translateX(0);
     transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
-    min-height: 56px;
 }
-/* Acento de color izquierdo según tipo de movimiento */
-.mov-item-inner.ingreso { border-left-color: rgba(91,141,239,0.55); }
-.mov-item-inner.salida  { border-left-color: rgba(240,85,79,0.50); }
-@media (hover: hover) { .mov-item-inner:hover { background: #1c1d21; } }
-.mov-item-inner:active { background: #1e1f23; }
+@media (hover: hover) { .mov-item-inner:hover { background: #1b2030; } }
+.mov-item-inner:active { background: #1d2235; }
 .mov-item-inner.mov-item-swiped {
     transform: translateX(152px);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
+/* Acento de color izquierdo según tipo */
+.mov-item-inner.ingreso { border-left-color: rgba(91,141,239,0.55); }
+.mov-item-inner.salida  { border-left-color: rgba(239,106,106,0.50); }
+
+/* Body: badge + info en fila horizontal */
+.mov-card-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+}
 
 /* Badge izquierdo: N° + hora + botón editar en esquina */
 .mov-icon {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    border-radius: 8px;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #1c1c1f;
-    border-radius: 10px;
-    padding: 6px 0;
-    line-height: 1.15;
+    gap: 2px;
     flex-shrink: 0;
-    width: 52px;
-    min-height: 52px;
+    margin-top: -4px;
 }
-.mov-icon.ingreso { background: rgba(124,127,242,0.16); }
-.mov-icon.salida  { background: rgba(240,85,79,0.14); }
-
-/* Dirección: los colores del borde-left ya la comunican */
+.mov-icon.ingreso { background: rgba(91,141,239,0.14); color: #5b8def; }
+.mov-icon.salida  { background: rgba(239,106,106,0.14); color: #ef6a6a; }
 
 .mov-count {
-    font-size: 14px;
-    font-weight: 700;
-    color: #e6e6e8;
+    font-size: 10px;
+    font-weight: 800;
+    color: inherit;
     line-height: 1;
 }
 
 .mov-hora-small {
-    font-size: 10px;
-    font-weight: 500;
-    color: #7a7a80;
+    font-size: 11px;
+    font-weight: 800;
+    color: inherit;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
-/* Sección central */
+/* Botón editar hora — esquina superior derecha del badge */
+.mov-hora-edit-btn {
+    position: absolute;
+    top: 3px; right: 3px;
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: transparent;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mov-icon:hover .mov-hora-edit-btn { color: currentColor; opacity: 0.65; }
+.mov-hora-edit-btn:hover { opacity: 1 !important; }
+@media (max-width: 599px) { .mov-hora-edit-btn { color: currentColor; opacity: 0.45; } }
+
+/* Sección de info */
 .mov-info {
+    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
-/* Fila principal: tipo + placa + · + conductor + cédula (todo horizontal) */
-.mov-info-row {
+/* Fila 1: TIPO · PLACA · EMPRESA (todo en el color del tipo) */
+.mov-info-r1 {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.mov-info-r1.ingreso { color: #5b8def; }
+.mov-info-r1.salida  { color: #ef6a6a; }
+
+/* Placa y empresa en blanco dentro de la fila 1 */
+.mov-placa-code  { color: #f2f4f7; font-size: inherit; font-weight: 800; }
+.mov-empresa-r1  { color: #f2f4f7; font-size: inherit; font-weight: 800; }
+.mov-tipo-tag    { font-size: inherit; font-weight: inherit; color: inherit; }
+
+/* Fila 2: conductor/CI a la izquierda, destino a la derecha */
+.mov-info-r2 {
     display: flex;
     align-items: baseline;
-    gap: 7px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    line-height: 1.5;
 }
-
-/* Tag tipo INGRESO / SALIDA */
-.mov-tipo-tag {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.9px;
+.mov-conductor-ci {
+    color: #c7ccd4;
+    font-size: 11px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.mov-destino-r2 {
+    color: #8b93a1;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
     flex-shrink: 0;
 }
-.mov-tipo-tag.ingreso { color: #5b8def; }
-.mov-tipo-tag.salida  { color: #f0554f; }
 
-/* Mantener retrocompat. con vistas de archivo */
+/* Actividad — debajo del body, alineada con la info */
+.mov-actividad {
+    color: #8b93a1;
+    font-size: 10px;
+    font-style: italic;
+    line-height: 1.4;
+    padding: 0 12px 10px 66px; /* indent = badge(42) + gap(12) + left-pad(12) */
+}
+
+/* Legacy compat */
 .mov-tipo { font-size: 14px; font-weight: 700; }
 .mov-tipo.ingreso { color: #818cf8; }
 .mov-tipo.salida  { color: #f87171; }
 .mov-persona { font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mov-empresa-dest { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Placa / código */
-.mov-placa-code {
-    font-size: 14px;
-    font-weight: 700;
-    color: #f2f2f4;
-    white-space: nowrap;
-}
-
-/* Punto separador */
-.mov-dot {
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: #54565c;
-    flex-shrink: 0;
-    align-self: center;
-}
-
-/* Conductor */
-.mov-conductor-name {
-    font-size: 13px;
-    color: #d5d6d9;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Cédula */
-.mov-cedula-tag {
-    font-size: 12px;
-    color: #7a7a80;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-/* Columna derecha: destino + empresa */
-.mov-dest-col {
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-left: 4px;
-    flex-shrink: 0;
-    max-width: 150px;
-}
-.mov-dest-name {
-    font-size: 12.5px;
-    color: #c7c8cc;
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.mov-dest-terminal {
-    font-size: 11px;
-    color: #7a7a80;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Legacy */
 .mov-hora  { font-size: 12px; color: #666; }
 .mov-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff; }
 .mov-badge.ingreso { background:#818cf8; }
@@ -2393,7 +2390,7 @@
 .bit-item {
     position: relative;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 14px;
 }
 
 /* Acciones ocultas (swipe) */
@@ -2411,49 +2408,112 @@
     z-index: 0;
 }
 
-/* Fila de datos — card de 7 columnas */
-.bit-row {
-    display: grid;
-    grid-template-columns: 64px 96px 96px 130px 1fr 1fr 130px;
-    align-items: center;
-    padding: 11px 16px;
-    border: 1px solid #1c202a;
-    border-left: 3px solid transparent;
+/* ── Card de bitácora ── */
+.bit-card {
+    background: #161b23;
+    border-radius: 14px;
+    border-left: 4px solid transparent;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     position: relative;
     z-index: 1;
     transform: translateX(0);
     transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
-    background: #0d1016;
 }
-.bit-row:hover       { background: #111520; }
-.bit-row.bit-row-swiped { transform: translateX(180px); }
+.bit-card:hover       { background: #1b2030; }
+.bit-card.bit-row-swiped { transform: translateX(180px); }
 
 /* Acento de color izquierdo según estado */
-.bit-row.bit-completo     { border-left-color: #3ecf8e; }
-.bit-row.bit-en-campo     { border-left-color: #e0a83e; }
-.bit-row.bit-solo-ingreso { border-left-color: #818cf8; }
+.bit-card.bit-completo     { border-left-color: #3ecf8e; }
+.bit-card.bit-en-campo     { border-left-color: #e0a83e; }
+.bit-card.bit-solo-ingreso { border-left-color: #818cf8; }
 
-/* Contenido de celdas */
-.bit-tcell-num    { color: #8b93a3; font-size: 13px; font-weight: 600; }
+/* Fila 1: horas + placa | tipo vehículo */
+.bit-card-r1 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* Bloque de horas — hereda el color del estado */
+.bit-card-horas {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+.bit-card.bit-completo     .bit-card-horas { color: #3ecf8e; }
+.bit-card.bit-en-campo     .bit-card-horas { color: #e0a83e; }
+.bit-card.bit-solo-ingreso .bit-card-horas { color: #818cf8; }
+
+/* Overrides de color dentro del bloque de horas */
+.bit-card .bit-hora-s,
+.bit-card .bit-hora-i { color: inherit; font-size: inherit; font-weight: inherit; font-variant-numeric: tabular-nums; }
+.bit-card-sep { opacity: 0.55; }
+
+/* Placa dentro del bloque (blanca) */
+.bit-card .bit-tplaca { color: #f2f4f7; font-size: 11px; font-weight: 800; display: inline; }
+
+/* Tipo de vehículo (derecha, gris uppercase) */
+.bit-card .bit-ttipo {
+    color: #7d8794;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Fila 2: conductor | destino */
+.bit-card-r2 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+.bit-card .bit-tconductor {
+    color: #c7ccd4;
+    font-size: 11px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.bit-card .bit-tconductor.changed { color: #fbbf24; }
+.bit-card-dest {
+    color: #8b93a1;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Clases heredadas que aún usa PantallaFlujoDetalle */
 .bit-hora-s       { color: #ff9f43; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bit-hora-i       { color: #7d9dff; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bit-tplaca       { color: #e8eaed; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
 .bit-ttipo        { color: #5a6070; font-size: 10.5px; margin-top: 2px; }
-.bit-tconductor   {
-    color: #c4c8d2; font-size: 12.5px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    display: flex; align-items: center; gap: 4px;
-}
+.bit-tconductor   { color: #c4c8d2; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 .bit-tconductor.changed { color: #fbbf24; }
+.bit-tcell-num    { color: #8b93a3; font-size: 13px; font-weight: 600; }
 .bit-tempresa     { color: #5a6070; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bit-tobservacion { color: #8b93a3; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
-
-/* Estado — punto de color simple */
 .bit-tcell-estado { display: flex; justify-content: flex-end; align-items: center; }
 .bit-status-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-/* ── Botón edición inline en celdas de la fila bitácora ── */
+/* ── Botón edición inline en celdas (usado en PantallaFlujoDetalle) ── */
 .bit-cell-edit-btn {
     background: none; border: none; padding: 2px 3px; cursor: pointer;
     color: #3a3f4a; border-radius: 4px;
@@ -2466,34 +2526,18 @@
 .bit-cell-edit-btn:hover { color: #818cf8; background: rgba(129,140,248,0.12); }
 @media (max-width: 599px) { .bit-cell-edit-btn { opacity: 1; color: #4a5060; } }
 
-/* Texto de actividad/obs en la fila */
+/* Texto de actividad/obs */
 .bit-tactividad {
     color: #4a6080; font-size: 10.5px; margin-top: 2px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font-style: italic;
 }
 
-/* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
+/* ── Responsive: el card ya es mobile-first, no se necesitan overrides ── */
 @media (max-width: 599px) {
     .bit-table-header { display: none; }
     .bit-table { min-width: unset; border-radius: 8px; }
-    .bit-list  { padding: 4px 6px; gap: 3px; }
-    .bit-row {
-        grid-template-columns: 1fr 1fr auto !important;
-        grid-template-rows: auto auto;
-        gap: 5px 8px;
-        padding: 10px 14px;
-        border-left-width: 3px;
-    }
-    /* 7 celdas: N°=1, Salida=2, Ingreso=3, Placa=4, Conductor=5, Actividad=6, Estado=7 */
-    .bit-row > *:nth-child(1) { display: none; }                              /* N° oculto */
-    .bit-row > *:nth-child(2) { grid-column: 2; grid-row: 1; }               /* Salida */
-    .bit-row > *:nth-child(3) { display: none; }                              /* Ingreso → detalle */
-    .bit-row > *:nth-child(4) { grid-column: 1; grid-row: 1; }               /* Placa */
-    .bit-row > *:nth-child(5) { grid-column: 1 / span 2; grid-row: 2; }     /* Conductor */
-    .bit-row > *:nth-child(6) { display: none; }                              /* Actividad → detalle */
-    .bit-row > *:nth-child(7) { grid-column: 3; grid-row: 1 / span 2; align-self: center; } /* Estado */
-    .bit-hora-s { font-size: 12px; }
+    .bit-list  { padding: 4px 6px; gap: 4px; }
 }
 
 

@@ -1821,49 +1821,48 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     selectMode ? onToggleSelect(m._id) : onOpenDetail(m);
                 }}
             >
-                {selectMode && (
-                    <input type="checkbox" className="mov-check" checked={selected}
-                        onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
-                )}
-                {/* Badge izquierdo: N° + hora + botón editar en esquina */}
-                <div className={`mov-icon ${m.tipo}`}>
-                    <span className="mov-count">{count}</span>
-                    <span className="mov-hora-small">{m.hora}</span>
-                    {!selectMode && !m._pending && (
-                        <button className="mov-hora-edit-btn" title="Editar hora"
-                            onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                            </svg>
-                        </button>
+                {/* Card body: badge izquierdo + info derecha */}
+                <div className="mov-card-body">
+                    {selectMode && (
+                        <input type="checkbox" className="mov-check" checked={selected}
+                            onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                     )}
-                </div>
-                {/* Sección central: tipo · placa · conductor · cédula */}
-                <div className="mov-info">
-                    <div className="mov-info-row">
-                        <span className={`mov-tipo-tag ${m.tipo}`}>{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
-                        <span className="mov-dot" />
-                        <span className="mov-placa-code">{m.placa}</span>
-                        {(m.conductor || m.cedula) && (
-                            <>
-                                <span className="mov-dot" />
-                                <span className="mov-conductor-name">{m.conductor || '—'}</span>
-                                {m.cedula && <><span className="mov-dot" /><span className="mov-cedula-tag">{m.cedula}</span></>}
-                            </>
+                    {/* Badge: N° + hora + botón editar en esquina */}
+                    <div className={`mov-icon ${m.tipo}`}>
+                        {!selectMode && !m._pending && (
+                            <button className="mov-hora-edit-btn" title="Editar hora"
+                                onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                                </svg>
+                            </button>
                         )}
+                        <span className="mov-count">{count}</span>
+                        <span className="mov-hora-small">{m.hora}</span>
                     </div>
-                    {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
-                        <span className="mov-actividad">{m.actividad}</span>
+                    {/* Info: fila 1 TIPO·PLACA·EMPRESA / fila 2 conductor + destino */}
+                    <div className="mov-info">
+                        <div className={`mov-info-r1 ${m.tipo}`}>
+                            <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                            {' · '}
+                            <span className="mov-placa-code">{m.placa}</span>
+                            {m.empresa && <>{' · '}<span className="mov-empresa-r1">{m.empresa}</span></>}
+                        </div>
+                        <div className="mov-info-r2">
+                            <span className="mov-conductor-ci">
+                                {m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}
+                            </span>
+                            {m.destino && <span className="mov-destino-r2">{m.destino.toUpperCase()}</span>}
+                        </div>
+                    </div>
+                    {m._pending && (
+                        <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ marginLeft: 'auto', alignSelf: 'center' }} />
                     )}
                 </div>
-                {/* Columna derecha: destino + empresa */}
-                {(m.destino || m.empresa) && (
-                    <div className="mov-dest-col">
-                        {m.destino && <span className="mov-dest-name">{m.destino}</span>}
-                        {m.empresa && <span className="mov-dest-terminal">{m.empresa}</span>}
-                    </div>
+                {/* Actividad — debajo del body */}
+                {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
+                    <div className="mov-actividad">{m.actividad}</div>
                 )}
-                {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ gridColumn: '3', justifySelf: 'end' }} />}
             </div>
         </div>
     );
@@ -5323,15 +5322,6 @@ const WorkspacePage = () => {
                             ) : (
                                 <div className="bit-table-scroll">
                                     <div className="bit-table">
-                                        <div className="bit-table-header">
-                                            <div className="bit-hcell">N°</div>
-                                            <div className="bit-hcell">Salida</div>
-                                            <div className="bit-hcell">Ingreso</div>
-                                            <div className="bit-hcell">Placa</div>
-                                            <div className="bit-hcell">Conductor / Empresa</div>
-                                            <div className="bit-hcell">Actividad / Observación</div>
-                                            <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
-                                        </div>
                                         <div className="bit-list">
                                             {bitacoraFiltrada.map((b, i) => {
                                                 const bText = [
@@ -5343,12 +5333,6 @@ const WorkspacePage = () => {
                                                     `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
                                                 ].filter(Boolean).join('\n');
                                                 const isSwiped = swipedBitMainIdx === i;
-                                                const stMap = {
-                                                    completo:       { color: '#3ecf8e', bg: 'rgba(62,207,142,0.12)',  label: 'Completado'   },
-                                                    'en-campo':     { color: '#e0a83e', bg: 'rgba(224,168,62,0.12)',  label: 'En campo'     },
-                                                    'solo-ingreso': { color: '#818cf8', bg: 'rgba(129,140,248,0.12)', label: 'Solo ingreso' },
-                                                };
-                                                const st = stMap[b.status] || stMap['solo-ingreso'];
                                                 return (
                                                 <div key={i} className="bit-item">
                                                     <div className="bit-actions" onClick={e => e.stopPropagation()}>
@@ -5360,7 +5344,7 @@ const WorkspacePage = () => {
                                                         <button className="bit-act-btn danger" title="Eliminar" onClick={() => { handleDeleteBitPair(b, i); setSwipedBitMainIdx(null); }}><IconMinus /></button>
                                                     </div>
                                                     <div
-                                                        className={`bit-row bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
+                                                        className={`bit-card bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
                                                         onTouchStart={e => { bitMainSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
                                                         onTouchMove={e => {
                                                             const dx = e.touches[0].clientX - bitMainSwipeRef.current.startX;
@@ -5390,36 +5374,28 @@ const WorkspacePage = () => {
                                                         })}
                                                         onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
                                                     >
-                                                        {/* N° */}
-                                                        <div className="bit-tcell-num">{i + 1}</div>
-                                                        {/* Salida */}
-                                                        <div>
-                                                            <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                        {/* Fila 1: horas · placa | tipo vehículo */}
+                                                        <div className="bit-card-r1">
+                                                            <div className="bit-card-horas">
+                                                                <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                                <span className="bit-card-sep"> — </span>
+                                                                <span className="bit-hora-i">{b.horaI || '—'}</span>
+                                                                <span className="bit-card-sep"> · </span>
+                                                                <span className="bit-tplaca">{b.placa}</span>
+                                                            </div>
+                                                            {b.tipoVehiculo && <span className="bit-ttipo">{b.tipoVehiculo.toUpperCase()}</span>}
                                                         </div>
-                                                        {/* Ingreso */}
-                                                        <div>
-                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
-                                                        </div>
-                                                        {/* Placa + Tipo */}
-                                                        <div>
-                                                            <div className="bit-tplaca">{b.placa}</div>
-                                                            {b.tipoVehiculo && <div className="bit-ttipo">{b.tipoVehiculo}</div>}
-                                                        </div>
-                                                        {/* Conductor + Empresa */}
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`} style={{ minWidth: 0 }}>
+                                                        {/* Fila 2: conductor | destino/empresa */}
+                                                        <div className="bit-card-r2">
+                                                            <span className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`}>
                                                                 {b.conductorChanged && (
                                                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                                                 )}
                                                                 {b.conductor || '—'}
-                                                            </div>
-                                                            {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
-                                                        </div>
-                                                        {/* Actividad / Observación */}
-                                                        <div className="bit-tobservacion">{b.actividad || ''}</div>
-                                                        {/* Estado — punto de color */}
-                                                        <div className="bit-tcell-estado">
-                                                            <div className="bit-status-dot" style={{ background: st.color }} title={st.label} />
+                                                            </span>
+                                                            {(b.destino || b.empresa) && (
+                                                                <span className="bit-card-dest">{b.destino || b.empresa}</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
