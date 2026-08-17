@@ -2656,7 +2656,9 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
                         marca: sal.marca || mov.marca, empresa: sal.empresa || mov.empresa,
                         tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
-                        destino: sal.destino || mov.destino, status: 'completo',
+                        destino: sal.destino || mov.destino,
+                        actividad: mov.actividad || sal.actividad || '',
+                        status: 'completo',
                     });
                 } else {
                     pairs.push({
@@ -2664,7 +2666,9 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         horaS: '—', horaI: mov.hora,
                         conductor: mov.conductor || '—', conductorChanged: false,
                         marca: mov.marca, empresa: mov.empresa,
-                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino, status: 'solo-ingreso',
+                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
+                        actividad: mov.actividad || '',
+                        status: 'solo-ingreso',
                     });
                 }
             }
@@ -2676,7 +2680,9 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                     horaS: s.hora, horaI: '—',
                     conductor: s.conductor || '—', conductorChanged: false,
                     marca: s.marca, empresa: s.empresa,
-                    tipoVehiculo: s.tipoVehiculo, destino: s.destino, status: 'en-campo',
+                    tipoVehiculo: s.tipoVehiculo, destino: s.destino,
+                    actividad: s.actividad || '',
+                    status: 'en-campo',
                 });
             }
         }
@@ -2896,6 +2902,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                     <div className="bit-hcell">Ingreso</div>
                                     <div className="bit-hcell">Placa</div>
                                     <div className="bit-hcell">Conductor / Empresa</div>
+                                    <div className="bit-hcell">Actividad / Observación</div>
                                     <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
                                 </div>
                                 <div className="bit-list">
@@ -2960,12 +2967,11 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                         </div>
                                                         {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
                                                     </div>
-                                                    {/* Estado */}
+                                                    {/* Actividad / Observación */}
+                                                    <div className="bit-tobservacion">{b.actividad || ''}</div>
+                                                    {/* Estado — punto de color */}
                                                     <div className="bit-tcell-estado">
-                                                        <div className="bit-status-pill" style={{ background: st.bg, color: st.color }}>
-                                                            <div className="bit-status-dot" style={{ background: st.color }} />
-                                                            {st.label}
-                                                        </div>
+                                                        <div className="bit-status-dot" style={{ background: st.color }} title={st.label} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -5279,6 +5285,7 @@ const WorkspacePage = () => {
                                             <div className="bit-hcell">Ingreso</div>
                                             <div className="bit-hcell">Placa</div>
                                             <div className="bit-hcell">Conductor / Empresa</div>
+                                            <div className="bit-hcell">Actividad / Observación</div>
                                             <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
                                         </div>
                                         <div className="bit-list">
@@ -5381,14 +5388,12 @@ const WorkspacePage = () => {
                                                                 </button>
                                                             </div>
                                                             {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
-                                                            {b.actividad && <div className="bit-tactividad">{b.actividad}</div>}
                                                         </div>
-                                                        {/* Estado */}
+                                                        {/* Actividad / Observación */}
+                                                        <div className="bit-tobservacion">{b.actividad || ''}</div>
+                                                        {/* Estado — punto de color */}
                                                         <div className="bit-tcell-estado">
-                                                            <div className="bit-status-pill" style={{ background: st.bg, color: st.color }}>
-                                                                <div className="bit-status-dot" style={{ background: st.color }} />
-                                                                {st.label}
-                                                            </div>
+                                                            <div className="bit-status-dot" style={{ background: st.color }} title={st.label} />
                                                         </div>
                                                     </div>
                                                 </div>

@@ -2319,13 +2319,13 @@
     border-radius: 10px;
     overflow: hidden;
     background: #0d1016;
-    min-width: 540px;
+    min-width: 820px;
 }
 
-/* Cabecera de columnas */
+/* Cabecera de columnas — 7 columnas */
 .bit-table-header {
     display: grid;
-    grid-template-columns: 44px 82px 82px minmax(80px, 1fr) minmax(130px, 1.6fr) 128px;
+    grid-template-columns: 64px 96px 96px 130px 1fr 1fr 130px;
     align-items: center;
     padding: 8px 16px;
     background: #10131a;
@@ -2339,13 +2339,14 @@
     text-transform: uppercase;
 }
 
-/* Lista de filas (sin gap — el separador lo da el borde de cada fila) */
-.bit-list { display: flex; flex-direction: column; }
+/* Lista de filas — gap visual entre cards */
+.bit-list { display: flex; flex-direction: column; padding: 6px 8px; gap: 3px; }
 
-/* Contenedor de fila con soporte de swipe */
+/* Contenedor de fila con soporte de swipe — clipa al border-radius del card */
 .bit-item {
     position: relative;
     overflow: hidden;
+    border-radius: 8px;
 }
 
 /* Acciones ocultas (swipe) */
@@ -2363,26 +2364,25 @@
     z-index: 0;
 }
 
-/* Fila de datos — grid de 6 columnas */
+/* Fila de datos — card de 7 columnas */
 .bit-row {
     display: grid;
-    grid-template-columns: 44px 82px 82px minmax(80px, 1fr) minmax(130px, 1.6fr) 128px;
+    grid-template-columns: 64px 96px 96px 130px 1fr 1fr 130px;
     align-items: center;
     padding: 11px 16px;
-    border-bottom: 1px solid #15181f;
-    border-left: 2px solid transparent;
+    border: 1px solid #1c202a;
+    border-left: 3px solid transparent;
     position: relative;
     z-index: 1;
     transform: translateX(0);
     transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
-    background: #0d1016; /* Mismo fondo que .bit-table — opaco para tapar los botones de acción */
+    background: #0d1016;
 }
-.bit-row:last-child  { border-bottom: none; }
 .bit-row:hover       { background: #111520; }
 .bit-row.bit-row-swiped { transform: translateX(180px); }
 
-/* Borde izquierdo según estado */
+/* Acento de color izquierdo según estado */
 .bit-row.bit-completo     { border-left-color: #3ecf8e; }
 .bit-row.bit-en-campo     { border-left-color: #e0a83e; }
 .bit-row.bit-solo-ingreso { border-left-color: #818cf8; }
@@ -2394,21 +2394,17 @@
 .bit-tplaca       { color: #e8eaed; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
 .bit-ttipo        { color: #5a6070; font-size: 10.5px; margin-top: 2px; }
 .bit-tconductor   {
-    color: #c4c8d2; font-size: 12px;
+    color: #c4c8d2; font-size: 12.5px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     display: flex; align-items: center; gap: 4px;
 }
 .bit-tconductor.changed { color: #fbbf24; }
 .bit-tempresa     { color: #5a6070; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bit-tobservacion { color: #8b93a3; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
 
-/* Estado (columna derecha) */
-.bit-tcell-estado { display: flex; justify-content: flex-end; }
-.bit-status-pill  {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: 100px; white-space: nowrap;
-    font-size: 11px; font-weight: 600;
-}
-.bit-status-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+/* Estado — punto de color simple */
+.bit-tcell-estado { display: flex; justify-content: flex-end; align-items: center; }
+.bit-status-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 /* ── Botón edición inline en celdas de la fila bitácora ── */
 .bit-cell-edit-btn {
@@ -2430,10 +2426,11 @@
     font-style: italic;
 }
 
-/* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
+/* ── Responsive: mobile (<600px) → tarjeta de 2 filas, 7 → 3 columnas ── */
 @media (max-width: 599px) {
     .bit-table-header { display: none; }
     .bit-table { min-width: unset; border-radius: 8px; }
+    .bit-list  { padding: 4px 6px; gap: 3px; }
     .bit-row {
         grid-template-columns: 1fr 1fr auto !important;
         grid-template-rows: auto auto;
@@ -2441,15 +2438,15 @@
         padding: 10px 14px;
         border-left-width: 3px;
     }
-    /* Reposicionar las 6 celdas: N°=1, Salida=2, Ingreso=3, Placa=4, Conductor=5, Estado=6 */
-    .bit-row > *:nth-child(1) { display: none; }                            /* N° oculto */
-    .bit-row > *:nth-child(2) { grid-column: 2; grid-row: 1; }             /* Salida */
-    .bit-row > *:nth-child(3) { display: none; }                            /* Ingreso → se ve en detalle */
-    .bit-row > *:nth-child(4) { grid-column: 1; grid-row: 1; }             /* Placa */
-    .bit-row > *:nth-child(5) { grid-column: 1 / span 2; grid-row: 2; }   /* Conductor */
-    .bit-row > *:nth-child(6) { grid-column: 3; grid-row: 1 / span 2; align-self: center; } /* Estado */
-    .bit-status-pill { font-size: 10px; padding: 3px 7px; }
-    .bit-hora-s      { font-size: 12px; }
+    /* 7 celdas: N°=1, Salida=2, Ingreso=3, Placa=4, Conductor=5, Actividad=6, Estado=7 */
+    .bit-row > *:nth-child(1) { display: none; }                              /* N° oculto */
+    .bit-row > *:nth-child(2) { grid-column: 2; grid-row: 1; }               /* Salida */
+    .bit-row > *:nth-child(3) { display: none; }                              /* Ingreso → detalle */
+    .bit-row > *:nth-child(4) { grid-column: 1; grid-row: 1; }               /* Placa */
+    .bit-row > *:nth-child(5) { grid-column: 1 / span 2; grid-row: 2; }     /* Conductor */
+    .bit-row > *:nth-child(6) { display: none; }                              /* Actividad → detalle */
+    .bit-row > *:nth-child(7) { grid-column: 3; grid-row: 1 / span 2; align-self: center; } /* Estado */
+    .bit-hora-s { font-size: 12px; }
 }
 
 
