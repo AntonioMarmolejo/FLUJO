@@ -5393,49 +5393,25 @@ const WorkspacePage = () => {
                                                         {/* N° */}
                                                         <div className="bit-tcell-num">{i + 1}</div>
                                                         {/* Salida */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                        <div>
                                                             <span className="bit-hora-s">{b.horaS || '—'}</span>
-                                                            {b.salida && (
-                                                                <button className="bit-cell-edit-btn" title="Editar hora salida"
-                                                                    onClick={e => { e.stopPropagation(); setEditHoraMov(b.salida); }}>
-                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                    </svg>
-                                                                </button>
-                                                            )}
                                                         </div>
-                                                        {/* Ingreso — siempre visible para poder registrar el retorno */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                        {/* Ingreso */}
+                                                        <div>
                                                             <span className="bit-hora-i">{b.horaI || '—'}</span>
-                                                            <button className="bit-cell-edit-btn"
-                                                                title={b.ingreso ? 'Editar ingreso' : 'Registrar ingreso'}
-                                                                style={!b.ingreso ? { opacity: 0.45 } : undefined}
-                                                                onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
-                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                </svg>
-                                                            </button>
                                                         </div>
                                                         {/* Placa + Tipo */}
                                                         <div>
                                                             <div className="bit-tplaca">{b.placa}</div>
                                                             {b.tipoVehiculo && <div className="bit-ttipo">{b.tipoVehiculo}</div>}
                                                         </div>
-                                                        {/* Conductor + Empresa + Actividad */}
+                                                        {/* Conductor + Empresa */}
                                                         <div style={{ minWidth: 0 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                                                                <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`} style={{ minWidth: 0 }}>
-                                                                    {b.conductorChanged && (
-                                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                    )}
-                                                                    {b.conductor || '—'}
-                                                                </div>
-                                                                <button className="bit-cell-edit-btn" title="Editar conductor / ingreso"
-                                                                    onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
-                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                    </svg>
-                                                                </button>
+                                                            <div className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`} style={{ minWidth: 0 }}>
+                                                                {b.conductorChanged && (
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                )}
+                                                                {b.conductor || '—'}
                                                             </div>
                                                             {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
                                                         </div>
