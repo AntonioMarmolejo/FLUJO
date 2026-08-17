@@ -2173,6 +2173,15 @@
         border-bottom-right-radius: 0;
         padding: 20px 16px;
     }
+    /* Modal de detalle bitácora → siempre centrado */
+    .modal-overlay.bit-det-overlay {
+        align-items: center;
+        padding: 16px;
+    }
+    .modal-overlay.bit-det-overlay .bit-det-card {
+        border-radius: 16px;
+        max-height: 85vh;
+    }
 }
 
 /* ══════════════════════════════════════════════════════════
