@@ -2476,11 +2476,7 @@
     font-style: italic;
 }
 
-<<<<<<< HEAD
-/* ── Responsive: mobile (<600px) → tarjeta de 2 filas, 7 → 3 columnas ── */
-=======
 /* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
->>>>>>> develop
 @media (max-width: 599px) {
     .bit-table-header { display: none; }
     .bit-table { min-width: unset; border-radius: 8px; }
