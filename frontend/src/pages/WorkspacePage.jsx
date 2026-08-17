@@ -1783,7 +1783,7 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                 </div>
             )}
             <div
-                className={`mov-item-inner${isSwiped ? ' mov-item-swiped' : ''}`}
+                className={`mov-item-inner ${m.tipo}${isSwiped ? ' mov-item-swiped' : ''}`}
                 onTouchStart={e => {
                     movSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false };
                 }}
@@ -1825,26 +1825,30 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     <input type="checkbox" className="mov-check" checked={selected}
                         onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                 )}
-                {/* Badge izquierdo: flecha + N° + hora */}
+                {/* Badge izquierdo: N° + hora + botón editar en esquina */}
                 <div className={`mov-icon ${m.tipo}`}>
-                    <span className="mov-icon-arrow">{m.tipo === 'ingreso' ? '↓' : '↑'}</span>
                     <span className="mov-count">{count}</span>
                     <span className="mov-hora-small">{m.hora}</span>
                     {!selectMode && !m._pending && (
                         <button className="mov-hora-edit-btn" title="Editar hora"
-                            onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>✎</button>
+                            onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                            </svg>
+                        </button>
                     )}
                 </div>
-                {/* Sección central: tipo + placa + · + conductor + cédula */}
+                {/* Sección central: tipo · placa · conductor · cédula */}
                 <div className="mov-info">
                     <div className="mov-info-row">
                         <span className={`mov-tipo-tag ${m.tipo}`}>{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                        <span className="mov-dot" />
                         <span className="mov-placa-code">{m.placa}</span>
                         {(m.conductor || m.cedula) && (
                             <>
                                 <span className="mov-dot" />
                                 <span className="mov-conductor-name">{m.conductor || '—'}</span>
-                                {m.cedula && <span className="mov-cedula-tag">{m.cedula}</span>}
+                                {m.cedula && <><span className="mov-dot" /><span className="mov-cedula-tag">{m.cedula}</span></>}
                             </>
                         )}
                     </div>
@@ -5372,11 +5376,17 @@ const WorkspacePage = () => {
                                                             if (!bitMainSwipeRef.current.moved) return;
                                                             const dx = e.changedTouches[0].clientX - bitMainSwipeRef.current.startX;
                                                             if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                            else { if (dx > 55) setSwipedBitMainIdx(i); }
+                                                            else {
+                                                                if (dx > 55) setSwipedBitMainIdx(i);
+                                                                else if (dx < -55) setEditIngresoBit(b);
+                                                            }
                                                         }}
                                                         {...addMouseSwipe(bitMainSwipeRef, dx => {
                                                             if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                            else { if (dx > 55) setSwipedBitMainIdx(i); }
+                                                            else {
+                                                                if (dx > 55) setSwipedBitMainIdx(i);
+                                                                else if (dx < -55) setEditIngresoBit(b);
+                                                            }
                                                         })}
                                                         onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
                                                     >

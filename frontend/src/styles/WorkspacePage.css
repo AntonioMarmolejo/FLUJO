@@ -196,6 +196,7 @@
     padding: 6px 16px 6px 14px;
     background: #17181b;
     border-radius: 10px;
+    border-left: 3px solid transparent;
     position: relative;
     z-index: 1;
     transform: translateX(0);
@@ -203,6 +204,9 @@
     cursor: pointer;
     min-height: 56px;
 }
+/* Acento de color izquierdo según tipo de movimiento */
+.mov-item-inner.ingreso { border-left-color: rgba(91,141,239,0.55); }
+.mov-item-inner.salida  { border-left-color: rgba(240,85,79,0.50); }
 @media (hover: hover) { .mov-item-inner:hover { background: #1c1d21; } }
 .mov-item-inner:active { background: #1e1f23; }
 .mov-item-inner.mov-item-swiped {
@@ -211,7 +215,7 @@
     border-bottom-left-radius: 0;
 }
 
-/* Badge izquierdo: N° + hora + flecha dirección */
+/* Badge izquierdo: N° + hora + botón editar en esquina */
 .mov-icon {
     position: relative;
     display: flex;
@@ -229,18 +233,7 @@
 .mov-icon.ingreso { background: rgba(124,127,242,0.16); }
 .mov-icon.salida  { background: rgba(240,85,79,0.14); }
 
-/* Flecha en la esquina del badge */
-.mov-icon-arrow {
-    position: absolute;
-    top: -7px; right: -6px;
-    font-size: 13px;
-    line-height: 1;
-    pointer-events: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-.mov-icon.ingreso .mov-icon-arrow { color: #a5a8f5; }
-.mov-icon.salida  .mov-icon-arrow { color: #f0847f; }
+/* Dirección: los colores del borde-left ya la comunican */
 
 .mov-count {
     font-size: 14px;
@@ -1172,21 +1165,25 @@
     font-style: italic;
 }
 
-/* Botón editar hora dentro del badge */
+/* Botón editar hora — esquina superior derecha del badge */
 .mov-hora-edit-btn {
+    position: absolute;
+    top: 3px; right: 3px;
     background: none;
     border: none;
-    padding: 0;
-    margin-top: 2px;
+    padding: 2px;
     cursor: pointer;
     color: transparent;
-    font-size: 9px;
     line-height: 1;
-    transition: color 0.15s;
-    display: block;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.mov-icon:hover .mov-hora-edit-btn { color: #555; }
-.mov-hora-edit-btn:hover { color: #999 !important; }
+.mov-icon:hover .mov-hora-edit-btn { color: #7a7a80; }
+.mov-hora-edit-btn:hover { color: #c7c8cc !important; background: rgba(255,255,255,0.08); }
+@media (max-width: 599px) { .mov-hora-edit-btn { color: #4a5060; } }
 
 /* Movimiento pendiente offline */
 .mov-item.mov-pending {
