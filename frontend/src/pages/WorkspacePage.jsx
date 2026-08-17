@@ -1821,7 +1821,9 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     <input type="checkbox" className="mov-check" checked={selected}
                         onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                 )}
+                {/* Badge izquierdo: flecha + N° + hora */}
                 <div className={`mov-icon ${m.tipo}`}>
+                    <span className="mov-icon-arrow">{m.tipo === 'ingreso' ? '↓' : '↑'}</span>
                     <span className="mov-count">{count}</span>
                     <span className="mov-hora-small">{m.hora}</span>
                     {!selectMode && !m._pending && (
@@ -1829,21 +1831,31 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                             onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>✎</button>
                     )}
                 </div>
+                {/* Sección central: tipo + placa + · + conductor + cédula */}
                 <div className="mov-info">
                     <div className="mov-info-row">
-                        <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                        <span className={`mov-tipo-tag ${m.tipo}`}>{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                        <span className="mov-placa-code">{m.placa}</span>
                         {(m.conductor || m.cedula) && (
-                            <span className="mov-persona">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
-                        )}
-                        {(m.empresa || m.destino) && (
-                            <span className="mov-empresa-dest">{[m.empresa, m.destino].filter(Boolean).join(' · ')}</span>
+                            <>
+                                <span className="mov-dot" />
+                                <span className="mov-conductor-name">{m.conductor || '—'}</span>
+                                {m.cedula && <span className="mov-cedula-tag">{m.cedula}</span>}
+                            </>
                         )}
                     </div>
                     {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
                         <span className="mov-actividad">{m.actividad}</span>
                     )}
                 </div>
-                {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" />}
+                {/* Columna derecha: destino + empresa */}
+                {(m.destino || m.empresa) && (
+                    <div className="mov-dest-col">
+                        {m.destino && <span className="mov-dest-name">{m.destino}</span>}
+                        {m.empresa && <span className="mov-dest-terminal">{m.empresa}</span>}
+                    </div>
+                )}
+                {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ gridColumn: '3', justifySelf: 'end' }} />}
             </div>
         </div>
     );

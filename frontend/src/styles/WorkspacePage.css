@@ -181,139 +181,179 @@
     margin-right: 5px;
 }
 
-/* Movimientos */
+/* ── Movimientos ─────────────────────────────────────── */
 .mov-item {
-    background: #1e1e1e;
-    border-radius: 12px;
     position: relative;
     overflow: hidden;
+    border-radius: 10px;
 }
 
 .mov-item-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: 52px minmax(0,1fr) auto;
     align-items: center;
-    gap: 12px;
-    padding: 14px;
+    gap: 16px;
+    padding: 6px 16px 6px 14px;
+    background: #17181b;
+    border-radius: 10px;
     position: relative;
     z-index: 1;
-    background: #1e1e1e;
-    border-radius: 12px;
     transform: translateX(0);
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
+    min-height: 56px;
 }
-.mov-item-inner:active { background: #242424; }
-@media (hover: hover) {
-    .mov-item-inner:hover { cursor: grab; }
-    .mov-item-inner:active { cursor: grabbing; }
-}
+@media (hover: hover) { .mov-item-inner:hover { background: #1c1d21; } }
+.mov-item-inner:active { background: #1e1f23; }
 .mov-item-inner.mov-item-swiped {
     transform: translateX(152px);
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
 
+/* Badge izquierdo: N° + hora + flecha dirección */
 .mov-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    background: #1c1c1f;
+    border-radius: 10px;
+    padding: 6px 0;
+    line-height: 1.15;
     flex-shrink: 0;
+    width: 52px;
+    min-height: 52px;
 }
+.mov-icon.ingreso { background: rgba(124,127,242,0.16); }
+.mov-icon.salida  { background: rgba(240,85,79,0.14); }
 
-.mov-icon.ingreso {
-    background: rgba(129, 140, 248, 0.15);
+/* Flecha en la esquina del badge */
+.mov-icon-arrow {
+    position: absolute;
+    top: -7px; right: -6px;
+    font-size: 13px;
+    line-height: 1;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
-.mov-icon.salida {
-    background: rgba(248, 113, 113, 0.15);
-}
+.mov-icon.ingreso .mov-icon-arrow { color: #a5a8f5; }
+.mov-icon.salida  .mov-icon-arrow { color: #f0847f; }
 
 .mov-count {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    color: #a5b4fc;
+    color: #e6e6e8;
     line-height: 1;
 }
 
 .mov-hora-small {
-    font-size: 13px;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 500;
+    color: #7a7a80;
     line-height: 1;
 }
 
+/* Sección central */
 .mov-info {
-    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    min-width: 0;           /* permite que el texto recorte en flex */
 }
 
-/* Fila principal: en móvil apila, en desktop es horizontal */
+/* Fila principal: tipo + placa + · + conductor + cédula (todo horizontal) */
 .mov-info-row {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+/* Tag tipo INGRESO / SALIDA */
+.mov-tipo-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    flex-shrink: 0;
+}
+.mov-tipo-tag.ingreso { color: #5b8def; }
+.mov-tipo-tag.salida  { color: #f0554f; }
+
+/* Mantener retrocompat. con vistas de archivo */
+.mov-tipo { font-size: 14px; font-weight: 700; }
+.mov-tipo.ingreso { color: #818cf8; }
+.mov-tipo.salida  { color: #f87171; }
+.mov-persona { font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mov-empresa-dest { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Placa / código */
+.mov-placa-code {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f2f2f4;
+    white-space: nowrap;
+}
+
+/* Punto separador */
+.mov-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #54565c;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+/* Conductor */
+.mov-conductor-name {
+    font-size: 13px;
+    color: #d5d6d9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Cédula */
+.mov-cedula-tag {
+    font-size: 12px;
+    color: #7a7a80;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Columna derecha: destino + empresa */
+.mov-dest-col {
+    text-align: right;
     display: flex;
     flex-direction: column;
     gap: 2px;
+    padding-left: 4px;
+    flex-shrink: 0;
+    max-width: 150px;
 }
-
-.mov-tipo {
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.mov-tipo.ingreso {
-    color: #818cf8;
-}
-.mov-tipo.salida {
-    color: #f87171;
-}
-
-/* Conductor · cédula */
-.mov-persona {
-    font-size: 12px;
-    color: #888;
+.mov-dest-name {
+    font-size: 12.5px;
+    color: #c7c8cc;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-/* Empresa · destino */
-.mov-empresa-dest {
+.mov-dest-terminal {
     font-size: 11px;
-    color: #888;
+    color: #7a7a80;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.mov-hora {
-    font-size: 12px;
-    color: #666;
-}
-
-.mov-badge {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: #fff;
-}
-
-.mov-badge.ingreso {
-    background: #818cf8;
-}
-.mov-badge.salida {
-    background: #f87171;
-}
+/* Legacy */
+.mov-hora  { font-size: 12px; color: #666; }
+.mov-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff; }
+.mov-badge.ingreso { background:#818cf8; }
+.mov-badge.salida  { background:#f87171; }
 
 .ws-empty {
     color: #555;
@@ -1123,8 +1163,8 @@
 
 /* Actividad / Observación en tarjeta */
 .mov-actividad {
-    font-size: 11px;
-    color: #5a6472;
+    font-size: 12px;
+    color: #8a8d93;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1132,20 +1172,21 @@
     font-style: italic;
 }
 
-/* Botón editar hora dentro del ícono */
+/* Botón editar hora dentro del badge */
 .mov-hora-edit-btn {
     background: none;
     border: none;
     padding: 0;
-    margin-top: 1px;
+    margin-top: 2px;
     cursor: pointer;
-    color: #3a3a3a;
+    color: transparent;
     font-size: 9px;
     line-height: 1;
     transition: color 0.15s;
     display: block;
 }
-.mov-hora-edit-btn:hover { color: #888; }
+.mov-icon:hover .mov-hora-edit-btn { color: #555; }
+.mov-hora-edit-btn:hover { color: #999 !important; }
 
 /* Movimiento pendiente offline */
 .mov-item.mov-pending {
