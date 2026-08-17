@@ -2410,30 +2410,17 @@
 }
 .bit-status-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 
-<<<<<<< HEAD
-/* ── Botón edición inline en celdas de fila ── */
-=======
 /* ── Botón edición inline en celdas de la fila bitácora ── */
->>>>>>> develop
 .bit-cell-edit-btn {
     background: none; border: none; padding: 2px 3px; cursor: pointer;
     color: #3a3f4a; border-radius: 4px;
     display: inline-flex; align-items: center; justify-content: center;
-<<<<<<< HEAD
-    flex-shrink: 0; opacity: 0; transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
-=======
     flex-shrink: 0; opacity: 0;
     transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
->>>>>>> develop
     line-height: 1;
 }
 .bit-row:hover .bit-cell-edit-btn { opacity: 1; }
 .bit-cell-edit-btn:hover { color: #818cf8; background: rgba(129,140,248,0.12); }
-<<<<<<< HEAD
-/* En mobile siempre visible (no hay hover) */
-@media (max-width: 599px) { .bit-cell-edit-btn { opacity: 1; color: #4a5060; } }
-
-=======
 @media (max-width: 599px) { .bit-cell-edit-btn { opacity: 1; color: #4a5060; } }
 
 /* Texto de actividad/obs en la fila */
@@ -2443,7 +2430,6 @@
     font-style: italic;
 }
 
->>>>>>> develop
 /* ── Responsive: mobile (<600px) → layout de tarjeta 2 filas ── */
 @media (max-width: 599px) {
     .bit-table-header { display: none; }

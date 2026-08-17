@@ -1383,15 +1383,17 @@ const ModalEditHora = ({ mov, onClose, onSave }) => {
 };
 
 // ── Modal registrar / editar ingreso desde bitácora ──────
-const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
+const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, onGuardar }) => {
     const isNew = !b.ingreso;
     const [hora, setHora]           = useState(() => b.horaI && b.horaI !== '—' ? b.horaI : getHoraLocal());
     const [conductor, setConductor] = useState(b.ingreso?.conductor || b.salida?.conductor || '');
     const [cedula, setCedula]       = useState(b.ingreso?.cedula    || b.salida?.cedula    || '');
     const [actividad, setActividad] = useState(b.ingreso?.actividad || '');
+    const [destino,   setDestino]   = useState(b.ingreso?.destino   || ubiIngreso);
     const [conductorSugs, setConductorSugs] = useState([]);
     const [cedulaSugs,    setCedulaSugs]    = useState([]);
     const [actividadSugs, setActividadSugs] = useState([]);
+    const [destinoSugs,   setDestinoSugs]   = useState([]);
     const [personaNotFound, setPersonaNotFound] = useState(false);
     const conductorTimer = useRef(null);
     const cedulaTimer    = useRef(null);
@@ -1453,7 +1455,7 @@ const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
         if (personaNotFound && cedula) {
             api.post('/personas', { nombres: conductor, cedula, empresa: b.empresa || '' }).catch(() => {});
         }
-        onGuardar({ b, hora, conductor: conductor.trim(), cedula: cedula.trim(), actividad: actividad.trim() });
+        onGuardar({ b, hora, conductor: conductor.trim(), cedula: cedula.trim(), actividad: actividad.trim(), destino: destino.trim() });
     };
 
     const fld = {
@@ -1546,7 +1548,8 @@ const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
                     <div style={{ position: 'relative' }}>
                         <LBL t="Conductor de retorno" />
                         <input type="text" placeholder="Nombre del conductor..." value={conductor}
-                            onChange={e => handleConductorChange(e.target.value)} style={fld} />
+                            onChange={e => handleConductorChange(e.target.value)}
+                            onBlur={() => setTimeout(() => setConductorSugs([]), 150)} style={fld} />
                         <PersonaSugList items={conductorSugs} />
                     </div>
 
@@ -1554,7 +1557,8 @@ const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
                     <div style={{ position: 'relative' }}>
                         <LBL t="Cédula" />
                         <input type="text" placeholder="Nro. de cédula..." value={cedula}
-                            onChange={e => handleCedulaChange(e.target.value)} style={fld} />
+                            onChange={e => handleCedulaChange(e.target.value)}
+                            onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} style={fld} />
                         <PersonaSugList items={cedulaSugs} />
                         {personaNotFound && cedula.length >= 3 && (
                             <div style={{ marginTop: 5, fontSize: 11, color: '#e0a83e' }}>
@@ -1568,8 +1572,19 @@ const ModalRegistrarIngreso = ({ b, movimientos, onClose, onGuardar }) => {
                         <LBL t="Actividad / Observación" />
                         <input type="text" placeholder="Descripción de la actividad..." value={actividad}
                             onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
+                            onBlur={() => setTimeout(() => setActividadSugs([]), 150)}
                             style={fld} />
                         <StrSugList items={actividadSugs} onSel={s => { setActividad(s); setActividadSugs([]); }} />
+                    </div>
+
+                    {/* Destino */}
+                    <div style={{ position: 'relative' }}>
+                        <LBL t="Destino" />
+                        <input type="text" placeholder="Área o lugar..." value={destino}
+                            onChange={e => { setDestino(e.target.value); setDestinoSugs(e.target.value.length >= 1 ? recentUniq('destino', e.target.value) : []); }}
+                            onBlur={() => setTimeout(() => setDestinoSugs([]), 150)}
+                            style={fld} />
+                        <StrSugList items={destinoSugs} onSel={s => { setDestino(s); setDestinoSugs([]); }} />
                     </div>
 
                     {/* Botón guardar */}
@@ -2632,6 +2647,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const [bitDetailIdx, setBitDetailIdx] = useState(null);
     const [sortDesc, setSortDesc] = useState(true);
     const [swipedBitIdx, setSwipedBitIdx] = useState(null);
+    const [editIngresoBit, setEditIngresoBit] = useState(null);
     const bitSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
 
     const bitacora = useMemo(() => {
@@ -2931,11 +2947,17 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                         if (!bitSwipeRef.current.moved) return;
                                                         const dx = e.changedTouches[0].clientX - bitSwipeRef.current.startX;
                                                         if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
-                                                        else { if (dx > 55) setSwipedBitIdx(i); }
+                                                        else {
+                                                            if (dx > 55) setSwipedBitIdx(i);
+                                                            else if (dx < -55) setEditIngresoBit(b);
+                                                        }
                                                     }}
                                                     {...addMouseSwipe(bitSwipeRef, dx => {
                                                         if (isSwiped) { if (dx < -30) setSwipedBitIdx(null); }
-                                                        else { if (dx > 55) setSwipedBitIdx(i); }
+                                                        else {
+                                                            if (dx > 55) setSwipedBitIdx(i);
+                                                            else if (dx < -55) setEditIngresoBit(b);
+                                                        }
                                                     })}
                                                     onClick={() => { if (bitSwipeRef.current?.didDrag) { bitSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
                                                 >
@@ -4993,13 +5015,13 @@ const WorkspacePage = () => {
     };
 
     // Registrar / editar ingreso directo desde la bitácora
-    const handleGuardarIngreso = async ({ b, hora, conductor, cedula, actividad }) => {
+    const handleGuardarIngreso = async ({ b, hora, conductor, cedula, actividad, destino }) => {
         setEditIngresoBit(null);
         if (b.ingreso) {
             // Actualizar ingreso existente — optimista
-            const updated = { ...b.ingreso, hora, conductor, cedula, actividad };
+            const updated = { ...b.ingreso, hora, conductor, cedula, actividad, destino };
             setMovimientos(prev => prev.map(m => m._id === b.ingreso._id ? updated : m));
-            api.put(`/movimientos/${b.ingreso._id}`, { hora, conductor, cedula, actividad }).catch(() => cargarDatos());
+            api.put(`/movimientos/${b.ingreso._id}`, { hora, conductor, cedula, actividad, destino }).catch(() => cargarDatos());
         } else {
             // Crear nuevo movimiento de ingreso
             const tempId = crypto.randomUUID();
@@ -5016,6 +5038,7 @@ const WorkspacePage = () => {
                 conductor: conductor || b.salida?.conductor || '',
                 cedula: cedula || b.salida?.cedula || '',
                 actividad,
+                destino,
                 fecha: fechaFlujo,
                 hora,
                 clientUUID: tempId,
@@ -5347,19 +5370,6 @@ const WorkspacePage = () => {
                                                                 </button>
                                                             )}
                                                         </div>
-<<<<<<< HEAD
-                                                        {/* Ingreso */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
-                                                            {b.ingreso && (
-                                                                <button className="bit-cell-edit-btn" title="Editar hora ingreso"
-                                                                    onClick={e => { e.stopPropagation(); setEditHoraMov(b.ingreso); }}>
-                                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                    </svg>
-                                                                </button>
-                                                            )}
-=======
                                                         {/* Ingreso — siempre visible para poder registrar el retorno */}
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                                             <span className="bit-hora-i">{b.horaI || '—'}</span>
@@ -5371,7 +5381,6 @@ const WorkspacePage = () => {
                                                                     <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                                                                 </svg>
                                                             </button>
->>>>>>> develop
                                                         </div>
                                                         {/* Placa + Tipo */}
                                                         <div>
@@ -5387,23 +5396,12 @@ const WorkspacePage = () => {
                                                                     )}
                                                                     {b.conductor || '—'}
                                                                 </div>
-<<<<<<< HEAD
-                                                                {(b.salida || b.ingreso) && (
-                                                                    <button className="bit-cell-edit-btn" title="Editar conductor"
-                                                                        onClick={e => { e.stopPropagation(); handleEdit(b.salida || b.ingreso); }}>
-                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                                                        </svg>
-                                                                    </button>
-                                                                )}
-=======
                                                                 <button className="bit-cell-edit-btn" title="Editar conductor / ingreso"
                                                                     onClick={e => { e.stopPropagation(); setEditIngresoBit(b); }}>
                                                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                                                         <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                                                                     </svg>
                                                                 </button>
->>>>>>> develop
                                                             </div>
                                                             {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
                                                             {b.actividad && <div className="bit-tactividad">{b.actividad}</div>}
@@ -5809,6 +5807,7 @@ const WorkspacePage = () => {
                 <ModalRegistrarIngreso
                     b={editIngresoBit}
                     movimientos={movimientos}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo?.puesto] || 'EPF'}
                     onClose={() => setEditIngresoBit(null)}
                     onGuardar={handleGuardarIngreso}
                 />
