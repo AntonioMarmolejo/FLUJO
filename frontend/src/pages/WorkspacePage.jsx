@@ -270,7 +270,7 @@ const generarNarrativa = (mov, cfg = {}) => {
     const conPlaca    = cfg.conPlaca     || 'de Placas';
     const conVehiculo = cfg.conVehiculo  || `conduciendo ${articuloVehiculo(tipoVehiculo)}`;
     const titulo      = genero === 'f' ? titMujer : titHombre;
-    const accion      = tipo === 'ingreso' ? `${conIngreso} ${ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
+    const accion      = tipo === 'ingreso' ? `${conIngreso} ${destino || ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
     const descripcion = (!actividad || /^vac[ií]o$/i.test(actividad.trim())) ? 'vacía' : actividad.trim();
     return `${hora} ${accion} ${titulo} ${conductor || '—'} ${conCedula} ${cedula || '—'} ${conEmpresa} ${empresa || '—'} ${conVehiculo} ${tipoVehiculo || 'vehículo'} ${conPlaca} ${placa} ${descripcion}`;
 };
