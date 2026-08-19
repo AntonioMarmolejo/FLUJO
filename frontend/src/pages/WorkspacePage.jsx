@@ -270,7 +270,7 @@ const generarNarrativa = (mov, cfg = {}) => {
     const conPlaca    = cfg.conPlaca     || 'de Placas';
     const conVehiculo = cfg.conVehiculo  || `conduciendo ${articuloVehiculo(tipoVehiculo)}`;
     const titulo      = genero === 'f' ? titMujer : titHombre;
-    const accion      = tipo === 'ingreso' ? `${conIngreso} ${destino || ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
+    const accion      = tipo === 'ingreso' ? `${conIngreso} ${ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
     const descripcion = (!actividad || /^vac[ií]o$/i.test(actividad.trim())) ? 'vacía' : actividad.trim();
     return `${hora} ${accion} ${titulo} ${conductor || '—'} ${conCedula} ${cedula || '—'} ${conEmpresa} ${empresa || '—'} ${conVehiculo} ${tipoVehiculo || 'vehículo'} ${conPlaca} ${placa} ${descripcion}`;
 };
@@ -1772,6 +1772,7 @@ const addMouseSwipe = (ref, onDragEnd) => ({
 // ── Tarjeta de movimiento ─────────────────────────────────
 const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora, onGoToReg }) => {
     const isSwiped = swipedMovId === m._id;
+    const [collapsed, setCollapsed] = useState(false);
     return (
         <div className={`mov-item${selected ? ' mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`} data-movid={m._id}>
             {!selectMode && !m._pending && (
@@ -1821,14 +1822,13 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     selectMode ? onToggleSelect(m._id) : onOpenDetail(m);
                 }}
             >
-                {/* Card body: badge izquierdo + info derecha */}
                 <div className="mov-card-body">
                     {selectMode && (
                         <input type="checkbox" className="mov-check" checked={selected}
                             onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                     )}
-                    {/* Badge: N° + hora + botón editar en esquina */}
-                    <div className={`mov-icon ${m.tipo}`}>
+                    {/* Badge izquierdo */}
+                    <div className={`mov-icon ${m.tipo}${collapsed ? ' mov-icon-sm' : ''}`}>
                         {!selectMode && !m._pending && (
                             <button className="mov-hora-edit-btn" title="Editar hora"
                                 onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>
@@ -1837,30 +1837,45 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                                 </svg>
                             </button>
                         )}
-                        <span className="mov-count">{count}</span>
+                        {!collapsed && <span className="mov-count">{count}</span>}
                         <span className="mov-hora-small">{m.hora}</span>
                     </div>
-                    {/* Info: fila 1 TIPO·PLACA·EMPRESA / fila 2 conductor + destino */}
+                    {/* Info central */}
                     <div className="mov-info">
-                        <div className={`mov-info-r1 ${m.tipo}`}>
-                            <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
-                            {' · '}
-                            <span className="mov-placa-code">{m.placa}</span>
-                            {m.empresa && <>{' · '}<span className="mov-empresa-r1">{m.empresa}</span></>}
-                        </div>
-                        <div className="mov-info-r2">
-                            <span className="mov-conductor-ci">
-                                {m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}
-                            </span>
-                            {m.destino && <span className="mov-destino-r2">{m.destino.toUpperCase()}</span>}
-                        </div>
+                        {collapsed ? (
+                            <div className={`mov-info-r1 ${m.tipo}`}>
+                                <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                                {' · '}
+                                <span className="mov-placa-code">{m.placa}</span>
+                                {(m.conductor || m.cedula) && (
+                                    <>{' · '}<span className="mov-coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
+                                )}
+                            </div>
+                        ) : (
+                            <>
+                                <div className={`mov-info-r1 ${m.tipo}`}>
+                                    <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                                    {' · '}
+                                    <span className="mov-placa-code">{m.placa}</span>
+                                    {m.empresa && <>{' · '}<span className="mov-empresa-r1">{m.empresa}</span></>}
+                                </div>
+                                <div className="mov-info-r2">
+                                    <span className="mov-conductor-ci">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span>
+                                    {m.destino && <span className="mov-destino-r2">{m.destino.toUpperCase()}</span>}
+                                </div>
+                            </>
+                        )}
                     </div>
-                    {m._pending && (
-                        <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ marginLeft: 'auto', alignSelf: 'center' }} />
-                    )}
+                    {/* Chevron */}
+                    <button className="mov-chevron-btn" onClick={e => { e.stopPropagation(); setCollapsed(c => !c); }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                             style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </button>
+                    {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ marginLeft: 'auto', alignSelf: 'center' }} />}
                 </div>
-                {/* Actividad — debajo del body */}
-                {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
+                {!collapsed && m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
                     <div className="mov-actividad">{m.actividad}</div>
                 )}
             </div>
@@ -2691,9 +2706,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
                         marca: sal.marca || mov.marca, empresa: sal.empresa || mov.empresa,
                         tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
-                        destino: sal.destino || mov.destino,
-                        actividad: mov.actividad || sal.actividad || '',
-                        status: 'completo',
+                        destino: sal.destino || mov.destino, status: 'completo',
                     });
                 } else {
                     pairs.push({
@@ -2701,9 +2714,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         horaS: '—', horaI: mov.hora,
                         conductor: mov.conductor || '—', conductorChanged: false,
                         marca: mov.marca, empresa: mov.empresa,
-                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
-                        actividad: mov.actividad || '',
-                        status: 'solo-ingreso',
+                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino, status: 'solo-ingreso',
                     });
                 }
             }
@@ -2715,9 +2726,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                     horaS: s.hora, horaI: '—',
                     conductor: s.conductor || '—', conductorChanged: false,
                     marca: s.marca, empresa: s.empresa,
-                    tipoVehiculo: s.tipoVehiculo, destino: s.destino,
-                    actividad: s.actividad || '',
-                    status: 'en-campo',
+                    tipoVehiculo: s.tipoVehiculo, destino: s.destino, status: 'en-campo',
                 });
             }
         }
@@ -2937,7 +2946,6 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                     <div className="bit-hcell">Ingreso</div>
                                     <div className="bit-hcell">Placa</div>
                                     <div className="bit-hcell">Conductor / Empresa</div>
-                                    <div className="bit-hcell">Actividad / Observación</div>
                                     <div className="bit-hcell" style={{ textAlign: 'right' }}>Estado</div>
                                 </div>
                                 <div className="bit-list">
@@ -3008,11 +3016,12 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                         </div>
                                                         {b.empresa && <div className="bit-tempresa">{b.empresa}</div>}
                                                     </div>
-                                                    {/* Actividad / Observación */}
-                                                    <div className="bit-tobservacion">{b.actividad || ''}</div>
-                                                    {/* Estado — punto de color */}
+                                                    {/* Estado */}
                                                     <div className="bit-tcell-estado">
-                                                        <div className="bit-status-dot" style={{ background: st.color }} title={st.label} />
+                                                        <div className="bit-status-pill" style={{ background: st.bg, color: st.color }}>
+                                                            <div className="bit-status-dot" style={{ background: st.color }} />
+                                                            {st.label}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -4737,6 +4746,8 @@ const WorkspacePage = () => {
     const regSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
     const [swipedBitMainIdx, setSwipedBitMainIdx] = useState(null);
     const bitMainSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
+    const [collapsedBitSet, setCollapsedBitSet] = useState(new Set());
+    const toggleBitCollapse = i => setCollapsedBitSet(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
     const [movSort, setMovSort] = useState('desc');
     const [regSort, setRegSort] = useState('asc');
     const [detailMovIdx, setDetailMovIdx] = useState(null);
@@ -5320,89 +5331,97 @@ const WorkspacePage = () => {
                             ) : bitacoraFiltrada.length === 0 ? (
                                 <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
                             ) : (
-                                <div className="bit-table-scroll">
-                                    <div className="bit-table">
-                                        <div className="bit-list">
-                                            {bitacoraFiltrada.map((b, i) => {
-                                                const bText = [
-                                                    `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
-                                                    `Estado: ${b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}`,
-                                                    `Conductor: ${b.conductor}`,
-                                                    b.empresa && `Empresa: ${b.empresa}`,
-                                                    b.destino && `Destino: ${b.destino}`,
-                                                    `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
-                                                ].filter(Boolean).join('\n');
-                                                const isSwiped = swipedBitMainIdx === i;
-                                                return (
-                                                <div key={i} className="bit-item">
-                                                    <div className="bit-actions" onClick={e => e.stopPropagation()}>
-                                                        <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconCopy /></button>
-                                                        <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconShare /></button>
-                                                        <button className="bit-act-btn" title="Editar" onClick={() => { setBitDetailIdx(i); setSwipedBitMainIdx(null); }}>
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                        </button>
-                                                        <button className="bit-act-btn danger" title="Eliminar" onClick={() => { handleDeleteBitPair(b, i); setSwipedBitMainIdx(null); }}><IconMinus /></button>
+                                <div className="bit-list-wrap">
+                                    {bitacoraFiltrada.map((b, i) => {
+                                        const bText = [
+                                            `Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`,
+                                            `Conductor: ${b.conductor}`,
+                                            b.destino && `Destino: ${b.destino}`,
+                                            `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
+                                        ].filter(Boolean).join('\n');
+                                        const isSwiped = swipedBitMainIdx === i;
+                                        const isCollapsed = collapsedBitSet.has(i);
+                                        return (
+                                        <div key={i} className="bit-item">
+                                            <div className="bit-actions" onClick={e => e.stopPropagation()}>
+                                                <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconCopy /></button>
+                                                <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitMainIdx(null); }}><IconShare /></button>
+                                                <button className="bit-act-btn" title="Editar" onClick={() => { setBitDetailIdx(i); setSwipedBitMainIdx(null); }}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                                <button className="bit-act-btn danger" title="Eliminar" onClick={() => { handleDeleteBitPair(b, i); setSwipedBitMainIdx(null); }}><IconMinus /></button>
+                                            </div>
+                                            <div
+                                                className={`bit-card bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
+                                                onTouchStart={e => { bitMainSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
+                                                onTouchMove={e => {
+                                                    const dx = e.touches[0].clientX - bitMainSwipeRef.current.startX;
+                                                    const dy = e.touches[0].clientY - bitMainSwipeRef.current.startY;
+                                                    if (!bitMainSwipeRef.current.moved && !bitMainSwipeRef.current.vertScroll) {
+                                                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                                                        if (Math.abs(dy) > Math.abs(dx)) { bitMainSwipeRef.current.vertScroll = true; return; }
+                                                        bitMainSwipeRef.current.moved = true;
+                                                    }
+                                                    if (bitMainSwipeRef.current.moved) e.preventDefault();
+                                                }}
+                                                onTouchEnd={e => {
+                                                    if (!bitMainSwipeRef.current.moved) return;
+                                                    const dx = e.changedTouches[0].clientX - bitMainSwipeRef.current.startX;
+                                                    if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
+                                                    else {
+                                                        if (dx > 55) setSwipedBitMainIdx(i);
+                                                        else if (dx < -55) setEditIngresoBit(b);
+                                                    }
+                                                }}
+                                                {...addMouseSwipe(bitMainSwipeRef, dx => {
+                                                    if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
+                                                    else {
+                                                        if (dx > 55) setSwipedBitMainIdx(i);
+                                                        else if (dx < -55) setEditIngresoBit(b);
+                                                    }
+                                                })}
+                                                onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
+                                            >
+                                                {/* Fila 1: horas + placa | tipo vehículo + chevron */}
+                                                <div className="bit-card-r1">
+                                                    <div className="bit-card-horas">
+                                                        <span className="bit-card-hora-grp">
+                                                            {!isCollapsed && <span className="bit-card-hora-lbl">INGRESO</span>}
+                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
+                                                        </span>
+                                                        <span className="bit-card-sep"> — </span>
+                                                        <span className="bit-card-hora-grp">
+                                                            {!isCollapsed && <span className="bit-card-hora-lbl">SALIDA</span>}
+                                                            <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                        </span>
+                                                        <span className="bit-card-sep"> · </span>
+                                                        <span className="bit-card-placa">{b.placa}</span>
                                                     </div>
-                                                    <div
-                                                        className={`bit-card bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
-                                                        onTouchStart={e => { bitMainSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
-                                                        onTouchMove={e => {
-                                                            const dx = e.touches[0].clientX - bitMainSwipeRef.current.startX;
-                                                            const dy = e.touches[0].clientY - bitMainSwipeRef.current.startY;
-                                                            if (!bitMainSwipeRef.current.moved && !bitMainSwipeRef.current.vertScroll) {
-                                                                if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-                                                                if (Math.abs(dy) > Math.abs(dx)) { bitMainSwipeRef.current.vertScroll = true; return; }
-                                                                bitMainSwipeRef.current.moved = true;
-                                                            }
-                                                            if (bitMainSwipeRef.current.moved) e.preventDefault();
-                                                        }}
-                                                        onTouchEnd={e => {
-                                                            if (!bitMainSwipeRef.current.moved) return;
-                                                            const dx = e.changedTouches[0].clientX - bitMainSwipeRef.current.startX;
-                                                            if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                            else {
-                                                                if (dx > 55) setSwipedBitMainIdx(i);
-                                                                else if (dx < -55) setEditIngresoBit(b);
-                                                            }
-                                                        }}
-                                                        {...addMouseSwipe(bitMainSwipeRef, dx => {
-                                                            if (isSwiped) { if (dx < -30) setSwipedBitMainIdx(null); }
-                                                            else {
-                                                                if (dx > 55) setSwipedBitMainIdx(i);
-                                                                else if (dx < -55) setEditIngresoBit(b);
-                                                            }
-                                                        })}
-                                                        onClick={() => { if (bitMainSwipeRef.current?.didDrag) { bitMainSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitMainIdx(null); return; } setBitDetailIdx(i); }}
-                                                    >
-                                                        {/* Fila 1: horas · placa | tipo vehículo */}
-                                                        <div className="bit-card-r1">
-                                                            <div className="bit-card-horas">
-                                                                <span className="bit-hora-s">{b.horaS || '—'}</span>
-                                                                <span className="bit-card-sep"> — </span>
-                                                                <span className="bit-hora-i">{b.horaI || '—'}</span>
-                                                                <span className="bit-card-sep"> · </span>
-                                                                <span className="bit-tplaca">{b.placa}</span>
-                                                            </div>
-                                                            {b.tipoVehiculo && <span className="bit-ttipo">{b.tipoVehiculo.toUpperCase()}</span>}
-                                                        </div>
-                                                        {/* Fila 2: conductor | destino/empresa */}
-                                                        <div className="bit-card-r2">
-                                                            <span className={`bit-tconductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                                {b.conductorChanged && (
-                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                                )}
-                                                                {b.conductor || '—'}
-                                                            </span>
-                                                            {(b.destino || b.empresa) && (
-                                                                <span className="bit-card-dest">{b.destino || b.empresa}</span>
-                                                            )}
-                                                        </div>
+                                                    <div className="bit-card-r1-right">
+                                                        {b.tipoVehiculo && <span className="bit-card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
+                                                        <button className="bit-chevron-btn" onClick={e => { e.stopPropagation(); toggleBitCollapse(i); }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                                                                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            </svg>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                );
-                                            })}
+                                                {/* Fila 2: conductor | destino — solo expandida */}
+                                                {!isCollapsed && (
+                                                    <div className="bit-card-r2">
+                                                        <span className={`bit-card-conductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                            {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                                            {b.conductor || '—'}
+                                                        </span>
+                                                        {(b.destino || b.empresa) && (
+                                                            <span className="bit-card-dest">{b.destino || b.empresa}</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

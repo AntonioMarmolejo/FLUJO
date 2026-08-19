@@ -44,7 +44,7 @@
 .ws-body {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 16px 100px;
+    padding: 12px 0px 100px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -83,10 +83,10 @@
 }
 
 .ws-section-content {
-    padding: 0 16px 16px;
+    padding: 0 8px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
 }
 
 /* Contadores */
@@ -182,11 +182,7 @@
 }
 
 /* ── Movimientos ─────────────────────────────────────── */
-.mov-item {
-    position: relative;
-    overflow: hidden;
-    border-radius: 14px;
-}
+.mov-item { position: relative; overflow: hidden; border-radius: 14px; }
 
 .mov-item-inner {
     display: flex;
@@ -207,11 +203,10 @@
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
-/* Acento de color izquierdo según tipo */
 .mov-item-inner.ingreso { border-left-color: rgba(91,141,239,0.55); }
 .mov-item-inner.salida  { border-left-color: rgba(239,106,106,0.50); }
 
-/* Body: badge + info en fila horizontal */
+/* Fila interna: badge + info + chevron */
 .mov-card-body {
     display: flex;
     align-items: center;
@@ -219,7 +214,7 @@
     padding: 12px;
 }
 
-/* Badge izquierdo: N° + hora + botón editar en esquina */
+/* Badge izquierdo */
 .mov-icon {
     width: 42px;
     min-width: 42px;
@@ -232,10 +227,16 @@
     justify-content: center;
     gap: 2px;
     flex-shrink: 0;
-    margin-top: -4px;
 }
 .mov-icon.ingreso { background: rgba(91,141,239,0.14); color: #5b8def; }
 .mov-icon.salida  { background: rgba(239,106,106,0.14); color: #ef6a6a; }
+
+/* Badge colapsado: solo la hora, más compacto */
+.mov-icon.mov-icon-sm {
+    height: 20px;
+    min-height: 20px;
+    gap: 0;
+}
 
 .mov-count {
     font-size: 10px;
@@ -243,7 +244,6 @@
     color: inherit;
     line-height: 1;
 }
-
 .mov-hora-small {
     font-size: 11px;
     font-weight: 800;
@@ -252,27 +252,22 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Botón editar hora — esquina superior derecha del badge */
+/* Botón lápiz para editar hora (en el badge) */
 .mov-hora-edit-btn {
     position: absolute;
     top: 3px; right: 3px;
-    background: none;
-    border: none;
-    padding: 2px;
-    cursor: pointer;
+    background: none; border: none;
+    padding: 2px; cursor: pointer;
     color: transparent;
-    line-height: 1;
-    border-radius: 4px;
+    line-height: 1; border-radius: 4px;
     transition: color 0.15s, background 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
 }
 .mov-icon:hover .mov-hora-edit-btn { color: currentColor; opacity: 0.65; }
 .mov-hora-edit-btn:hover { opacity: 1 !important; }
 @media (max-width: 599px) { .mov-hora-edit-btn { color: currentColor; opacity: 0.45; } }
 
-/* Sección de info */
+/* Sección central */
 .mov-info {
     flex: 1;
     min-width: 0;
@@ -281,7 +276,7 @@
     gap: 4px;
 }
 
-/* Fila 1: TIPO · PLACA · EMPRESA (todo en el color del tipo) */
+/* Fila 1: TIPO · PLACA · EMPRESA */
 .mov-info-r1 {
     font-size: 9px;
     font-weight: 800;
@@ -294,13 +289,19 @@
 }
 .mov-info-r1.ingreso { color: #5b8def; }
 .mov-info-r1.salida  { color: #ef6a6a; }
-
-/* Placa y empresa en blanco dentro de la fila 1 */
 .mov-placa-code  { color: #f2f4f7; font-size: inherit; font-weight: 800; }
 .mov-empresa-r1  { color: #f2f4f7; font-size: inherit; font-weight: 800; }
 .mov-tipo-tag    { font-size: inherit; font-weight: inherit; color: inherit; }
 
-/* Fila 2: conductor/CI a la izquierda, destino a la derecha */
+/* Conductor colapsado (gris, sin uppercase) */
+.mov-coll-conductor {
+    color: #c7ccd4;
+    font-weight: 500;
+    text-transform: none;
+    font-size: inherit;
+}
+
+/* Fila 2: conductor/CI + destino */
 .mov-info-r2 {
     display: flex;
     align-items: baseline;
@@ -325,14 +326,25 @@
     flex-shrink: 0;
 }
 
-/* Actividad — debajo del body, alineada con la info */
+/* Actividad debajo del body */
 .mov-actividad {
     color: #8b93a1;
     font-size: 10px;
     font-style: italic;
     line-height: 1.4;
-    padding: 0 12px 10px 66px; /* indent = badge(42) + gap(12) + left-pad(12) */
+    padding: 0 12px 10px 66px;
 }
+
+/* Chevron de colapso */
+.mov-chevron-btn {
+    background: none; border: none;
+    padding: 2px; cursor: pointer;
+    color: #7d8794; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px; transition: color 0.15s;
+    align-self: flex-start; margin-top: 2px;
+}
+.mov-chevron-btn:hover { color: #c7ccd4; }
 
 /* Legacy compat */
 .mov-tipo { font-size: 14px; font-weight: 700; }
@@ -1162,25 +1174,21 @@
     font-style: italic;
 }
 
-/* Botón editar hora — esquina superior derecha del badge */
+/* Botón editar hora dentro del badge */
 .mov-hora-edit-btn {
-    position: absolute;
-    top: 3px; right: 3px;
     background: none;
     border: none;
-    padding: 2px;
+    padding: 0;
+    margin-top: 2px;
     cursor: pointer;
     color: transparent;
+    font-size: 9px;
     line-height: 1;
-    border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transition: color 0.15s;
+    display: block;
 }
-.mov-icon:hover .mov-hora-edit-btn { color: #7a7a80; }
-.mov-hora-edit-btn:hover { color: #c7c8cc !important; background: rgba(255,255,255,0.08); }
-@media (max-width: 599px) { .mov-hora-edit-btn { color: #4a5060; } }
+.mov-icon:hover .mov-hora-edit-btn { color: #555; }
+.mov-hora-edit-btn:hover { color: #999 !important; }
 
 /* Movimiento pendiente offline */
 .mov-item.mov-pending {
@@ -2209,41 +2217,6 @@
     .col-xs-hide { display: table-cell; }
     .personas-td-name { max-width: 200px; }
 
-    /* ── Tarjeta movimiento: layout horizontal en una fila ── */
-    .mov-info-row {
-        flex-direction: row;
-        align-items: baseline;
-        gap: 0;
-        overflow: hidden;
-    }
-    /* tipo·placa nunca se encoge */
-    .mov-info-row .mov-tipo {
-        flex-shrink: 0;
-        white-space: nowrap;
-    }
-    /* conductor·cédula: separado con — y ocupa el espacio sobrante */
-    .mov-persona {
-        flex: 1;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .mov-persona::before {
-        content: " — ";
-        color: #444;
-    }
-    /* empresa·destino: a la derecha, nunca se encoge */
-    .mov-empresa-dest {
-        flex-shrink: 0;
-        margin-left: 12px;
-        font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 35%;     /* límite para que no aplaste el centro */
-        text-align: right;
-    }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2315,7 +2288,7 @@
 
 /* ── Bitácora ───────────────────────────────────────────── */
 .ws-bitacora {
-    padding: 12px 16px 100px;
+    padding: 12px 3px 100px;
 }
 .bit-toolbar {
     display: flex;
@@ -2350,43 +2323,17 @@
 .bit-export-btn:hover { background: rgba(74,222,128,0.18); }
 .bit-export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── Bitácora: tabla ─────────────────────────────────────── */
+/* ── Bitácora: cards ─────────────────────────────────────── */
 
-/* Scroll horizontal en pantallas pequeñas */
-.bit-table-scroll {
-    overflow-x: auto;
+/* Lista de cards */
+.bit-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0 8px;
 }
 
-/* Contenedor principal de la tabla */
-.bit-table {
-    border: 1px solid #1c202a;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #0d1016;
-    min-width: 820px;
-}
-
-/* Cabecera de columnas — 7 columnas */
-.bit-table-header {
-    display: grid;
-    grid-template-columns: 64px 96px 96px 130px 1fr 1fr 130px;
-    align-items: center;
-    padding: 8px 16px;
-    background: #10131a;
-    border-bottom: 1px solid #1c202a;
-}
-.bit-hcell {
-    color: #5a6070;
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-}
-
-/* Lista de filas — gap visual entre cards */
-.bit-list { display: flex; flex-direction: column; padding: 6px 8px; gap: 3px; }
-
-/* Contenedor de fila con soporte de swipe — clipa al border-radius del card */
+/* Contenedor de card con soporte de swipe */
 .bit-item {
     position: relative;
     overflow: hidden;
@@ -2408,7 +2355,7 @@
     z-index: 0;
 }
 
-/* ── Card de bitácora ── */
+/* Card principal */
 .bit-card {
     background: #161b23;
     border-radius: 14px;
@@ -2423,54 +2370,98 @@
     transition: transform 0.25s ease, background 0.15s ease;
     cursor: pointer;
 }
-.bit-card:hover       { background: #1b2030; }
-.bit-card.bit-row-swiped { transform: translateX(180px); }
+@media (hover: hover) { .bit-card:hover { background: #1b2030; } }
+.bit-card:active { background: #1d2235; }
+.bit-card.bit-row-swiped { transform: translateX(180px); border-top-left-radius: 0; border-bottom-left-radius: 0; }
 
-/* Acento de color izquierdo según estado */
+/* Borde izquierdo según estado */
 .bit-card.bit-completo     { border-left-color: #3ecf8e; }
 .bit-card.bit-en-campo     { border-left-color: #e0a83e; }
 .bit-card.bit-solo-ingreso { border-left-color: #818cf8; }
 
-/* Fila 1: horas + placa | tipo vehículo */
+/* Fila 1: horas + placa | tipo vehículo + chevron */
 .bit-card-r1 {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
 }
-
-/* Bloque de horas — hereda el color del estado */
 .bit-card-horas {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+.bit-card-hora-grp {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+.bit-card-hora-lbl {
+    color: #8b93a1;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+.bit-card-sep {
+    opacity: 0.45;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.bit-card-placa {
+    color: #f2f4f7;
     font-size: 11px;
     font-weight: 800;
-    letter-spacing: -0.01em;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
+    flex-shrink: 0;
 }
-.bit-card.bit-completo     .bit-card-horas { color: #3ecf8e; }
-.bit-card.bit-en-campo     .bit-card-horas { color: #e0a83e; }
-.bit-card.bit-solo-ingreso .bit-card-horas { color: #818cf8; }
-
-/* Overrides de color dentro del bloque de horas */
-.bit-card .bit-hora-s,
-.bit-card .bit-hora-i { color: inherit; font-size: inherit; font-weight: inherit; font-variant-numeric: tabular-nums; }
-.bit-card-sep { opacity: 0.55; }
-
-/* Placa dentro del bloque (blanca) */
-.bit-card .bit-tplaca { color: #f2f4f7; font-size: 11px; font-weight: 800; display: inline; }
-
-/* Tipo de vehículo (derecha, gris uppercase) */
-.bit-card .bit-ttipo {
+.bit-card-r1-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.bit-card-tipo {
     color: #7d8794;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
-    flex-shrink: 0;
 }
+
+/* Horas toman el color del estado */
+.bit-card.bit-completo     .bit-hora-s,
+.bit-card.bit-completo     .bit-hora-i { color: #3ecf8e; }
+.bit-card.bit-en-campo     .bit-hora-s,
+.bit-card.bit-en-campo     .bit-hora-i { color: #e0a83e; }
+.bit-card.bit-solo-ingreso .bit-hora-s,
+.bit-card.bit-solo-ingreso .bit-hora-i { color: #818cf8; }
+
+/* Valores de hora (dentro de cards — sobreescriben los valores legacy de abajo) */
+.bit-card .bit-hora-s,
+.bit-card .bit-hora-i {
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+/* Chevron de colapso */
+.bit-chevron-btn {
+    background: none; border: none;
+    padding: 2px; cursor: pointer;
+    color: #7d8794; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px; transition: color 0.15s;
+}
+.bit-chevron-btn:hover { color: #c7ccd4; }
 
 /* Fila 2: conductor | destino */
 .bit-card-r2 {
@@ -2479,7 +2470,7 @@
     justify-content: space-between;
     gap: 6px;
 }
-.bit-card .bit-tconductor {
+.bit-card-conductor {
     color: #c7ccd4;
     font-size: 11px;
     font-weight: 500;
@@ -2491,7 +2482,7 @@
     align-items: center;
     gap: 4px;
 }
-.bit-card .bit-tconductor.changed { color: #fbbf24; }
+.bit-card-conductor.changed { color: #fbbf24; }
 .bit-card-dest {
     color: #8b93a1;
     font-size: 11px;
@@ -2500,44 +2491,24 @@
     flex-shrink: 0;
 }
 
-/* Clases heredadas que aún usa PantallaFlujoDetalle */
+/* ── Legacy: clases usadas en PantallaFlujoDetalle y otros ── */
+.bit-tcell-num    { color: #8b93a3; font-size: 13px; font-weight: 600; }
 .bit-hora-s       { color: #ff9f43; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bit-hora-i       { color: #7d9dff; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bit-tplaca       { color: #e8eaed; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px; }
 .bit-ttipo        { color: #5a6070; font-size: 10.5px; margin-top: 2px; }
-.bit-tconductor   { color: #c4c8d2; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.bit-tconductor   { color: #c4c8d2; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 .bit-tconductor.changed { color: #fbbf24; }
-.bit-tcell-num    { color: #8b93a3; font-size: 13px; font-weight: 600; }
 .bit-tempresa     { color: #5a6070; font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bit-tobservacion { color: #8b93a3; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
-.bit-tcell-estado { display: flex; justify-content: flex-end; align-items: center; }
-.bit-status-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-/* ── Botón edición inline en celdas (usado en PantallaFlujoDetalle) ── */
-.bit-cell-edit-btn {
-    background: none; border: none; padding: 2px 3px; cursor: pointer;
-    color: #3a3f4a; border-radius: 4px;
-    display: inline-flex; align-items: center; justify-content: center;
-    flex-shrink: 0; opacity: 0;
-    transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
-    line-height: 1;
-}
-.bit-row:hover .bit-cell-edit-btn { opacity: 1; }
+.bit-tcell-estado { display: flex; justify-content: flex-end; }
+.bit-status-pill  { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 100px; white-space: nowrap; font-size: 11px; font-weight: 600; }
+.bit-status-dot   { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.bit-cell-edit-btn { background: none; border: none; padding: 2px 3px; cursor: pointer; color: #3a3f4a; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.15s ease, background 0.15s ease; line-height: 1; }
 .bit-cell-edit-btn:hover { color: #818cf8; background: rgba(129,140,248,0.12); }
-@media (max-width: 599px) { .bit-cell-edit-btn { opacity: 1; color: #4a5060; } }
+.bit-tactividad   { color: #4a6080; font-size: 10.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
 
-/* Texto de actividad/obs */
-.bit-tactividad {
-    color: #4a6080; font-size: 10.5px; margin-top: 2px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-style: italic;
-}
-
-/* ── Responsive: el card ya es mobile-first, no se necesitan overrides ── */
 @media (max-width: 599px) {
-    .bit-table-header { display: none; }
-    .bit-table { min-width: unset; border-radius: 8px; }
-    .bit-list  { padding: 4px 6px; gap: 4px; }
+    .bit-list-wrap { padding: 4px 4px 8px; gap: 4px; }
 }
 
 
