@@ -5386,13 +5386,13 @@ const WorkspacePage = () => {
                                                 <div className="bit-card-r1">
                                                     <div className="bit-card-horas">
                                                         <span className="bit-card-hora-grp">
-                                                            {!isCollapsed && <span className="bit-card-hora-lbl">SALIDA</span>}
-                                                            <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                            {!isCollapsed && <span className="bit-card-hora-lbl">INGRESO</span>}
+                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
                                                         </span>
                                                         <span className="bit-card-sep"> — </span>
                                                         <span className="bit-card-hora-grp">
-                                                            {!isCollapsed && <span className="bit-card-hora-lbl">INGRESO</span>}
-                                                            <span className="bit-hora-i">{b.horaI || '—'}</span>
+                                                            {!isCollapsed && <span className="bit-card-hora-lbl">SALIDA</span>}
+                                                            <span className="bit-hora-s">{b.horaS || '—'}</span>
                                                         </span>
                                                         <span className="bit-card-sep"> · </span>
                                                         <span className="bit-card-placa">{b.placa}</span>
