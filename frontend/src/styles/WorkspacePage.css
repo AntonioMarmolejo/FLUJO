@@ -1,3 +1,11 @@
+/* ── Variables globales (tema oscuro por defecto) ─────────── */
+:root {
+    --topbar-icon: #ffffff;
+}
+[data-theme="light"] {
+    --topbar-icon: #374151;
+}
+
 .ws-wrapper {
     display: flex;
     flex-direction: column;
@@ -3004,3 +3012,183 @@
     color: #818cf8;
 }
 .gen-chip:hover:not(.active) { color: #aaa; border-color: #3a3a3a; }
+
+
+/* ══════════════════════════════════════════════════════════
+   TEMA CLARO (data-theme="light")
+══════════════════════════════════════════════════════════ */
+
+/* ── Shell ── */
+[data-theme="light"] body { background: #edf0f7; }
+[data-theme="light"] .ws-wrapper { background: #edf0f7; }
+
+/* ── Topbar ── */
+[data-theme="light"] .ws-topbar {
+    background: #ffffff;
+    border-bottom: 1px solid #dde4ef;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+[data-theme="light"] .ws-topbar-title { color: #111827; }
+[data-theme="light"] .ws-topbar-btn { background: #f1f4fa; color: #374151; }
+[data-theme="light"] .ws-topbar-btn:hover { background: #e4e9f4; }
+
+/* ── Navbar ── */
+[data-theme="light"] .ws-navbar {
+    background: #ffffff;
+    border-top: 1px solid #dde4ef;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
+}
+[data-theme="light"] .ws-nav-item { color: #9ca3af; }
+[data-theme="light"] .ws-nav-item.active { color: #4f46e5; }
+
+/* ── Secciones ── */
+[data-theme="light"] .ws-body { background: #edf0f7; }
+[data-theme="light"] .ws-section {
+    background: #ffffff;
+    border: 1px solid #e5eaf4;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+[data-theme="light"] .ws-section-header { color: #111827; }
+[data-theme="light"] .ws-sub-title { color: #111827; }
+[data-theme="light"] .ws-empty { color: #9ca3af; }
+
+/* ── Búsqueda ── */
+[data-theme="light"] .ws-search-wrap { background: #ffffff; border-bottom: 1px solid #e5eaf4; }
+[data-theme="light"] .ws-search-bar { background: #f3f6fc; border: 1px solid #dde4ef; }
+[data-theme="light"] .ws-search-input { color: #111827; }
+[data-theme="light"] .ws-search-input::placeholder { color: #9ca3af; }
+[data-theme="light"] .ws-search-clear { color: #9ca3af; }
+
+/* ── Contadores ── */
+[data-theme="light"] .ws-counter-card {
+    background: #ffffff;
+    border: 1px solid #e5eaf4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+[data-theme="light"] .ws-counter-val { color: #111827; }
+[data-theme="light"] .ws-counter-label { color: #6b7280; }
+
+/* ── Tarjetas movimientos ── */
+[data-theme="light"] .mov-item-inner {
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+[data-theme="light"] .mov-item-inner:hover { background: #f8faff; }
+[data-theme="light"] .mov-item-inner:active { background: #f0f4ff; }
+[data-theme="light"] .mov-item-inner.ingreso { border-left-color: rgba(59,130,246,0.6); }
+[data-theme="light"] .mov-item-inner.salida  { border-left-color: rgba(239,68,68,0.55); }
+[data-theme="light"] .mov-icon.ingreso { background: rgba(59,130,246,0.1); color: #2563eb; }
+[data-theme="light"] .mov-icon.salida  { background: rgba(239,68,68,0.1);  color: #dc2626; }
+[data-theme="light"] .mov-info-r1.ingreso { color: #2563eb; }
+[data-theme="light"] .mov-info-r1.salida  { color: #dc2626; }
+[data-theme="light"] .mov-placa-code  { color: #111827; }
+[data-theme="light"] .mov-empresa-r1  { color: #111827; }
+[data-theme="light"] .mov-conductor-ci { color: #374151; }
+[data-theme="light"] .mov-destino-r2  { color: #6b7280; }
+[data-theme="light"] .mov-coll-conductor { color: #6b7280; }
+[data-theme="light"] .mov-actividad   { color: #6b7280; }
+[data-theme="light"] .mov-chevron-btn { color: #9ca3af; }
+[data-theme="light"] .mov-chevron-btn:hover { color: #374151; }
+
+/* ── Acciones swipe movimientos ── */
+[data-theme="light"] .mov-actions { background: #e9edf7; }
+[data-theme="light"] .mov-act-btn { background: #ffffff; border-color: #dde4ef; color: #374151; }
+[data-theme="light"] .mov-act-btn:hover { color: #111827; border-color: #b0bbd4; }
+[data-theme="light"] .mov-act-btn.danger:hover { color: #dc2626; border-color: #dc2626; }
+
+/* ── Tarjetas bitácora ── */
+[data-theme="light"] .bit-card {
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+[data-theme="light"] .bit-card:hover { background: #f8faff; }
+[data-theme="light"] .bit-card.bit-completo     { border-left-color: #10b981; }
+[data-theme="light"] .bit-card.bit-en-campo     { border-left-color: #d97706; }
+[data-theme="light"] .bit-card.bit-solo-ingreso { border-left-color: #6366f1; }
+[data-theme="light"] .bit-card.bit-completo     .bit-hora-s,
+[data-theme="light"] .bit-card.bit-completo     .bit-hora-i { color: #059669; }
+[data-theme="light"] .bit-card.bit-en-campo     .bit-hora-s,
+[data-theme="light"] .bit-card.bit-en-campo     .bit-hora-i { color: #b45309; }
+[data-theme="light"] .bit-card.bit-solo-ingreso .bit-hora-s,
+[data-theme="light"] .bit-card.bit-solo-ingreso .bit-hora-i { color: #4f46e5; }
+[data-theme="light"] .bit-card-placa  { color: #111827; }
+[data-theme="light"] .bit-card-tipo   { color: #6b7280; }
+[data-theme="light"] .bit-card-hora-lbl { color: #9ca3af; }
+[data-theme="light"] .bit-card-sep    { color: #9ca3af; }
+[data-theme="light"] .bit-card-conductor { color: #374151; }
+[data-theme="light"] .bit-card-conductor.changed { color: #d97706; }
+[data-theme="light"] .bit-card-dest   { color: #6b7280; }
+[data-theme="light"] .bit-chevron-btn { color: #9ca3af; }
+[data-theme="light"] .bit-chevron-btn:hover { color: #374151; }
+
+/* ── Acciones swipe bitácora ── */
+[data-theme="light"] .bit-actions { background: #e9edf7; }
+[data-theme="light"] .bit-act-btn { background: #ffffff; border-color: #dde4ef; color: #374151; }
+[data-theme="light"] .bit-act-btn:hover { color: #111827; border-color: #b0bbd4; }
+[data-theme="light"] .bit-act-btn.danger:hover { color: #dc2626; border-color: #dc2626; }
+
+/* ── Toolbar bitácora ── */
+[data-theme="light"] .bit-toolbar { background: #ffffff; border-bottom: 1px solid #e5eaf4; }
+[data-theme="light"] .bit-toolbar-count { color: #6b7280; }
+[data-theme="light"] .bit-export-btn { background: rgba(16,185,129,0.08); color: #059669; border-color: rgba(16,185,129,0.3); }
+
+/* ── Vista tabs ── */
+[data-theme="light"] .ws-vista-tab {
+    background: #f1f4fa;
+    color: #6b7280;
+    border: 1px solid #e5eaf4;
+}
+[data-theme="light"] .ws-vista-tab.active {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+}
+
+/* ── Modales ── */
+[data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.35); }
+[data-theme="light"] .modal-card {
+    background: #ffffff;
+    border: 1px solid #dde4ef;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+[data-theme="light"] .modal-title { color: #111827; }
+[data-theme="light"] .modal-label { color: #374151; }
+[data-theme="light"] .modal-input,
+[data-theme="light"] .modal-select,
+[data-theme="light"] .modal-textarea {
+    background: #f3f6fc;
+    border-color: #dde4ef;
+    color: #111827;
+}
+[data-theme="light"] .modal-input::placeholder,
+[data-theme="light"] .modal-textarea::placeholder { color: #9ca3af; }
+[data-theme="light"] .modal-input:focus,
+[data-theme="light"] .modal-select:focus,
+[data-theme="light"] .modal-textarea:focus { border-color: #6366f1; background: #ffffff; }
+
+/* ── Drawer ── */
+[data-theme="light"] .drawer-overlay { background: rgba(0,0,0,0.3); }
+[data-theme="light"] .drawer-panel {
+    background: #ffffff;
+    border-right: 1px solid #dde4ef;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+}
+[data-theme="light"] .drawer-title { color: #111827; }
+[data-theme="light"] .drawer-item { color: #374151; }
+[data-theme="light"] .drawer-item:hover { background: #f1f4fa; }
+[data-theme="light"] .drawer-item.active { background: rgba(99,102,241,0.08); color: #4f46e5; }
+
+/* ── Scroll top + FAB ── */
+[data-theme="light"] .scroll-top-btn {
+    background: #ffffff;
+    border-color: #dde4ef;
+    color: #374151;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+[data-theme="light"] .ws-speed-dial-btn.main { background: #4f46e5; }
+
+/* ── Filtros / chips ── */
+[data-theme="light"] .ws-filter-btn { background: #f1f4fa; border-color: #dde4ef; color: #6b7280; }
+[data-theme="light"] .ws-filter-btn.active { background: rgba(99,102,241,0.1); border-color: #6366f1; color: #4f46e5; }
+[data-theme="light"] .gen-chip { background: #f1f4fa; border-color: #dde4ef; color: #6b7280; }
+[data-theme="light"] .gen-chip.active { background: rgba(129,140,248,0.12); border-color: #818cf8; color: #4f46e5; }

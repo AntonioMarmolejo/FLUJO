@@ -4729,6 +4729,13 @@ const WorkspacePage = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [theme, setTheme] = useState(() => localStorage.getItem('flujo-theme') || 'dark');
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('flujo-theme', theme);
+    }, [theme]);
+    const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(true);
     const [movCollapsed, setMovCollapsed] = useState(false);
@@ -5272,11 +5279,26 @@ const WorkspacePage = () => {
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" />
-                                <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : '#fff'} strokeWidth="2" strokeLinecap="round" />
+                                <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : 'var(--topbar-icon)' } strokeWidth="2" />
+                                <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         </button>
                     )}
+                    {/* Toggle tema día / noche */}
+                    <button className="ws-topbar-btn ws-theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}>
+                        {theme === 'dark' ? (
+                            /* Sol — modo día */
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="4"/>
+                                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                            </svg>
+                        ) : (
+                            /* Luna — modo noche */
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        )}
+                    </button>
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => handleTabChange(tabActiva === 'perfil' ? 'inicio' : 'perfil')}>
                             <IconUserCircle active={tabActiva === 'perfil'} />
