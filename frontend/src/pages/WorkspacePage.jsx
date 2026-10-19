@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
+import { usePwaInstall } from '../hooks/usePwaInstall.js';
 import api from '../api/axios';
 import {
     encolarMovimiento,
@@ -4699,8 +4700,15 @@ const PantallaStub = ({ title }) => (
 // ── Perfil ────────────────────────────────────────────────
 const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
     const { registerPasskey } = useAuth();
+    const { installed: appInstalada, canPrompt: puedeInstalar, isIOS: esIOS, promptInstall } = usePwaInstall();
     const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
     const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
+
+    const [instalando, setInstalando] = useState(false);
+    const handleInstalar = async () => {
+        setInstalando(true);
+        try { await promptInstall(); } finally { setInstalando(false); }
+    };
 
     const [bioSupported, setBioSupported] = useState(false);
     const [bioStatus, setBioStatus] = useState('idle'); // idle | loading | ok | error
@@ -4772,6 +4780,27 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                         </>
                     )}
                 </div>
+            )}
+
+            {!appInstalada && (puedeInstalar || esIOS) && (
+                <div className="perfil-bio-section">
+                    <p className="perfil-bio-label">APLICACIÓN</p>
+                    {puedeInstalar ? (
+                        <button className="perfil-bio-btn" onClick={handleInstalar} disabled={instalando}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 3v12M7 10l5 5 5-5M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {instalando ? 'Instalando…' : 'Instalar aplicación'}
+                        </button>
+                    ) : (
+                        <p className="perfil-install-note">
+                            Para instalarla: toca <strong>Compartir</strong> en Safari y luego <strong>"Agregar a pantalla de inicio"</strong>
+                        </p>
+                    )}
+                </div>
+            )}
+            {appInstalada && (
+                <p className="perfil-bio-success">✓ Aplicación instalada en este dispositivo</p>
             )}
 
             <button className="perfil-logout" onClick={onLogout}>Cerrar sesión</button>
