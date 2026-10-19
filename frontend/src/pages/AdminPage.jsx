@@ -42,6 +42,7 @@ const PANELS_DISPONIBLES = [
     { id: 'extensiones', label: 'Extensiones' },
     { id: 'reportes',    label: 'Reportes y Avance' },
     { id: 'jefes',       label: 'Jefes Inmediatos' },
+    { id: 'puestos',     label: 'Ver Puestos del Bloque' },
 ];
 
 const adm_css = `

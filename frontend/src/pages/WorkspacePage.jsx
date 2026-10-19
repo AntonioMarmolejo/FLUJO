@@ -3108,7 +3108,7 @@ const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
 // ── Pantalla lista de flujos ───────────────────────────────
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const PantallaFlujos = ({ turnoActivo }) => {
+const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin }) => {
     const [vistaFlujos, setVistaFlujos] = useState('archivo');
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
     const [confirmarFlujo, setConfirmarFlujo] = useState(null);
@@ -3131,6 +3131,24 @@ const PantallaFlujos = ({ turnoActivo }) => {
     const [genQuery, setGenQuery] = useState('');
     const [genResultados, setGenResultados] = useState([]);
     const [genLoading, setGenLoading] = useState(false);
+
+    // Navegación de "Puestos": galería de puestos del bloque (todos los usuarios)
+    // → año → mes → día, con los mismos niveles que el Archivo personal.
+    const puedeVerPuestos = isAdmin || (hasPermiso && hasPermiso('puestos'));
+    const [puestoSel, setPuestoSel] = useState(null);
+    const [anioSelP, setAnioSelP] = useState(null);
+    const [mesSelP, setMesSelP] = useState(null);
+    const [puestoFlujoSeleccionado, setPuestoFlujoSeleccionado] = useState(null);
+    const [puestosGaleria, setPuestosGaleria] = useState([]);
+    const [aniosP, setAniosP] = useState([]);
+    const [mesesP, setMesesP] = useState([]);
+    const [diasP, setDiasP] = useState([]);
+    const [diaMovsP, setDiaMovsP] = useState([]);
+    const [loadingPuestos, setLoadingPuestos] = useState(false);
+    const [loadingAniosP, setLoadingAniosP] = useState(false);
+    const [loadingMesesP, setLoadingMesesP] = useState(false);
+    const [loadingDiasP, setLoadingDiasP] = useState(false);
+    const [loadingDiaP, setLoadingDiaP] = useState(false);
 
     // Guarda el último puesto/bloque conocido para poder ver flujos sin turno activo
     useEffect(() => {
@@ -3198,6 +3216,56 @@ const PantallaFlujos = ({ turnoActivo }) => {
         return () => clearTimeout(t);
     }, [vistaFlujos, genQuery, genCampo, puesto, bloque]);
 
+    // Puestos — Nivel 1: galería con todos los puestos del bloque (no solo el propio)
+    useEffect(() => {
+        if (vistaFlujos !== 'puestos' || !puedeVerPuestos || !bloque) return;
+        setLoadingPuestos(true);
+        api.get(`/movimientos/bloque/puestos?bloque=${bloque}`)
+            .then(res => setPuestosGaleria(res.data.puestos || []))
+            .catch(() => setPuestosGaleria([]))
+            .finally(() => setLoadingPuestos(false));
+    }, [vistaFlujos, puedeVerPuestos, bloque]);
+
+    // Puestos — Nivel 2: años del puesto elegido
+    useEffect(() => {
+        if (!puestoSel || !bloque) return;
+        setLoadingAniosP(true);
+        api.get(`/movimientos/bloque/anios?bloque=${bloque}&puesto=${encodeURIComponent(puestoSel)}`)
+            .then(res => setAniosP(res.data.anios || []))
+            .catch(() => setAniosP([]))
+            .finally(() => setLoadingAniosP(false));
+    }, [puestoSel, bloque]);
+
+    // Puestos — Nivel 3: cuadro de meses del año elegido
+    useEffect(() => {
+        if (!puestoSel || !anioSelP || !bloque) return;
+        setLoadingMesesP(true);
+        api.get(`/movimientos/bloque/meses?bloque=${bloque}&puesto=${encodeURIComponent(puestoSel)}&anio=${anioSelP}`)
+            .then(res => setMesesP(res.data.meses || []))
+            .catch(() => setMesesP([]))
+            .finally(() => setLoadingMesesP(false));
+    }, [puestoSel, anioSelP, bloque]);
+
+    // Puestos — Nivel 4: días registrados en el mes elegido
+    useEffect(() => {
+        if (!puestoSel || !anioSelP || !mesSelP || !bloque) return;
+        setLoadingDiasP(true);
+        api.get(`/movimientos/bloque/dias?bloque=${bloque}&puesto=${encodeURIComponent(puestoSel)}&anio=${anioSelP}&mes=${mesSelP}`)
+            .then(res => setDiasP(res.data.dias || []))
+            .catch(() => setDiasP([]))
+            .finally(() => setLoadingDiasP(false));
+    }, [puestoSel, anioSelP, mesSelP, bloque]);
+
+    // Puestos — Nivel 5: movimientos del día elegido (de todos los usuarios del puesto)
+    useEffect(() => {
+        if (!puestoFlujoSeleccionado || !puestoSel || !bloque) return;
+        setLoadingDiaP(true);
+        api.get(`/movimientos/bloque/dia?bloque=${bloque}&puesto=${encodeURIComponent(puestoSel)}&fecha=${puestoFlujoSeleccionado}`)
+            .then(res => setDiaMovsP(res.data.movimientos || []))
+            .catch(() => setDiaMovsP([]))
+            .finally(() => setLoadingDiaP(false));
+    }, [puestoFlujoSeleccionado, puestoSel, bloque]);
+
     const handleDeleteFlujo = async () => {
         if (!confirmarFlujo) return;
         try {
@@ -3258,14 +3326,28 @@ const PantallaFlujos = ({ turnoActivo }) => {
             />;
     }
 
+    // Detalle de un día dentro de "Puestos" — mismos formatos, pero con los
+    // movimientos de TODOS los usuarios que registraron en ese puesto/bloque.
+    if (puestoFlujoSeleccionado) {
+        return loadingDiaP
+            ? <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>
+            : <PantallaFlujoDetalle
+                fecha={puestoFlujoSeleccionado}
+                movs={diaMovsP}
+                onBack={() => setPuestoFlujoSeleccionado(null)}
+            />;
+    }
+
     return (
         <>
-        {/* Pestañas Archivo / General */}
+        {/* Pestañas Archivo / General / Puestos */}
         <div style={{ display: 'flex', gap: 8, padding: '12px 16px 10px' }}>
             <button className={`ws-vista-tab${vistaFlujos === 'archivo' ? ' active' : ''}`}
                 onClick={() => setVistaFlujos('archivo')}>Archivo</button>
             <button className={`ws-vista-tab${vistaFlujos === 'general' ? ' active' : ''}`}
                 onClick={() => setVistaFlujos('general')}>General</button>
+            <button className={`ws-vista-tab${vistaFlujos === 'puestos' ? ' active' : ''}`}
+                onClick={() => setVistaFlujos('puestos')}>Puestos</button>
         </div>
 
         {/* ── TAB ARCHIVO: años → meses (calendario) → días ── */}
@@ -3402,6 +3484,112 @@ const PantallaFlujos = ({ turnoActivo }) => {
                     </div>
                 )}
             </div>
+        )}
+
+        {/* ── TAB PUESTOS: galería del bloque → años → meses → días (todos los usuarios) ── */}
+        {vistaFlujos === 'puestos' && (
+            !puedeVerPuestos ? (
+                <AccesoRestringido label="Puestos del Bloque" />
+            ) : (
+                <div style={{ padding: '0 16px 80px' }}>
+                    {!puestoSel ? (
+                        loadingPuestos
+                            ? <p className="ws-empty">Cargando...</p>
+                            : !BLOQUES_DATA[bloque]
+                                ? <p className="ws-empty">Sin bloque activo</p>
+                                : <div className="flujo-tags-row">
+                                    {BLOQUES_DATA[bloque].puestos.map(p => {
+                                        const info = puestosGaleria.find(x => x.puesto === p);
+                                        return (
+                                            <button key={p} className="flujo-tag" onClick={() => setPuestoSel(p)}>
+                                                <span className="flujo-tag-label">{p}</span>
+                                                <span className="flujo-tag-count">{info ? `${info.dias} día${info.dias !== 1 ? 's' : ''}` : 'Sin registros'}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                    ) : !anioSelP ? (
+                        <>
+                            <button className="flujo-back-btn" onClick={() => setPuestoSel(null)}>
+                                <IconArrowLeft /> <span>{puestoSel}</span>
+                            </button>
+                            {loadingAniosP
+                                ? <p className="ws-empty">Cargando...</p>
+                                : aniosP.length === 0
+                                    ? <p className="ws-empty">No hay flujos registrados en este puesto</p>
+                                    : <div className="flujo-tags-row">
+                                        {aniosP.map(a => (
+                                            <button key={a.anio} className="flujo-tag" onClick={() => setAnioSelP(a.anio)}>
+                                                <span className="flujo-tag-label">{a.anio}</span>
+                                                <span className="flujo-tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                            }
+                        </>
+                    ) : !mesSelP ? (
+                        <>
+                            <button className="flujo-back-btn" onClick={() => setAnioSelP(null)}>
+                                <IconArrowLeft /> <span>{anioSelP}</span>
+                            </button>
+                            {loadingMesesP ? <p className="ws-empty">Cargando...</p> : (
+                                <div className="flujo-mes-grid">
+                                    {MESES_ES.map((nombre, i) => {
+                                        const mm = String(i + 1).padStart(2, '0');
+                                        const info = mesesP.find(m => m.mes === mm);
+                                        const activo = !!info;
+                                        return (
+                                            <button key={mm} className={`flujo-mes-tile${activo ? ' activo' : ''}`}
+                                                disabled={!activo}
+                                                onClick={() => activo && setMesSelP(mm)}>
+                                                <span className="flujo-mes-nombre">{nombre.slice(0, 3)}</span>
+                                                {activo && <span className="flujo-mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <button className="flujo-back-btn" onClick={() => setMesSelP(null)}>
+                                <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSelP, 10) - 1]} {anioSelP}</span>
+                            </button>
+                            {loadingDiasP
+                                ? <p className="ws-empty">Cargando...</p>
+                                : diasP.length === 0
+                                    ? <p className="ws-empty">Sin días registrados</p>
+                                    : <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                                        {diasP.map(d => {
+                                            const fechaLarga = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+                                                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                                            });
+                                            return (
+                                                <div key={d.fecha} className="flujo-card" onClick={() => setPuestoFlujoSeleccionado(d.fecha)}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            <span style={{ color: d.isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
+                                                                {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
+                                                            </span>
+                                                            {fechaLarga}
+                                                        </div>
+                                                        <div className="flujo-stats">
+                                                            <span style={{ color: '#818cf8' }}>{d.ingresos} ing.</span>
+                                                            <span style={{ color: '#555' }}> · </span>
+                                                            <span style={{ color: '#f87171' }}>{d.salidas} sal.</span>
+                                                            {d.petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{d.petro} EP</span></>}
+                                                        </div>
+                                                    </div>
+                                                    <IconChevronRight />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                            }
+                        </>
+                    )}
+                </div>
+            )
         )}
 
         {confirmarFlujo && (
@@ -4623,6 +4811,7 @@ const PANEL_LABELS = {
     personas:    'Gestión de Personas',
     jefes:       'Jefes Inmediatos',
     utilidades:  'Utilidades',
+    puestos:     'Ver Puestos del Bloque',
 };
 
 // ── Panel estado activación (para usuarios pendientes o con permisos parciales) ──
@@ -5713,7 +5902,7 @@ const WorkspacePage = () => {
                         : <PantallaAvance turnoActivo={turnoActivo} user={user} />
                 )}
 
-                {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} />}
+                {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} hasPermiso={hasPermiso} isAdmin={isAdmin} />}
 
                 {tabActiva === 'utilidades' && <PantallaUtilidades />}
 

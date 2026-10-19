@@ -36,6 +36,22 @@ export const authorizeRole = (...rolesPermitidos) => {
     };
 };
 
+// Protege la vista "Puestos" (ver los registros de TODOS los puestos de un
+// bloque, no solo los propios): exige el permiso 'puestos' otorgado por el
+// admin, y que el usuario pertenezca al bloque que está consultando.
+export const requirePuestosBloque = (req, res, next) => {
+    const { bloque } = req.query;
+    const isAdmin = req.user?.role === 'admin';
+    const tienePermiso = isAdmin || (req.user?.permisosPanel || []).includes('puestos');
+    if (!tienePermiso) {
+        return res.status(403).json({ message: 'No tienes permiso para ver los Puestos del bloque. Solicítalo al administrador.' });
+    }
+    if (!isAdmin && !(req.user?.bloques || []).includes(bloque)) {
+        return res.status(403).json({ message: 'No perteneces a este bloque' });
+    }
+    next();
+};
+
 // Bloquea operaciones de escritura a usuarios pendientes de aprobación
 export const requireActive = (req, res, next) => {
     const userStatus = req.user?.status || 'pending';

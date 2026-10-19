@@ -131,19 +131,102 @@ export const getMovimientosTodos = async (req, res) => {
     }
 };
 
+// ── Helpers de agregación para el archivo de flujos (años/meses/días) ──
+// Reciben un $match base ({usuario, puesto, bloque} para el archivo personal,
+// o {puesto, bloque} sin usuario para la vista de "Puestos" del bloque) y
+// hacen el conteo en el servidor, sin traer movimientos completos.
+
+const aniosDesde = async (matchBase) => {
+    const rows = await Movimiento.aggregate([
+        { $match: matchBase },
+        { $group: { _id: { anio: { $substrCP: ['$fecha', 0, 4] }, fecha: '$fecha' } } },
+        { $group: { _id: '$_id.anio', dias: { $sum: 1 } } },
+        { $project: { _id: 0, anio: '$_id', dias: 1 } },
+        { $sort: { anio: -1 } },
+    ]);
+    return rows;
+};
+
+const mesesDesde = async (matchBase, anio) => {
+    const rows = await Movimiento.aggregate([
+        { $match: { ...matchBase, fecha: { $regex: `^${anio}-` } } },
+        { $group: { _id: { mes: { $substrCP: ['$fecha', 5, 2] }, fecha: '$fecha' } } },
+        { $group: { _id: '$_id.mes', dias: { $sum: 1 } } },
+        { $project: { _id: 0, mes: '$_id', dias: 1 } },
+    ]);
+    return rows;
+};
+
+const diasDesde = async (matchBase, anio, mes) => {
+    const docs = await Movimiento.aggregate([
+        { $match: { ...matchBase, fecha: { $regex: `^${anio}-${mes}` } } },
+        // Primero se agrupa por vehículo dentro de cada día: el contador de
+        // "Petroecuador" cuenta vehículos únicos, no movimientos.
+        {
+            $group: {
+                _id: { fecha: '$fecha', placa: '$placa' },
+                tipos: { $push: '$tipo' },
+                empresas: { $push: '$empresa' },
+                horas: { $push: '$hora' },
+            },
+        },
+        {
+            $project: {
+                fecha: '$_id.fecha',
+                ingresos: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'ingreso'] } } } },
+                salidas: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'salida'] } } } },
+                empresaNonEmpty: {
+                    $let: {
+                        vars: { nonEmpty: { $filter: { input: '$empresas', as: 'e', cond: { $ne: ['$$e', ''] } } } },
+                        in: { $arrayElemAt: ['$$nonEmpty', 0] },
+                    },
+                },
+                horas: 1,
+            },
+        },
+        {
+            $group: {
+                _id: '$fecha',
+                ingresos: { $sum: '$ingresos' },
+                salidas: { $sum: '$salidas' },
+                petro: {
+                    $sum: {
+                        $cond: [
+                            { $regexMatch: { input: { $toLower: { $ifNull: ['$empresaNonEmpty', ''] } }, regex: 'petroecuador' } },
+                            1, 0,
+                        ],
+                    },
+                },
+                horas: { $push: '$horas' },
+            },
+        },
+        {
+            $project: {
+                _id: 0, fecha: '$_id', ingresos: 1, salidas: 1, petro: 1,
+                horas: { $reduce: { input: '$horas', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } },
+            },
+        },
+        { $sort: { fecha: -1 } },
+    ]);
+
+    return docs.map(d => {
+        const primeraHora = [...d.horas].sort()[0] || '12:00';
+        const earliestHour = parseInt(primeraHora.split(':')[0], 10);
+        const isDiurno = earliestHour >= 6 && earliestHour < 18;
+        return { fecha: d.fecha, ingresos: d.ingresos, salidas: d.salidas, petro: d.petro, isDiurno };
+    });
+};
+
+const ANIO_RE = /^\d{4}$/;
+const MES_RE = /^(0[1-9]|1[0-2])$/;
+
 // GET /api/movimientos/anios?puesto=X&bloque=Y
 // Solo etiquetas de años con datos (sin cargar movimientos). Cuenta días distintos por año.
 export const getFlujoAnios = async (req, res) => {
     try {
         const { puesto, bloque } = req.query;
-        const rows = await Movimiento.aggregate([
-            { $match: { usuario: req.user._id, puesto, bloque } },
-            { $group: { _id: { anio: { $substrCP: ['$fecha', 0, 4] }, fecha: '$fecha' } } },
-            { $group: { _id: '$_id.anio', dias: { $sum: 1 } } },
-            { $project: { _id: 0, anio: '$_id', dias: 1 } },
-            { $sort: { anio: -1 } },
-        ]);
-        res.json({ anios: rows });
+        const anios = await aniosDesde({ usuario: req.user._id, puesto, bloque });
+        res.json({ anios });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
@@ -154,14 +237,9 @@ export const getFlujoAnios = async (req, res) => {
 export const getFlujoMeses = async (req, res) => {
     try {
         const { puesto, bloque, anio } = req.query;
-        if (!/^\d{4}$/.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
-        const rows = await Movimiento.aggregate([
-            { $match: { usuario: req.user._id, puesto, bloque, fecha: { $regex: `^${anio}-` } } },
-            { $group: { _id: { mes: { $substrCP: ['$fecha', 5, 2] }, fecha: '$fecha' } } },
-            { $group: { _id: '$_id.mes', dias: { $sum: 1 } } },
-            { $project: { _id: 0, mes: '$_id', dias: 1 } },
-        ]);
-        res.json({ meses: rows });
+        if (!ANIO_RE.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        const meses = await mesesDesde({ usuario: req.user._id, puesto, bloque }, anio);
+        res.json({ meses });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
@@ -174,67 +252,82 @@ export const getFlujoMeses = async (req, res) => {
 export const getFlujoDias = async (req, res) => {
     try {
         const { puesto, bloque, anio, mes } = req.query;
-        if (!/^\d{4}$/.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
-        if (!/^(0[1-9]|1[0-2])$/.test(mes || '')) return res.status(400).json({ message: 'Mes inválido' });
-
-        const docs = await Movimiento.aggregate([
-            { $match: { usuario: req.user._id, puesto, bloque, fecha: { $regex: `^${anio}-${mes}` } } },
-            // Primero se agrupa por vehículo dentro de cada día: el contador de
-            // "Petroecuador" cuenta vehículos únicos, no movimientos.
-            {
-                $group: {
-                    _id: { fecha: '$fecha', placa: '$placa' },
-                    tipos: { $push: '$tipo' },
-                    empresas: { $push: '$empresa' },
-                    horas: { $push: '$hora' },
-                },
-            },
-            {
-                $project: {
-                    fecha: '$_id.fecha',
-                    ingresos: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'ingreso'] } } } },
-                    salidas: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'salida'] } } } },
-                    empresaNonEmpty: {
-                        $let: {
-                            vars: { nonEmpty: { $filter: { input: '$empresas', as: 'e', cond: { $ne: ['$$e', ''] } } } },
-                            in: { $arrayElemAt: ['$$nonEmpty', 0] },
-                        },
-                    },
-                    horas: 1,
-                },
-            },
-            {
-                $group: {
-                    _id: '$fecha',
-                    ingresos: { $sum: '$ingresos' },
-                    salidas: { $sum: '$salidas' },
-                    petro: {
-                        $sum: {
-                            $cond: [
-                                { $regexMatch: { input: { $toLower: { $ifNull: ['$empresaNonEmpty', ''] } }, regex: 'petroecuador' } },
-                                1, 0,
-                            ],
-                        },
-                    },
-                    horas: { $push: '$horas' },
-                },
-            },
-            {
-                $project: {
-                    _id: 0, fecha: '$_id', ingresos: 1, salidas: 1, petro: 1,
-                    horas: { $reduce: { input: '$horas', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } },
-                },
-            },
-            { $sort: { fecha: -1 } },
-        ]);
-
-        const dias = docs.map(d => {
-            const primeraHora = [...d.horas].sort()[0] || '12:00';
-            const earliestHour = parseInt(primeraHora.split(':')[0], 10);
-            const isDiurno = earliestHour >= 6 && earliestHour < 18;
-            return { fecha: d.fecha, ingresos: d.ingresos, salidas: d.salidas, petro: d.petro, isDiurno };
-        });
+        if (!ANIO_RE.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        if (!MES_RE.test(mes || '')) return res.status(400).json({ message: 'Mes inválido' });
+        const dias = await diasDesde({ usuario: req.user._id, puesto, bloque }, anio, mes);
         res.json({ dias });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// ── Pestaña "Puestos": igual que el archivo, pero a nivel de todo el bloque
+// (todos los usuarios) en vez de solo los propios. Las rutas van protegidas
+// con el middleware requirePuestosBloque (permiso otorgado por el admin +
+// pertenencia al bloque), así que aquí no se vuelve a validar.
+
+// GET /api/movimientos/bloque/puestos?bloque=Y
+// Galería: cuántos días tiene registrados cada puesto del bloque.
+export const getBloquePuestos = async (req, res) => {
+    try {
+        const { bloque } = req.query;
+        const rows = await Movimiento.aggregate([
+            { $match: { bloque } },
+            { $group: { _id: { puesto: '$puesto', fecha: '$fecha' } } },
+            { $group: { _id: '$_id.puesto', dias: { $sum: 1 } } },
+            { $project: { _id: 0, puesto: '$_id', dias: 1 } },
+        ]);
+        res.json({ puestos: rows });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/bloque/anios?bloque=Y&puesto=X
+export const getBloqueAnios = async (req, res) => {
+    try {
+        const { puesto, bloque } = req.query;
+        const anios = await aniosDesde({ puesto, bloque });
+        res.json({ anios });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/bloque/meses?bloque=Y&puesto=X&anio=YYYY
+export const getBloqueMeses = async (req, res) => {
+    try {
+        const { puesto, bloque, anio } = req.query;
+        if (!ANIO_RE.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        const meses = await mesesDesde({ puesto, bloque }, anio);
+        res.json({ meses });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/bloque/dias?bloque=Y&puesto=X&anio=YYYY&mes=MM
+export const getBloqueDias = async (req, res) => {
+    try {
+        const { puesto, bloque, anio, mes } = req.query;
+        if (!ANIO_RE.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        if (!MES_RE.test(mes || '')) return res.status(400).json({ message: 'Mes inválido' });
+        const dias = await diasDesde({ puesto, bloque }, anio, mes);
+        res.json({ dias });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/bloque/dia?bloque=Y&puesto=X&fecha=YYYY-MM-DD
+// Detalle de un día para TODOS los usuarios que registraron en ese puesto/bloque
+// (a diferencia de GET /movimientos, que solo trae los propios).
+export const getBloqueDia = async (req, res) => {
+    try {
+        const { puesto, bloque, fecha } = req.query;
+        if (!puesto || !bloque || !fecha) return res.status(400).json({ message: 'puesto, bloque y fecha son obligatorios' });
+        const movimientos = await Movimiento.find({ puesto, bloque, fecha }).sort({ createdAt: -1 });
+        res.json({ movimientos });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
