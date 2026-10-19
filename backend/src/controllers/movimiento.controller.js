@@ -4,6 +4,10 @@ import Vehiculo from '../models/Vehiculo.model.js';
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
 const getFecha = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
 
+// Escapa caracteres especiales de regex para que el texto de búsqueda del usuario
+// nunca se interprete como un patrón (evita errores y "regex injection").
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula }) =>
     ({ marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '' });
 
@@ -122,6 +126,153 @@ export const getMovimientosTodos = async (req, res) => {
         const { puesto, bloque } = req.query;
         const movimientos = await Movimiento.find({ usuario: req.user._id, puesto, bloque }).sort({ fecha: -1, createdAt: -1 });
         res.status(200).json({ movimientos });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/anios?puesto=X&bloque=Y
+// Solo etiquetas de años con datos (sin cargar movimientos). Cuenta días distintos por año.
+export const getFlujoAnios = async (req, res) => {
+    try {
+        const { puesto, bloque } = req.query;
+        const rows = await Movimiento.aggregate([
+            { $match: { usuario: req.user._id, puesto, bloque } },
+            { $group: { _id: { anio: { $substrCP: ['$fecha', 0, 4] }, fecha: '$fecha' } } },
+            { $group: { _id: '$_id.anio', dias: { $sum: 1 } } },
+            { $project: { _id: 0, anio: '$_id', dias: 1 } },
+            { $sort: { anio: -1 } },
+        ]);
+        res.json({ anios: rows });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/meses?puesto=X&bloque=Y&anio=YYYY
+// Solo etiquetas de meses con datos dentro de un año (sin cargar movimientos).
+export const getFlujoMeses = async (req, res) => {
+    try {
+        const { puesto, bloque, anio } = req.query;
+        if (!/^\d{4}$/.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        const rows = await Movimiento.aggregate([
+            { $match: { usuario: req.user._id, puesto, bloque, fecha: { $regex: `^${anio}-` } } },
+            { $group: { _id: { mes: { $substrCP: ['$fecha', 5, 2] }, fecha: '$fecha' } } },
+            { $group: { _id: '$_id.mes', dias: { $sum: 1 } } },
+            { $project: { _id: 0, mes: '$_id', dias: 1 } },
+        ]);
+        res.json({ meses: rows });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/dias?puesto=X&bloque=Y&anio=YYYY&mes=MM
+// Etiquetas de días registrados en un mes, con los contadores que usa la tarjeta
+// (ingresos, salidas, vehículos de Petroecuador), calculados en el servidor
+// para no tener que traer todos los movimientos del mes al cliente.
+export const getFlujoDias = async (req, res) => {
+    try {
+        const { puesto, bloque, anio, mes } = req.query;
+        if (!/^\d{4}$/.test(anio || '')) return res.status(400).json({ message: 'Año inválido' });
+        if (!/^(0[1-9]|1[0-2])$/.test(mes || '')) return res.status(400).json({ message: 'Mes inválido' });
+
+        const docs = await Movimiento.aggregate([
+            { $match: { usuario: req.user._id, puesto, bloque, fecha: { $regex: `^${anio}-${mes}` } } },
+            // Primero se agrupa por vehículo dentro de cada día: el contador de
+            // "Petroecuador" cuenta vehículos únicos, no movimientos.
+            {
+                $group: {
+                    _id: { fecha: '$fecha', placa: '$placa' },
+                    tipos: { $push: '$tipo' },
+                    empresas: { $push: '$empresa' },
+                    horas: { $push: '$hora' },
+                },
+            },
+            {
+                $project: {
+                    fecha: '$_id.fecha',
+                    ingresos: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'ingreso'] } } } },
+                    salidas: { $size: { $filter: { input: '$tipos', as: 't', cond: { $eq: ['$$t', 'salida'] } } } },
+                    empresaNonEmpty: {
+                        $let: {
+                            vars: { nonEmpty: { $filter: { input: '$empresas', as: 'e', cond: { $ne: ['$$e', ''] } } } },
+                            in: { $arrayElemAt: ['$$nonEmpty', 0] },
+                        },
+                    },
+                    horas: 1,
+                },
+            },
+            {
+                $group: {
+                    _id: '$fecha',
+                    ingresos: { $sum: '$ingresos' },
+                    salidas: { $sum: '$salidas' },
+                    petro: {
+                        $sum: {
+                            $cond: [
+                                { $regexMatch: { input: { $toLower: { $ifNull: ['$empresaNonEmpty', ''] } }, regex: 'petroecuador' } },
+                                1, 0,
+                            ],
+                        },
+                    },
+                    horas: { $push: '$horas' },
+                },
+            },
+            {
+                $project: {
+                    _id: 0, fecha: '$_id', ingresos: 1, salidas: 1, petro: 1,
+                    horas: { $reduce: { input: '$horas', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } },
+                },
+            },
+            { $sort: { fecha: -1 } },
+        ]);
+
+        const dias = docs.map(d => {
+            const primeraHora = [...d.horas].sort()[0] || '12:00';
+            const earliestHour = parseInt(primeraHora.split(':')[0], 10);
+            const isDiurno = earliestHour >= 6 && earliestHour < 18;
+            return { fecha: d.fecha, ingresos: d.ingresos, salidas: d.salidas, petro: d.petro, isDiurno };
+        });
+        res.json({ dias });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// DELETE /api/movimientos/dia  { puesto, bloque, fecha }
+// Elimina de un solo golpe todos los movimientos de un día (sin necesitar sus ids,
+// que ya no se cargan hasta que se abre el detalle del día).
+export const deleteMovimientosPorFecha = async (req, res) => {
+    try {
+        const { puesto, bloque, fecha } = req.body;
+        if (!puesto || !bloque || !fecha) return res.status(400).json({ message: 'puesto, bloque y fecha son obligatorios' });
+        const result = await Movimiento.deleteMany({ usuario: req.user._id, puesto, bloque, fecha });
+        res.json({ message: 'Flujo eliminado', eliminados: result.deletedCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/buscar?puesto=X&bloque=Y&campo=Z&q=texto
+// Búsqueda de la pestaña "General": se resuelve en el servidor (limitada a 150
+// resultados) en vez de descargar todo el histórico para filtrarlo en el cliente.
+export const buscarMovimientos = async (req, res) => {
+    try {
+        const { puesto, bloque, campo, q } = req.query;
+        if (!q || !q.trim()) return res.json({ movimientos: [] });
+
+        const regex = new RegExp(escapeRegex(q.trim()), 'i');
+        const camposBuscables = ['placa', 'conductor', 'empresa', 'actividad', 'destino'];
+        const filter = { usuario: req.user._id, puesto, bloque };
+        if (campo && camposBuscables.includes(campo)) {
+            filter[campo] = regex;
+        } else {
+            filter.$or = camposBuscables.map(c => ({ [c]: regex }));
+        }
+
+        const movimientos = await Movimiento.find(filter).sort({ fecha: -1, hora: -1 }).limit(150);
+        res.json({ movimientos });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }

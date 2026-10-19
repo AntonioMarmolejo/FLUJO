@@ -42,4 +42,8 @@ const movimientoSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Acelera los filtros por usuario/puesto/bloque/fecha que usa la pantalla de Flujos
+// (listado por años, meses y días, y el detalle de un día puntual).
+movimientoSchema.index({ usuario: 1, puesto: 1, bloque: 1, fecha: 1 });
+
 export default mongoose.model('Movimiento', movimientoSchema);

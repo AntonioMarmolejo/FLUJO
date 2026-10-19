@@ -3109,16 +3109,28 @@ const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const PantallaFlujos = ({ turnoActivo }) => {
-    const [movimientos, setMovimientos] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [vistaFlujos, setVistaFlujos] = useState('archivo');
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
     const [confirmarFlujo, setConfirmarFlujo] = useState(null);
-    const [vistaFlujos, setVistaFlujos] = useState('archivo');
-    const [expandedYears, setExpandedYears] = useState({});
-    const [expandedMonths, setExpandedMonths] = useState({});
+    const returnTabRef = useRef('archivo');
+
+    // Navegación del archivo: año → mes → día. Cada nivel se pide al servidor
+    // solo cuando se entra en él — nunca se descarga el histórico completo.
+    const [anioSel, setAnioSel] = useState(null);
+    const [mesSel, setMesSel] = useState(null);
+    const [anios, setAnios] = useState([]);
+    const [meses, setMeses] = useState([]);
+    const [dias, setDias] = useState([]);
+    const [diaMovs, setDiaMovs] = useState([]);
+    const [loadingAnios, setLoadingAnios] = useState(true);
+    const [loadingMeses, setLoadingMeses] = useState(false);
+    const [loadingDias, setLoadingDias] = useState(false);
+    const [loadingDia, setLoadingDia] = useState(false);
+
     const [genCampo, setGenCampo] = useState('todos');
     const [genQuery, setGenQuery] = useState('');
-    const returnTabRef = useRef('archivo');
+    const [genResultados, setGenResultados] = useState([]);
+    const [genLoading, setGenLoading] = useState(false);
 
     // Guarda el último puesto/bloque conocido para poder ver flujos sin turno activo
     useEffect(() => {
@@ -3132,113 +3144,97 @@ const PantallaFlujos = ({ turnoActivo }) => {
         try { return JSON.parse(localStorage.getItem(LAST_TURNO_KEY) || '{}'); } catch { return {}; }
     }, [turnoActivo]);
 
+    // Nivel 1 — etiquetas de años
     useEffect(() => {
-        if (!puesto || !bloque) { setLoading(false); return; }
-        setLoading(true);
-        api.get(`/movimientos/todos?puesto=${puesto}&bloque=${bloque}`)
-            .then(res => { setMovimientos(res.data.movimientos); setLoading(false); })
-            .catch(() => setLoading(false));
+        if (!puesto || !bloque) { setLoadingAnios(false); return; }
+        setLoadingAnios(true);
+        api.get(`/movimientos/anios?puesto=${puesto}&bloque=${bloque}`)
+            .then(res => setAnios(res.data.anios || []))
+            .catch(() => setAnios([]))
+            .finally(() => setLoadingAnios(false));
     }, [puesto, bloque]);
 
-    // Abrir el año y mes actuales por defecto
+    // Nivel 2 — cuadro de meses del año elegido (sin cargar movimientos)
     useEffect(() => {
-        const now = new Date();
-        const year = String(now.getFullYear());
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        setExpandedYears({ [year]: true });
-        setExpandedMonths({ [`${year}-${month}`]: true });
-    }, []);
+        if (!anioSel || !puesto || !bloque) return;
+        setLoadingMeses(true);
+        api.get(`/movimientos/meses?puesto=${puesto}&bloque=${bloque}&anio=${anioSel}`)
+            .then(res => setMeses(res.data.meses || []))
+            .catch(() => setMeses([]))
+            .finally(() => setLoadingMeses(false));
+    }, [anioSel, puesto, bloque]);
+
+    // Nivel 3 — etiquetas de los días registrados en el mes elegido
+    useEffect(() => {
+        if (!anioSel || !mesSel || !puesto || !bloque) return;
+        setLoadingDias(true);
+        api.get(`/movimientos/dias?puesto=${puesto}&bloque=${bloque}&anio=${anioSel}&mes=${mesSel}`)
+            .then(res => setDias(res.data.dias || []))
+            .catch(() => setDias([]))
+            .finally(() => setLoadingDias(false));
+    }, [anioSel, mesSel, puesto, bloque]);
+
+    // Nivel 4 — recién aquí se cargan los movimientos, y solo los de ese día
+    useEffect(() => {
+        if (!flujoSeleccionado || !puesto || !bloque) return;
+        setLoadingDia(true);
+        api.get(`/movimientos?puesto=${puesto}&bloque=${bloque}&fecha=${flujoSeleccionado}`)
+            .then(res => setDiaMovs(res.data.movimientos || []))
+            .catch(() => setDiaMovs([]))
+            .finally(() => setLoadingDia(false));
+    }, [flujoSeleccionado, puesto, bloque]);
+
+    // Búsqueda global (pestaña General) — resuelta en el servidor con un pequeño debounce
+    useEffect(() => {
+        if (vistaFlujos !== 'general' || !puesto || !bloque) return;
+        if (!genQuery.trim()) { setGenResultados([]); return; }
+        setGenLoading(true);
+        const t = setTimeout(() => {
+            api.get(`/movimientos/buscar?puesto=${puesto}&bloque=${bloque}&campo=${genCampo}&q=${encodeURIComponent(genQuery.trim())}`)
+                .then(res => setGenResultados(res.data.movimientos || []))
+                .catch(() => setGenResultados([]))
+                .finally(() => setGenLoading(false));
+        }, 350);
+        return () => clearTimeout(t);
+    }, [vistaFlujos, genQuery, genCampo, puesto, bloque]);
 
     const handleDeleteFlujo = async () => {
         if (!confirmarFlujo) return;
         try {
-            await api.delete('/movimientos/batch', { data: { ids: confirmarFlujo.ids } });
-            setMovimientos(prev => prev.filter(m => m.fecha !== confirmarFlujo.fecha));
+            await api.delete('/movimientos/dia', { data: { puesto, bloque, fecha: confirmarFlujo.fecha } });
+            setDias(prev => prev.filter(d => d.fecha !== confirmarFlujo.fecha));
+            // Refresca en segundo plano los contadores de mes/año (son consultas livianas)
+            api.get(`/movimientos/meses?puesto=${puesto}&bloque=${bloque}&anio=${anioSel}`).then(res => setMeses(res.data.meses || [])).catch(() => {});
+            api.get(`/movimientos/anios?puesto=${puesto}&bloque=${bloque}`).then(res => setAnios(res.data.anios || [])).catch(() => {});
         } catch { }
         setConfirmarFlujo(null);
     };
 
-    const flujos = useMemo(() => {
-        const groups = {};
-        movimientos.forEach(m => {
-            if (!groups[m.fecha]) groups[m.fecha] = [];
-            groups[m.fecha].push(m);
-        });
-        return Object.entries(groups)
-            .sort(([a], [b]) => b.localeCompare(a))
-            .map(([fecha, movs]) => ({ fecha, movs }));
-    }, [movimientos]);
-
-    // Agrupar flujos por año → mes
-    const flujosArchivo = useMemo(() => {
-        const byYear = {};
-        flujos.forEach(f => {
-            const [year, month] = f.fecha.split('-');
-            const ym = `${year}-${month}`;
-            if (!byYear[year]) byYear[year] = {};
-            if (!byYear[year][ym]) byYear[year][ym] = [];
-            byYear[year][ym].push(f);
-        });
-        return byYear;
-    }, [flujos]);
-
-    // Búsqueda global (pestaña General)
-    const genResultados = useMemo(() => {
-        if (!genQuery.trim()) return [];
-        const q = genQuery.toLowerCase().trim();
-        return movimientos.filter(m => {
-            if (genCampo === 'placa')     return m.placa?.toLowerCase().includes(q);
-            if (genCampo === 'conductor') return (m.conductor || '').toLowerCase().includes(q);
-            if (genCampo === 'empresa')   return (m.empresa || '').toLowerCase().includes(q);
-            if (genCampo === 'actividad') return (m.actividad || '').toLowerCase().includes(q);
-            return (
-                m.placa?.toLowerCase().includes(q) ||
-                (m.conductor || '').toLowerCase().includes(q) ||
-                (m.empresa || '').toLowerCase().includes(q) ||
-                (m.actividad || '').toLowerCase().includes(q) ||
-                (m.destino || '').toLowerCase().includes(q)
-            );
-        }).sort((a, b) => a.fecha !== b.fecha ? b.fecha.localeCompare(a.fecha) : b.hora.localeCompare(a.hora));
-    }, [movimientos, genQuery, genCampo]);
-
-    // Tarjeta de flujo (reutilizada en archivo y en resultados generales)
-    const renderFlujoCard = (f) => {
-        const fechaLarga = new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
+    // Etiqueta de un día (reutilizada en el nivel de días y en los resultados de "General")
+    const renderDiaTag = (d) => {
+        const fechaLarga = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         });
-        const ingresos = f.movs.filter(m => m.tipo === 'ingreso').length;
-        const salidas  = f.movs.filter(m => m.tipo === 'salida').length;
-        const isPetro  = m => m.empresa?.toLowerCase().includes('petroecuador');
-        const unicos   = Object.values(f.movs.reduce((acc, m) => {
-            if (!acc[m.placa] || (!acc[m.placa].empresa && m.empresa)) acc[m.placa] = m;
-            return acc;
-        }, {}));
-        const petro = unicos.filter(isPetro).length;
-        const earliestHour = (() => {
-            const sorted = [...f.movs].sort((a, b) => a.hora.localeCompare(b.hora));
-            return parseInt((sorted[0]?.hora || '12:00').split(':')[0]);
-        })();
-        const isDiurno = earliestHour >= 6 && earliestHour < 18;
         return (
-            <div key={f.fecha} className="flujo-card" onClick={() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(f.fecha); }}>
+            <div key={d.fecha} className="flujo-card" onClick={() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(d.fecha); }}>
                 <div style={{ flex: 1 }}>
                     <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
-                            {isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
+                        <span style={{ color: d.isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
+                            {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
                         </span>
                         {fechaLarga}
                     </div>
                     <div className="flujo-stats">
-                        <span style={{ color: '#818cf8' }}>{ingresos} ing.</span>
+                        <span style={{ color: '#818cf8' }}>{d.ingresos} ing.</span>
                         <span style={{ color: '#555' }}> · </span>
-                        <span style={{ color: '#f87171' }}>{salidas} sal.</span>
-                        {petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{petro} EP</span></>}
+                        <span style={{ color: '#f87171' }}>{d.salidas} sal.</span>
+                        {d.petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{d.petro} EP</span></>}
                     </div>
                 </div>
                 <button
                     className="flujo-delete-btn"
                     title="Eliminar flujo"
-                    onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: f.fecha, ids: f.movs.map(m => m._id), fechaLarga }); }}
+                    onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: d.fecha, fechaLarga, total: d.ingresos + d.salidas }); }}
                 >
                     <IconMinus />
                 </button>
@@ -3251,18 +3247,16 @@ const PantallaFlujos = ({ turnoActivo }) => {
         return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
     }
 
+    // Nivel 4: detalle de un día — se carga justo al entrar, y solo ese día
     if (flujoSeleccionado) {
-        const flujo = flujos.find(f => f.fecha === flujoSeleccionado);
-        return (
-            <PantallaFlujoDetalle
+        return loadingDia
+            ? <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>
+            : <PantallaFlujoDetalle
                 fecha={flujoSeleccionado}
-                movs={flujo?.movs || []}
+                movs={diaMovs}
                 onBack={() => { setFlujoSeleccionado(null); setVistaFlujos(returnTabRef.current); returnTabRef.current = 'archivo'; }}
-            />
-        );
+            />;
     }
-
-    if (loading) return <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>;
 
     return (
         <>
@@ -3274,62 +3268,61 @@ const PantallaFlujos = ({ turnoActivo }) => {
                 onClick={() => setVistaFlujos('general')}>General</button>
         </div>
 
-        {/* ── TAB ARCHIVO ── */}
+        {/* ── TAB ARCHIVO: años → meses (calendario) → días ── */}
         {vistaFlujos === 'archivo' && (
-            flujos.length === 0
-                ? <p className="ws-empty" style={{ padding: 32 }}>No hay flujos registrados aún</p>
-                : <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {Object.keys(flujosArchivo).sort((a, b) => b.localeCompare(a)).map(year => {
-                        const totalFlujos = Object.values(flujosArchivo[year]).flat().length;
-                        return (
-                            <div key={year}>
-                                <button
-                                    className="flujo-year-header"
-                                    onClick={() => setExpandedYears(prev => ({ ...prev, [year]: !prev[year] }))}
-                                >
-                                    <span className="flujo-year-label">{year}</span>
-                                    <span className="flujo-year-count">{totalFlujos} día{totalFlujos !== 1 ? 's' : ''}</span>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                        style={{ marginLeft: 'auto', flexShrink: 0, transition: 'transform 0.2s', transform: expandedYears[year] ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                </button>
-
-                                {expandedYears[year] && (
-                                    <div style={{ paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        {Object.keys(flujosArchivo[year]).sort((a, b) => b.localeCompare(a)).map(ym => {
-                                            const monthNum = parseInt(ym.split('-')[1]);
-                                            const mesNombre = MESES_ES[monthNum - 1];
-                                            const diasCount = flujosArchivo[year][ym].length;
-                                            const movsCount = flujosArchivo[year][ym].reduce((s, f) => s + f.movs.length, 0);
-                                            return (
-                                                <div key={ym}>
-                                                    <button
-                                                        className="flujo-month-header"
-                                                        onClick={() => setExpandedMonths(prev => ({ ...prev, [ym]: !prev[ym] }))}
-                                                    >
-                                                        <span className="flujo-month-label">{mesNombre}</span>
-                                                        <span className="flujo-month-count">{diasCount} día{diasCount !== 1 ? 's' : ''} · {movsCount} mov.</span>
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                                            style={{ marginLeft: 'auto', flexShrink: 0, transition: 'transform 0.2s', transform: expandedMonths[ym] ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                        </svg>
-                                                    </button>
-
-                                                    {expandedMonths[ym] && (
-                                                        <div style={{ paddingLeft: 10, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4, paddingBottom: 4 }}>
-                                                            {flujosArchivo[year][ym].map(f => renderFlujoCard(f))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+            <div style={{ padding: '0 16px 80px' }}>
+                {!anioSel ? (
+                    loadingAnios
+                        ? <p className="ws-empty">Cargando...</p>
+                        : anios.length === 0
+                            ? <p className="ws-empty">No hay flujos registrados aún</p>
+                            : <div className="flujo-tags-row">
+                                {anios.map(a => (
+                                    <button key={a.anio} className="flujo-tag" onClick={() => setAnioSel(a.anio)}>
+                                        <span className="flujo-tag-label">{a.anio}</span>
+                                        <span className="flujo-tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
+                                    </button>
+                                ))}
                             </div>
-                        );
-                    })}
-                </div>
+                ) : !mesSel ? (
+                    <>
+                        <button className="flujo-back-btn" onClick={() => setAnioSel(null)}>
+                            <IconArrowLeft /> <span>{anioSel}</span>
+                        </button>
+                        {loadingMeses ? <p className="ws-empty">Cargando...</p> : (
+                            <div className="flujo-mes-grid">
+                                {MESES_ES.map((nombre, i) => {
+                                    const mm = String(i + 1).padStart(2, '0');
+                                    const info = meses.find(m => m.mes === mm);
+                                    const activo = !!info;
+                                    return (
+                                        <button key={mm} className={`flujo-mes-tile${activo ? ' activo' : ''}`}
+                                            disabled={!activo}
+                                            onClick={() => activo && setMesSel(mm)}>
+                                            <span className="flujo-mes-nombre">{nombre.slice(0, 3)}</span>
+                                            {activo && <span className="flujo-mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <button className="flujo-back-btn" onClick={() => setMesSel(null)}>
+                            <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSel, 10) - 1]} {anioSel}</span>
+                        </button>
+                        {loadingDias
+                            ? <p className="ws-empty">Cargando...</p>
+                            : dias.length === 0
+                                ? <p className="ws-empty">Sin días registrados</p>
+                                : <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                                    {dias.map(renderDiaTag)}
+                                </div>
+                        }
+                    </>
+                )}
+            </div>
         )}
 
         {/* ── TAB GENERAL ── */}
@@ -3369,6 +3362,8 @@ const PantallaFlujos = ({ turnoActivo }) => {
                 {/* Resultados */}
                 {!genQuery.trim() ? (
                     <p className="ws-empty" style={{ marginTop: 20 }}>Escribe algo para buscar en todos los registros</p>
+                ) : genLoading ? (
+                    <p className="ws-empty" style={{ marginTop: 20 }}>Buscando...</p>
                 ) : genResultados.length === 0 ? (
                     <p className="ws-empty" style={{ marginTop: 20 }}>Sin resultados para "{genQuery}"</p>
                 ) : (
@@ -3411,7 +3406,7 @@ const PantallaFlujos = ({ turnoActivo }) => {
 
         {confirmarFlujo && (
             <ModalConfirm
-                mensaje={`¿Eliminar los ${confirmarFlujo.ids.length} movimientos del ${confirmarFlujo.fechaLarga}?`}
+                mensaje={`¿Eliminar los ${confirmarFlujo.total} movimientos del ${confirmarFlujo.fechaLarga}?`}
                 onConfirm={handleDeleteFlujo}
                 onCancel={() => setConfirmarFlujo(null)}
             />

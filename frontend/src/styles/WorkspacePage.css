@@ -2993,6 +2993,91 @@
 }
 .flujo-month-header:hover .flujo-month-label { color: #a5b4fc; }
 
+/* ── Archivo de flujos: etiquetas de año ──────────────────── */
+.flujo-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 4px;
+}
+.flujo-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 16px;
+    background: #141414;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    min-width: 88px;
+}
+.flujo-tag:hover { background: #1a1a1a; border-color: #2a2a2a; }
+.flujo-tag-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e0e0e0;
+    letter-spacing: 0.5px;
+}
+.flujo-tag-count {
+    font-size: 11px;
+    color: #555;
+    font-weight: 400;
+}
+
+/* ── Archivo de flujos: botón "atrás" de cada nivel ───────── */
+.flujo-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 2px 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e0e0e0;
+    text-transform: capitalize;
+}
+.flujo-back-btn svg path { stroke: #818cf8; }
+
+/* ── Archivo de flujos: cuadro de meses (tipo calendario) ──── */
+.flujo-mes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.flujo-mes-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    aspect-ratio: 1.3;
+    background: #141414;
+    border: 1px solid #1e1e1e;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    color: #555;
+}
+.flujo-mes-tile.activo { color: #e0e0e0; cursor: pointer; }
+.flujo-mes-tile.activo:hover { background: #1a1a1a; border-color: #818cf8; }
+.flujo-mes-tile:disabled { cursor: not-allowed; opacity: 0.45; }
+.flujo-mes-nombre {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.flujo-mes-dias {
+    font-size: 10px;
+    color: #818cf8;
+    font-weight: 600;
+}
+
 /* ── Chips de filtro búsqueda general ──────────────────── */
 .gen-chip {
     padding: 5px 13px;
