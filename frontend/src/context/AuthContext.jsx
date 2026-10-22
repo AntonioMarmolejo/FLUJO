@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import api from '../api/axios';
+import { setAccessToken, setRefreshToken, getRefreshToken, clearAuthStore } from '../lib/authStore.js';
+import { vaultExists, destroyVault } from '../lib/vault.js';
 
 const AuthContext = createContext();
 
@@ -11,11 +13,11 @@ const getDeviceId = () => {
     return id;
 };
 
-const saveSession = (data) => {
-    localStorage.setItem('token', data.token);
-    if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-    localStorage.setItem('user', JSON.stringify(data.user));
-};
+// El perfil del usuario no es un secreto (ya se muestra en la UI) y sigue
+// cacheado en claro para poder pintar la app sin esperar al servidor. El
+// token/refreshToken YA NO se guardan aquí — ver lib/authStore.js (memoria)
+// y lib/vault.js (vault cifrado en Dexie, desbloqueado por PIN/huella).
+const cacheUser = (user) => localStorage.setItem('user', JSON.stringify(user));
 
 // Devuelve true si el dispositivo tiene autenticador biométrico de plataforma
 export const checkBiometricSupport = async () => {
@@ -32,41 +34,54 @@ export const AuthProvider = ({ children }) => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const verifyToken = async () => {
-            const token = localStorage.getItem('token');
-            const refreshToken = localStorage.getItem('refreshToken');
+        const bootstrap = async () => {
+            // Si ya existe un vault en este dispositivo, la restauración real la
+            // hace LockScreen (PIN/huella) llamando a restoreFromVault() — aquí
+            // no hay nada que intentar contra el servidor todavía.
+            if (await vaultExists()) { setLoading(false); return; }
+
+            // Sin vault: dispositivo nuevo, o una sesión "legacy" (de antes de
+            // este cambio) que aún tiene token en claro en localStorage. Si hay
+            // una sesión legacy, se migra sin forzar un re-login — ver
+            // afterAuthSuccess más abajo y CreatePinScreen.
+            const legacyToken = localStorage.getItem('token');
+            const legacyRefresh = localStorage.getItem('refreshToken');
             const cached = localStorage.getItem('user');
 
-            if (!token && !refreshToken) { setLoading(false); return; }
+            if (!legacyToken && !legacyRefresh) { setLoading(false); return; }
 
-            // Sin internet: restaurar sesión cacheada sin tocar el servidor
             if (!navigator.onLine && cached) {
-                try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
+                try {
+                    setUser(JSON.parse(cached));
+                    if (legacyRefresh) setRefreshToken(legacyRefresh);
+                    setLoading(false);
+                    return;
+                } catch { /* ignorar */ }
             }
 
-            // Intento 1: access token válido
-            if (token) {
+            if (legacyToken) {
                 try {
+                    setAccessToken(legacyToken);
                     const { data } = await api.get('/auth/me', { timeout: 8000 });
                     setUser(data.user);
+                    if (legacyRefresh) setRefreshToken(legacyRefresh);
                     setLoading(false);
                     return;
                 } catch { /* continuar */ }
             }
 
-            // Intento 2: renovar con refresh token
-            if (refreshToken) {
+            if (legacyRefresh) {
                 try {
-                    const { data } = await api.post('/auth/refresh', { refreshToken });
-                    localStorage.setItem('token', data.token);
-                    if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+                    const { data } = await api.post('/auth/refresh', { refreshToken: legacyRefresh });
+                    setAccessToken(data.token);
+                    setRefreshToken(legacyRefresh);
+                    if (data.user) cacheUser(data.user);
                     setUser(data.user || (cached ? JSON.parse(cached) : null));
                     setLoading(false);
                     return;
-                } catch { /* refresh expirado o sin internet */ }
+                } catch { /* refresh vencido o sin internet */ }
             }
 
-            // Último recurso offline
             if (cached && !navigator.onLine) {
                 try { setUser(JSON.parse(cached)); setLoading(false); return; } catch { /* ignorar */ }
             }
@@ -77,7 +92,7 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setLoading(false);
         };
-        verifyToken();
+        bootstrap();
     }, []);
 
     useEffect(() => {
@@ -88,31 +103,73 @@ export const AuthProvider = ({ children }) => {
     }, [user]);
 
     const updateUser = (newUserData) => {
-        localStorage.setItem('user', JSON.stringify(newUserData));
+        cacheUser(newUserData);
         setUser(newUserData);
+    };
+
+    // Llamado por LockScreen tras un PIN/huella correcto: repuebla la sesión
+    // SIN tocar el servidor (restaura el perfil cacheado de inmediato), y si
+    // hay internet intenta refrescar el access token en background sin
+    // bloquear al usuario si falla por estar simplemente offline.
+    const restoreFromVault = async (refreshToken) => {
+        setRefreshToken(refreshToken);
+        const cached = localStorage.getItem('user');
+        if (cached) { try { setUser(JSON.parse(cached)); } catch { /* ignorar */ } }
+
+        if (!navigator.onLine) return { ok: true };
+        try {
+            const { data } = await api.post('/auth/refresh', { refreshToken });
+            setAccessToken(data.token);
+            if (data.user) { setUser(data.user); cacheUser(data.user); }
+            return { ok: true };
+        } catch (err) {
+            if (err.response?.status === 401) {
+                // El refreshToken guardado en el vault ya no es válido en el
+                // servidor (revocado o vencido) — no se puede restaurar esta
+                // sesión, hay que iniciar sesión de nuevo.
+                clearAuthStore();
+                localStorage.removeItem('user');
+                await destroyVault().catch(() => {});
+                setUser(null);
+                return { ok: false, expired: true };
+            }
+            // Error de red u otro problema pasajero: seguir con lo ya restaurado.
+            return { ok: true };
+        }
+    };
+
+    // Tras cualquier login online exitoso: si este dispositivo no tiene vault
+    // todavía, pide crear un PIN antes de entrar (CreatePinScreen). Si ya
+    // existe uno, se deja tal cual — el refreshToken anterior sigue siendo
+    // válido en el servidor por un tiempo, así que no hace falta pedir el PIN
+    // de nuevo solo para actualizarlo.
+    const afterAuthSuccess = async (data) => {
+        setAccessToken(data.token);
+        setRefreshToken(data.refreshToken);
+        cacheUser(data.user);
+        setUser(data.user);
+
+        const dest = data.user.onboardingCompleto ? '/workspace' : '/onboarding';
+        if (!(await vaultExists())) {
+            navigate('/crear-pin', { state: { refreshToken: data.refreshToken, dest } });
+        } else {
+            navigate(dest);
+        }
     };
 
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password, deviceId: getDeviceId() });
-        saveSession(data);
-        setUser(data.user);
-        if (data.user.onboardingCompleto) navigate('/workspace');
-        else navigate('/onboarding');
+        await afterAuthSuccess(data);
     };
 
     const register = async (name, email, password) => {
         const { data } = await api.post('/auth/register', { name, email, password, deviceId: getDeviceId() });
-        saveSession(data);
-        setUser(data.user);
-        navigate('/onboarding');
+        await afterAuthSuccess(data);
     };
 
     const loginWithGoogle = async (accessToken) => {
         const { data } = await api.post('/auth/google', { token: accessToken, deviceId: getDeviceId() });
-        saveSession(data);
-        setUser(data.user);
-        if (data.user.onboardingCompleto) navigate('/workspace');
-        else navigate('/onboarding');
+        await afterAuthSuccess(data);
     };
 
     // Login biométrico: el usuario solo necesita su email + huella/Face ID
@@ -125,10 +182,7 @@ export const AuthProvider = ({ children }) => {
             userId: optRes.data.userId,
             deviceId,
         });
-        saveSession(verifyRes.data);
-        setUser(verifyRes.data.user);
-        if (verifyRes.data.user.onboardingCompleto) navigate('/workspace');
-        else navigate('/onboarding');
+        await afterAuthSuccess(verifyRes.data);
     };
 
     // Registrar la huella del dispositivo actual (debe llamarse con sesión activa)
@@ -145,13 +199,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getRefreshToken();
         if (refreshToken) {
             api.post('/auth/logout', { refreshToken }).catch(() => {});
         }
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        clearAuthStore();
         localStorage.removeItem('user');
+        await destroyVault().catch(() => {});
         setUser(null);
         navigate('/');
     };
@@ -167,7 +221,7 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider value={{
             user, loading,
             login, register, loginWithGoogle, loginWithBiometric, registerPasskey,
-            logout, updateUser,
+            logout, updateUser, restoreFromVault,
             role, isAdmin, isSupervisor, isPending, permisosPanel, hasPermiso,
         }}>
             {children}

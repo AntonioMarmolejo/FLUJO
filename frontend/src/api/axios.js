@@ -1,11 +1,13 @@
 import axios from 'axios';
+import { getAccessToken, setAccessToken, getRefreshToken, clearAuthStore } from '../lib/authStore.js';
+import { destroyVault } from '../lib/vault.js';
 
 const api = axios.create({
     baseURL: '/api',
 });
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = getAccessToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
@@ -27,11 +29,13 @@ api.interceptors.response.use(
             // Si estamos offline, NO redirigir — dejar que opere localmente
             if (!navigator.onLine) return Promise.reject(error);
 
-            // Intentar renovar el token con el refresh token
-            const refreshToken = localStorage.getItem('refreshToken');
+            // El refreshToken ya no vive en localStorage: solo está en memoria
+            // (se repobló al desbloquear el vault o al hacer login). Si no hay
+            // nada en memoria (ej. la pestaña se recargó sin desbloquear), mandar
+            // a la raíz para que RootRoute decida entre LockScreen y LoginPage.
+            const refreshToken = getRefreshToken();
             if (!refreshToken) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                clearAuthStore();
                 window.location.href = '/';
                 return Promise.reject(error);
             }
@@ -50,16 +54,19 @@ api.interceptors.response.use(
 
             try {
                 const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-                localStorage.setItem('token', data.token);
+                setAccessToken(data.token);
                 if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
                 processRefreshQueue(null, data.token);
                 original.headers.Authorization = `Bearer ${data.token}`;
                 return api(original);
             } catch (refreshError) {
                 processRefreshQueue(refreshError, null);
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
+                // El refreshToken guardado ya no es válido en el servidor (revocado
+                // o expirado): no tiene sentido mantener un vault que nunca más va
+                // a poder refrescar sesión, así que se borra y se manda a login.
+                clearAuthStore();
                 localStorage.removeItem('user');
+                await destroyVault().catch(() => {});
                 window.location.href = '/';
                 return Promise.reject(refreshError);
             } finally {

@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import { usePwaInstall } from '../hooks/usePwaInstall.js';
+import { vaultExists, hasBiometricGate, enableBiometricGate, disableBiometricGate, unlockWithPin, InvalidPinError } from '../lib/vault.js';
+import { isBiometricGateSupported } from '../lib/biometricGate.js';
+import PinPad from '../components/PinPad.jsx';
 import api from '../api/axios';
 import {
     encolarMovimiento,
@@ -18,6 +21,13 @@ import {
     deleteCachedVehiculo,
     cachePersona,
     buscarPersonaLocal,
+    getPersonasCache,
+    deleteCachedPersona,
+    cacheExtension,
+    getExtensionesCache,
+    deleteCachedExtension,
+    touchCatalogMeta,
+    getCatalogMeta,
 } from '../lib/syncEngine.js';
 import '../styles/WorkspacePage.css';
 
@@ -2413,12 +2423,38 @@ const ModalDetalleVehiculo = ({ vehiculos, id, onClose, onEdit, onNavigate }) =>
     );
 };
 
+// Formatea un timestamp como "hace 2 días" / "hace 3 h" / "hace 5 min"
+const formatRelativeTime = (ts) => {
+    if (!ts) return '';
+    const diffMin = Math.floor((Date.now() - ts) / 60000);
+    if (diffMin < 1) return 'hace un momento';
+    if (diffMin < 60) return `hace ${diffMin} min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `hace ${diffH} h`;
+    const diffD = Math.floor(diffH / 24);
+    return `hace ${diffD} día${diffD !== 1 ? 's' : ''}`;
+};
+
+// Aviso reutilizable de "datos cargados desde caché offline" con su antigüedad
+// (vigencia tipo Netflix: cachedAt/expiresAt guardado por catálogo en Dexie).
+const CacheFreshnessBadge = ({ cachedAt, onRefresh }) => (
+    <div style={{ margin: '0 16px 6px', padding: '7px 12px', background: '#1a1400', border: '1px solid #3a2e00', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 11, color: '#a87f00' }}>
+            📴 Datos guardados localmente{cachedAt ? ` · ${formatRelativeTime(cachedAt)}` : ''}
+        </span>
+        <button onClick={onRefresh} style={{ background: 'none', border: 'none', color: '#fbbf24', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+            Actualizar
+        </button>
+    </div>
+);
+
 // ── Pantalla Placas DB ────────────────────────────────────
 const PantallaPlacasDB = () => {
     const [vehiculos, setVehiculos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [fromCache, setFromCache] = useState(false);
+    const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editVehiculo, setEditVehiculo] = useState(null);
@@ -2437,6 +2473,7 @@ const PantallaPlacasDB = () => {
             setVehiculos(data.vehiculos);
             // Actualizar caché offline con todos los vehículos recibidos
             data.vehiculos.forEach(v => cacheVehiculo(v).catch(() => {}));
+            await touchCatalogMeta('vehiculos');
         } catch {
             // Sin conexión: intentar cargar desde caché local
             try {
@@ -2444,6 +2481,8 @@ const PantallaPlacasDB = () => {
                 if (cached.length > 0) {
                     setVehiculos(cached);
                     setFromCache(true);
+                    const meta = await getCatalogMeta('vehiculos');
+                    setCachedAt(meta?.cachedAt || null);
                 } else {
                     setLoadError(true);
                 }
@@ -2523,14 +2562,7 @@ const PantallaPlacasDB = () => {
             </div>
 
             {/* Aviso de datos cargados desde caché offline */}
-            {fromCache && (
-                <div style={{ margin: '0 16px 6px', padding: '7px 12px', background: '#1a1400', border: '1px solid #3a2e00', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: '#a87f00' }}>📴 Mostrando datos guardados localmente</span>
-                    <button onClick={cargar} style={{ background: 'none', border: 'none', color: '#fbbf24', fontSize: 11, cursor: 'pointer', padding: 0 }}>
-                        Actualizar
-                    </button>
-                </div>
-            )}
+            {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {/* Tabla de vehículos */}
             {loading
@@ -4055,6 +4087,8 @@ const ModalExtension = ({ onClose, onGuardado, editData }) => {
 const PantallaExtensiones = () => {
     const [extensiones, setExtensiones] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fromCache, setFromCache] = useState(false);
+    const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editExt, setEditExt] = useState(null);
@@ -4062,10 +4096,26 @@ const PantallaExtensiones = () => {
     const extSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
     const [detailExt, setDetailExt] = useState(null);
 
-    const cargar = () => {
-        api.get('/extensiones')
-            .then(res => { setExtensiones(res.data.extensiones); setLoading(false); })
-            .catch(() => setLoading(false));
+    const cargar = async () => {
+        setLoading(true);
+        setFromCache(false);
+        try {
+            const { data } = await api.get('/extensiones');
+            setExtensiones(data.extensiones);
+            data.extensiones.forEach(e => cacheExtension(e).catch(() => {}));
+            await touchCatalogMeta('extensiones');
+        } catch {
+            // Sin conexión: mostrar lo último que se tenga cacheado localmente
+            try {
+                const cached = await getExtensionesCache();
+                setExtensiones(cached);
+                setFromCache(cached.length > 0);
+                const meta = await getCatalogMeta('extensiones');
+                setCachedAt(meta?.cachedAt || null);
+            } catch { /* se queda en lista vacía */ }
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { cargar(); }, []);
@@ -4100,6 +4150,7 @@ const PantallaExtensiones = () => {
     // Eliminación optimista: quita la fila inmediatamente, luego sincroniza
     const handleDelete = async id => {
         setExtensiones(prev => prev.filter(e => e._id !== id));
+        deleteCachedExtension(id).catch(() => {});
         try { await api.delete(`/extensiones/${id}`); } catch { }
     };
 
@@ -4122,6 +4173,9 @@ const PantallaExtensiones = () => {
                     {filtrados.length} reg.
                 </span>
             </div>
+
+            {/* Aviso de datos cargados desde caché offline */}
+            {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {/* Tabla de extensiones */}
             {loading
@@ -4510,6 +4564,8 @@ const ModalImportPersonas = ({ onClose, onGuardado }) => {
 const PantallaPersonas = () => {
     const [personas, setPersonas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fromCache, setFromCache] = useState(false);
+    const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editPersona, setEditPersona] = useState(null);
@@ -4519,10 +4575,26 @@ const PantallaPersonas = () => {
     const personaSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
     const [detailPersona, setDetailPersona] = useState(null);
 
-    const cargar = () => {
-        api.get('/personas')
-            .then(res => { setPersonas(res.data.personas); setLoading(false); })
-            .catch(() => setLoading(false));
+    const cargar = async () => {
+        setLoading(true);
+        setFromCache(false);
+        try {
+            const { data } = await api.get('/personas');
+            setPersonas(data.personas);
+            data.personas.forEach(p => cachePersona(p).catch(() => {}));
+            await touchCatalogMeta('personas');
+        } catch {
+            // Sin conexión: mostrar lo último que se tenga cacheado localmente
+            try {
+                const cached = await getPersonasCache();
+                setPersonas(cached);
+                setFromCache(cached.length > 0);
+                const meta = await getCatalogMeta('personas');
+                setCachedAt(meta?.cachedAt || null);
+            } catch { /* se queda en lista vacía */ }
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { cargar(); }, []);
@@ -4536,7 +4608,8 @@ const PantallaPersonas = () => {
             (p.departamento || '').toLowerCase().includes(sq))
         : personas;
 
-    const handleDelete = async id => {
+    const handleDelete = async (id, cedula) => {
+        deleteCachedPersona(cedula).catch(() => {});
         try { await api.delete(`/personas/${id}`); cargar(); } catch { }
     };
 
@@ -4574,6 +4647,9 @@ const PantallaPersonas = () => {
                 </span>
             </div>
 
+            {/* Aviso de datos cargados desde caché offline */}
+            {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
+
             {/* Tabla de personas */}
             {loading
                 ? <p className="ws-empty">Cargando...</p>
@@ -4597,7 +4673,7 @@ const PantallaPersonas = () => {
                                                 <button className="plist-act-btn" title="Copiar"    onClick={() => { handleCopyText(pToText(p)); setSwipedPersonaId(null); }}><IconCopy /></button>
                                                 <button className="plist-act-btn" title="Compartir" onClick={() => { handleShareText(pToText(p)); setSwipedPersonaId(null); }}><IconShare /></button>
                                                 <button className="plist-act-btn" title="Ver QR"    onClick={() => { setQrPersona(p); setSwipedPersonaId(null); }}><IconQR /></button>
-                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id); setSwipedPersonaId(null); }}><IconMinus /></button>
+                                                <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id, p.cedula); setSwipedPersonaId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
                                                 className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
@@ -4698,6 +4774,97 @@ const PantallaStub = ({ title }) => (
 );
 
 // ── Perfil ────────────────────────────────────────────────
+// Activar/desactivar el gate biométrico LOCAL para desbloquear el vault del
+// PIN (distinto del "ACCESO BIOMÉTRICO" de arriba, que es el login completo
+// verificado contra el servidor). Exige confirmar el PIN actual antes de
+// vincular una huella nueva — mismo criterio de "no activar biometría sin
+// autenticar antes" aplicado aquí al desbloqueo local.
+const DesbloqueoHuellaLocal = () => {
+    const [ready, setReady] = useState(false);
+    const [visible, setVisible] = useState(false);
+    const [enabled, setEnabled] = useState(false);
+    const [confirming, setConfirming] = useState(false);
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState('');
+    const [shake, setShake] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            const [hasVault, supported, registered] = await Promise.all([
+                vaultExists(), isBiometricGateSupported(), hasBiometricGate(),
+            ]);
+            setVisible(hasVault && supported);
+            setEnabled(registered);
+            setReady(true);
+        })();
+    }, []);
+
+    const triggerError = (msg) => {
+        setError(msg);
+        setShake(true);
+        setPin('');
+        setTimeout(() => setShake(false), 400);
+    };
+
+    const handleDigit = async (d) => {
+        if (busy) return;
+        const next = (pin + d).slice(0, 6);
+        setPin(next);
+        setError('');
+        if (next.length < 6) return;
+        setBusy(true);
+        try {
+            const { deviceKeyBytes } = await unlockWithPin(next);
+            await enableBiometricGate(deviceKeyBytes);
+            setEnabled(true);
+            setConfirming(false);
+        } catch (err) {
+            triggerError(err instanceof InvalidPinError ? 'PIN incorrecto' : 'No se pudo activar');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleBackspace = () => { if (!busy) { setPin(p => p.slice(0, -1)); setError(''); } };
+
+    const handleDesactivar = async () => {
+        await disableBiometricGate().catch(() => {});
+        setEnabled(false);
+    };
+
+    if (!ready || !visible) return null;
+
+    return (
+        <div className="perfil-bio-section">
+            <p className="perfil-bio-label">DESBLOQUEO RÁPIDO</p>
+            {enabled ? (
+                <>
+                    <p className="perfil-bio-success">✓ Huella activada para desbloquear la app en este dispositivo</p>
+                    <button className="pin-footer-link" onClick={handleDesactivar}>Desactivar</button>
+                </>
+            ) : confirming ? (
+                <>
+                    <p className="perfil-install-note">Confirma tu PIN para activar la huella</p>
+                    <PinPad length={6} value={pin} onDigit={handleDigit} onBackspace={handleBackspace}
+                        error={!!error} shake={shake} disabled={busy} />
+                    <p className="pin-error-msg">{error}</p>
+                </>
+            ) : (
+                <button className="perfil-bio-btn" onClick={() => setConfirming(true)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 1C8.5 1 5.5 2.5 3.5 5M12 1c3.5 0 6.5 1.5 8.5 4M3 9c-.3 1-.5 2-.5 3M21 9c.3 1 .5 2 .5 3M12 7c-2.8 0-5 2.2-5 5 0 1.5.3 2.9.8 4.1M12 7c2.8 0 5 2.2 5 5 0 1.5-.3 2.9-.8 4.1M12 11c-1.1 0-2 .9-2 2 0 1.5.4 2.9 1 4.1M12 11c1.1 0 2 .9 2 2 0 1.5-.4 2.9-1 4.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                    Activar desbloqueo con huella
+                </button>
+            )}
+            <p className="perfil-install-note" style={{ marginTop: 2 }}>
+                Esto solo desbloquea la app en este dispositivo — no reemplaza tu inicio de sesión.
+            </p>
+        </div>
+    );
+};
+
 const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
     const { registerPasskey } = useAuth();
     const { installed: appInstalada, canPrompt: puedeInstalar, isIOS: esIOS, promptInstall } = usePwaInstall();
@@ -4781,6 +4948,8 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                     )}
                 </div>
             )}
+
+            <DesbloqueoHuellaLocal />
 
             {!appInstalada && (puedeInstalar || esIOS) && (
                 <div className="perfil-bio-section">

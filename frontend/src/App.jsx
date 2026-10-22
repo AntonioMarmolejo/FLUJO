@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import RootRoute from './components/RootRoute';
+import CreatePinScreen from './pages/CreatePinScreen';
 import BlockSelectPage from './pages/BlockSelectPage';
 import PostSelectPage from './pages/PostSelectPage';
 import WorkspacePage from './pages/WorkspacePage';
@@ -21,6 +22,9 @@ function App() {
                 <AuthProvider>
                     <Routes>
                         <Route path="/" element={<RootRoute />} />
+                        <Route path="/crear-pin" element={
+                            <ProtectedRoute><CreatePinScreen /></ProtectedRoute>
+                        } />
                         <Route path="/onboarding" element={
                             <ProtectedRoute><BlockSelectPage /></ProtectedRoute>
                         } />

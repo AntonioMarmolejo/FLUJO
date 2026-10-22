@@ -117,3 +117,57 @@ export const buscarPersonaLocal = async (query) => {
         )
         .toArray();
 };
+
+// Devuelve todo el catálogo de personas cacheado (para la pantalla de Personas offline)
+export const getPersonasCache = async () => {
+    return db.personasCache.orderBy('nombres').toArray();
+};
+
+export const deleteCachedPersona = async (cedula) => {
+    if (!cedula) return;
+    await db.personasCache.delete(cedula);
+};
+
+// Cachea una extensión para la pantalla de Extensiones offline
+export const cacheExtension = async (e) => {
+    if (!e._id) return;
+    await db.extensionesCache.put({ ...e, updatedAt: Date.now() });
+};
+
+export const getExtensionesCache = async () => {
+    return db.extensionesCache.orderBy('nombre').toArray();
+};
+
+export const deleteCachedExtension = async (id) => {
+    if (!id) return;
+    await db.extensionesCache.delete(id);
+};
+
+export const buscarExtensionLocal = async (query) => {
+    const q = query.toLowerCase();
+    return db.extensionesCache
+        .filter(e =>
+            (e.nombre || '').toLowerCase().includes(q) ||
+            (e.cargo || '').toLowerCase().includes(q) ||
+            (e.departamento || '').toLowerCase().includes(q)
+        )
+        .toArray();
+};
+
+// ── Vigencia de caché tipo Netflix (cachedAt/expiresAt) ───
+// Un registro por catálogo ('vehiculos' | 'personas' | 'extensiones').
+export const CATALOG_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
+
+export const touchCatalogMeta = async (catalogo) => {
+    const now = Date.now();
+    await db.catalogMeta.put({ catalogo, cachedAt: now, expiresAt: now + CATALOG_TTL_MS });
+};
+
+export const getCatalogMeta = async (catalogo) => {
+    return db.catalogMeta.get(catalogo);
+};
+
+export const isCatalogStale = async (catalogo) => {
+    const meta = await getCatalogMeta(catalogo);
+    return !meta || meta.expiresAt < Date.now();
+};

@@ -14,4 +14,16 @@ db.version(2).stores({
     edicionesPending: 'id, synced, createdAt',
 });
 
+// v3: vault de sesión cifrada (PIN/huella) + caché offline de extensiones +
+// metadata de vigencia ("cachedAt/expiresAt" tipo Netflix) por catálogo.
+db.version(3).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+});
+
 export default db;
