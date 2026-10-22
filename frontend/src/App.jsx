@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
-import LoginPage from './pages/LoginPage';
+import RootRoute from './components/RootRoute';
 import BlockSelectPage from './pages/BlockSelectPage';
 import PostSelectPage from './pages/PostSelectPage';
 import WorkspacePage from './pages/WorkspacePage';
@@ -20,7 +20,7 @@ function App() {
             <BrowserRouter>
                 <AuthProvider>
                     <Routes>
-                        <Route path="/" element={<LoginPage />} />
+                        <Route path="/" element={<RootRoute />} />
                         <Route path="/onboarding" element={
                             <ProtectedRoute><BlockSelectPage /></ProtectedRoute>
                         } />

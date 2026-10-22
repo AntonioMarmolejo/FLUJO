@@ -5,7 +5,7 @@ import api from '../api/axios.js';
 const uploadItem = async (item, attempt = 0) => {
     try {
         const { data } = await api.post('/movimientos', item.payload);
-        await db.movimientosPending.update(item.uuid, { synced: true, serverId: data.movimiento._id });
+        await db.movimientosPending.update(item.uuid, { synced: 1, serverId: data.movimiento._id });
         return { uuid: item.uuid, serverId: data.movimiento._id };
     } catch (err) {
         if (attempt >= 3) throw err;
@@ -48,7 +48,7 @@ export const getPendingMovimientos = async () => {
 
 // Marca un item como sincronizado (llamar cuando la API responde OK tras el write-ahead)
 export const marcarSincronizado = async (uuid, serverId) => {
-    await db.movimientosPending.update(uuid, { synced: true, serverId });
+    await db.movimientosPending.update(uuid, { synced: 1, serverId });
 };
 
 // ── Cola de ediciones offline ─────────────────────────────

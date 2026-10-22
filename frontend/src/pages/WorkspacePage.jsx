@@ -5195,8 +5195,9 @@ const WorkspacePage = () => {
         setMovimientos(prev => prev.map(m => m._id === tempId ? realMov : m));
     };
 
-    // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión
-    // y cada 30 s para cubrir casos donde el servidor rechazó el POST sin perder internet
+    // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión,
+    // cuando la pestaña recupera el foco (el navegador puede pausar el intervalo
+    // mientras está en segundo plano) y cada 30 s como respaldo.
     useEffect(() => {
         if (!turnoActivo || isPending) return;
         const onSynced = ({ uuid, serverId }) => {
@@ -5211,11 +5212,14 @@ const WorkspacePage = () => {
                 syncPendingEdiciones(onSyncedEdicion);
             }
         };
+        const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
         sync();
         window.addEventListener('online', sync);
+        document.addEventListener('visibilitychange', onVisibility);
         const interval = setInterval(sync, 30_000);
         return () => {
             window.removeEventListener('online', sync);
+            document.removeEventListener('visibilitychange', onVisibility);
             clearInterval(interval);
         };
     }, [turnoActivo, isPending]);
