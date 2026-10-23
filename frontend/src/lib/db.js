@@ -26,4 +26,17 @@ db.version(3).stores({
     authVault: 'id',
 });
 
+// v4: cola de borrados offline (borrar un movimiento también debe funcionar
+// sin conexión, igual que crear/editar).
+db.version(4).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+});
+
 export default db;

@@ -9,12 +9,17 @@ import PinPad from '../components/PinPad.jsx';
 import api from '../api/axios';
 import {
     encolarMovimiento,
-    marcarSincronizado,
+    subirMovimientoPendiente,
+    cancelarMovimientoPendiente,
     getPendingMovimientos,
     syncPendingMovimientos,
     encolarEdicion,
     marcarEdicionSincronizada,
     syncPendingEdiciones,
+    encolarBorrado,
+    cancelarBorradoEncolado,
+    getBorradosPendientesIds,
+    syncPendingBorrados,
     cacheVehiculo,
     buscarPlacaLocal,
     getVehiculosCache,
@@ -914,13 +919,13 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         }
         // Write-ahead: guardar en Dexie ANTES de intentar la API.
         // Así, si el usuario refresca durante el vuelo o el servidor no responde,
-        // el movimiento no se pierde — ya está en la cola local.
+        // el movimiento no se pierde — ya está en la cola local. Subirlo pasa
+        // por el mismo punto único que usa el motor de reintento (candado en
+        // memoria incluido) para que nunca se suba dos veces en paralelo.
         await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
         try {
-            const { data } = await api.post('/movimientos', payload);
-            // Éxito: marcar como sincronizado en Dexie y confirmar en UI
-            await marcarSincronizado(tempId, data.movimiento._id);
-            onMovimientoConfirmado(tempId, data.movimiento);
+            const result = await subirMovimientoPendiente(tempId);
+            if (result?.movimiento) onMovimientoConfirmado(tempId, result.movimiento);
         } catch {
             // El movimiento ya está en Dexie; el motor de reintento lo subirá
         }
@@ -5324,7 +5329,10 @@ const WorkspacePage = () => {
         const turnoFecha = turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual);
         try {
             const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
-            const serverMovs = mRes.data.movimientos;
+            // No volver a mostrar un movimiento que el usuario ya borró pero que
+            // todavía no se confirmó contra el servidor (borrado en cola offline).
+            const borrados = new Set(await getBorradosPendientesIds());
+            const serverMovs = mRes.data.movimientos.filter(m => !borrados.has(m._id));
             const serverIds = new Set(serverMovs.map(m => m._id));
             const pending = await getPendingMovimientos();
             const pendingItems = pending
@@ -5369,7 +5377,8 @@ const WorkspacePage = () => {
     // mientras está en segundo plano) y cada 30 s como respaldo.
     useEffect(() => {
         if (!turnoActivo || isPending) return;
-        const onSynced = ({ uuid, serverId }) => {
+        const onSynced = ({ uuid, serverId, cancelado }) => {
+            if (cancelado) return; // el usuario ya lo borró localmente mientras se subía
             setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
         };
         const onSyncedEdicion = (id, movData) => {
@@ -5379,6 +5388,7 @@ const WorkspacePage = () => {
             if (navigator.onLine) {
                 syncPendingMovimientos(onSynced);
                 syncPendingEdiciones(onSyncedEdicion);
+                syncPendingBorrados();
             }
         };
         const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
@@ -5420,8 +5430,27 @@ const WorkspacePage = () => {
         selectedIds.size === movimientos.length ? new Set() : new Set(movimientos.map(m => m._id))
     );
 
+    // Borrado optimista: quita la fila de inmediato. Si el movimiento todavía
+    // no se había subido al servidor (sigue en la cola offline), basta con
+    // cancelarlo ahí — nunca llegó a crearse allá. Si ya estaba confirmado,
+    // se encola el borrado y se reintenta solo hasta que se confirme —
+    // ya no depende de que haya internet en el momento exacto del clic.
     const handleDelete = async id => {
-        try { await api.delete(`/movimientos/${id}`); cargarDatos(); } catch { }
+        const target = movimientos.find(m => m._id === id);
+        setMovimientos(prev => prev.filter(m => m._id !== id));
+
+        if (target?._pending) {
+            await cancelarMovimientoPendiente(id).catch(() => {});
+            return;
+        }
+
+        await encolarBorrado(id);
+        try {
+            await api.delete(`/movimientos/${id}`);
+            await cancelarBorradoEncolado(id);
+        } catch {
+            // Queda en la cola; el motor de sincronización lo reintentará
+        }
     };
 
     const handleDeleteBitPair = async (b, idx) => {
@@ -5429,19 +5458,31 @@ const WorkspacePage = () => {
         if (!ids.length) return;
         const label = ids.length > 1 ? 'los 2 movimientos' : 'el movimiento';
         if (!window.confirm(`¿Eliminar ${label} de ${b.placa}?`)) return;
-        try {
-            await Promise.all(ids.map(id => api.delete(`/movimientos/${id}`)));
-            setBitDetailIdx(null);
-            cargarDatos();
-        } catch {}
+        await Promise.all(ids.map(id => handleDelete(id)));
+        setBitDetailIdx(null);
     };
 
     const handleBatchDelete = async () => {
         if (!selectedIds.size) return;
-        try {
-            await api.delete('/movimientos/batch', { data: { ids: [...selectedIds] } });
-            setSelectedIds(new Set()); setSelectMode(false); cargarDatos();
-        } catch { }
+        const ids = [...selectedIds];
+        const pendingIds = ids.filter(id => movimientos.find(m => m._id === id)?._pending);
+        const confirmedIds = ids.filter(id => !pendingIds.includes(id));
+
+        setMovimientos(prev => prev.filter(m => !selectedIds.has(m._id)));
+        setSelectedIds(new Set());
+        setSelectMode(false);
+
+        await Promise.all(pendingIds.map(id => cancelarMovimientoPendiente(id).catch(() => {})));
+
+        if (confirmedIds.length) {
+            await Promise.all(confirmedIds.map(id => encolarBorrado(id)));
+            try {
+                await api.delete('/movimientos/batch', { data: { ids: confirmedIds } });
+                await Promise.all(confirmedIds.map(id => cancelarBorradoEncolado(id)));
+            } catch {
+                // Quedan en la cola; el motor de sincronización las reintentará una por una
+            }
+        }
     };
 
     const handleCopy = m => navigator.clipboard?.writeText(movToText(m));
@@ -5500,9 +5541,8 @@ const WorkspacePage = () => {
             setMovimientos(prev => [...prev, tempMov]);
             await encolarMovimiento({ uuid: tempId, payload, hora, fecha: fechaFlujo });
             try {
-                const { data } = await api.post('/movimientos', payload);
-                await marcarSincronizado(tempId, data.movimiento._id);
-                handleMovimientoConfirmado(tempId, data.movimiento);
+                const result = await subirMovimientoPendiente(tempId);
+                if (result?.movimiento) handleMovimientoConfirmado(tempId, result.movimiento);
             } catch { /* queda en cola Dexie */ }
         }
     };

@@ -43,6 +43,15 @@ export const crearMovimiento = async (req, res) => {
 
         res.status(201).json({ message: 'Movimiento registrado', movimiento });
     } catch (error) {
+        // Carrera entre dos intentos con el mismo clientUUID (ej. el guardado
+        // inicial y el motor de reintento, ambos en vuelo por internet lento):
+        // el índice único de (usuario, clientUUID) rechaza el segundo insert
+        // en vez de crear un duplicado. Se trata igual que el camino feliz de
+        // idempotencia de arriba — devolver el que ya quedó guardado.
+        if (error.code === 11000 && req.body.clientUUID) {
+            const existing = await Movimiento.findOne({ clientUUID: req.body.clientUUID, usuario: req.user._id });
+            if (existing) return res.status(201).json({ message: 'Movimiento ya registrado', movimiento: existing });
+        }
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };
