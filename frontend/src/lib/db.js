@@ -39,4 +39,17 @@ db.version(4).stores({
     borradosPending: 'id, createdAt',
 });
 
+// v5: caché offline de Firmas Funcionarios (solo lectura, igual que Personas/Extensiones)
+db.version(5).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+});
+
 export default db;

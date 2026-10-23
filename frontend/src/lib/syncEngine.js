@@ -191,8 +191,11 @@ export const buscarPersonaLocal = async (query) => {
 };
 
 // Devuelve todo el catálogo de personas cacheado (para la pantalla de Personas offline)
+// Nota: 'nombres' no es un índice de la tabla, así que se ordena en JS
+// (orderBy() de Dexie exige que la clave esté indexada).
 export const getPersonasCache = async () => {
-    return db.personasCache.orderBy('nombres').toArray();
+    const arr = await db.personasCache.toArray();
+    return arr.sort((a, b) => (a.nombres || '').localeCompare(b.nombres || ''));
 };
 
 export const deleteCachedPersona = async (cedula) => {
@@ -207,7 +210,8 @@ export const cacheExtension = async (e) => {
 };
 
 export const getExtensionesCache = async () => {
-    return db.extensionesCache.orderBy('nombre').toArray();
+    const arr = await db.extensionesCache.toArray();
+    return arr.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 };
 
 export const deleteCachedExtension = async (id) => {
@@ -226,8 +230,24 @@ export const buscarExtensionLocal = async (query) => {
         .toArray();
 };
 
+// Cachea una firma para la galería de Firmas Funcionarios offline
+export const cacheFirma = async (f) => {
+    if (!f._id) return;
+    await db.firmasCache.put({ ...f, updatedAt: Date.now() });
+};
+
+export const getFirmasCache = async () => {
+    const arr = await db.firmasCache.toArray();
+    return arr.sort((a, b) => (a.nombres || '').localeCompare(b.nombres || ''));
+};
+
+export const deleteCachedFirma = async (id) => {
+    if (!id) return;
+    await db.firmasCache.delete(id);
+};
+
 // ── Vigencia de caché tipo Netflix (cachedAt/expiresAt) ───
-// Un registro por catálogo ('vehiculos' | 'personas' | 'extensiones').
+// Un registro por catálogo ('vehiculos' | 'personas' | 'extensiones' | 'firmas').
 export const CATALOG_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días
 
 export const touchCatalogMeta = async (catalogo) => {
