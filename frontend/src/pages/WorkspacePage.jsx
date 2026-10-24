@@ -6279,6 +6279,22 @@ const WorkspacePage = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    const [diasActivos, setDiasActivos] = useState(0);
+    const [movimientos, setMovimientos] = useState([]);
+    const [turnoActivo, setTurnoActivo] = useState(null);
+
+    const [showModal, setShowModal] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showShareMenu, setShowShareMenu] = useState(false);
+    const [fabOpen, setFabOpen] = useState(false);
+    const [detailMov, setDetailMov] = useState(null);
+    const [editMov, setEditMov] = useState(null);
+
+    const [showDrawer, setShowDrawer] = useState(false);
+    const [lastDrawerTab, setLastDrawerTab] = useState(null);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Con la búsqueda activa, al bajar se oculta la fila de íconos (menú,
     // usuario, día/noche, lupa) y la barra de búsqueda sube a ocupar ese
     // espacio; al subir un poco vuelve a aparecer la fila para poder
@@ -6301,22 +6317,6 @@ const WorkspacePage = () => {
         window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
     }, [showSearch]);
-
-    const [diasActivos, setDiasActivos] = useState(0);
-    const [movimientos, setMovimientos] = useState([]);
-    const [turnoActivo, setTurnoActivo] = useState(null);
-
-    const [showModal, setShowModal] = useState(false);
-    const [showExportMenu, setShowExportMenu] = useState(false);
-    const [showShareMenu, setShowShareMenu] = useState(false);
-    const [fabOpen, setFabOpen] = useState(false);
-    const [detailMov, setDetailMov] = useState(null);
-    const [editMov, setEditMov] = useState(null);
-
-    const [showDrawer, setShowDrawer] = useState(false);
-    const [lastDrawerTab, setLastDrawerTab] = useState(null);
-    const [showSearch, setShowSearch] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
