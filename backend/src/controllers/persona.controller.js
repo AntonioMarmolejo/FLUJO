@@ -70,6 +70,25 @@ export const deletePersona = async (req, res) => {
     }
 };
 
+// PUT /api/personas/:id/autorizar (solo admin) — habilita/revoca el permiso
+// para registrar firma de esta persona en Utilidades > Firmas Funcionarios.
+export const setAutorizacionFirma = async (req, res) => {
+    try {
+        const persona = await Persona.findByIdAndUpdate(
+            req.params.id,
+            { autorizadoFirma: !!req.body.autorizado },
+            { new: true }
+        );
+        if (!persona) return res.status(404).json({ message: 'Persona no encontrada' });
+        res.json({
+            message: persona.autorizadoFirma ? 'Persona autorizada para registrar firma' : 'Autorización de firma revocada',
+            persona,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // POST /api/personas/bulk
 export const bulkImport = async (req, res) => {
     try {

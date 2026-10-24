@@ -40,13 +40,15 @@ export const createFirma = async (req, res) => {
 
         const cedulaTrim = cedula.trim();
 
-        // Si la persona no existe en el catálogo, se crea (igual que el
-        // registro automático de movimientos cuando el conductor es nuevo).
-        await Persona.findOneAndUpdate(
-            { cedula: cedulaTrim },
-            { $setOnInsert: { cedula: cedulaTrim, ...fields(req.body) } },
-            { upsert: true }
-        );
+        // Solo se puede registrar firma de una persona ya autorizada por un
+        // admin (Personas > autorizar) — a diferencia de movimientos, aquí
+        // no se crea la persona automáticamente.
+        const persona = await Persona.findOne({ cedula: cedulaTrim });
+        if (!persona || !persona.autorizadoFirma) {
+            return res.status(403).json({
+                message: 'Esta persona no está autorizada para registrar firma. Pide a un administrador que la autorice desde Personas.',
+            });
+        }
 
         if (reemplazaA) {
             await Firma.updateOne({ _id: reemplazaA, cedula: cedulaTrim }, { vigente: false });

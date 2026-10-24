@@ -3863,11 +3863,17 @@ const RecortarFirma = ({ src, onAplicar, onCancelar }) => {
 
 // Dropdown de sugerencias de persona (mismo estilo visual que PersonaSugList del formulario de movimientos)
 const PersonaSugMini = ({ items, onSel }) => !items.length ? null : (
-    <div style={{
-        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-        background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
-        overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
-    }}>
+    // onMouseDown con preventDefault evita que el input pierda el foco (blur)
+    // antes de que el click en la sugerencia llegue a dispararse — así el
+    // onBlur del input puede cerrar la lista al tocar fuera o cambiar de
+    // campo, sin romper la selección por click/tap.
+    <div
+        onMouseDown={e => e.preventDefault()}
+        style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
+            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
+        }}>
         {items.map((p, i) => (
             <div key={i} onClick={() => onSel(p)}
                 style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
@@ -3892,7 +3898,7 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
     const [empresa, setEmpresa] = useState(editando?.empresa || '');
     const [departamento, setDepartamento] = useState(editando?.departamento || '');
     const [cargo, setCargo] = useState(editando?.cargo || '');
-    const [matchEstado, setMatchEstado] = useState(editando ? 'cargado' : null); // null | 'cargado' | 'nuevo'
+    const [matchEstado, setMatchEstado] = useState(editando ? 'cargado' : null); // null | 'cargado' | 'no-autorizado' | 'no-encontrado'
     const [sugsNombres, setSugsNombres] = useState([]);
     const [sugsCedula, setSugsCedula] = useState([]);
     const [avisoExistente, setAvisoExistente] = useState(null);
@@ -3904,16 +3910,22 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
     const timerNombres = useRef(null);
     const timerCedula = useRef(null);
 
+    // Solo personas autorizadas por un admin pueden tener firma — las
+    // sugerencias se filtran a esas, y si hay coincidencias sin autorizar
+    // se avisa en vez de permitir crear una persona nueva desde aquí.
     const buscarYSugerir = async (val, setSugs) => {
         try {
             const { data } = await api.get(`/personas/search?q=${encodeURIComponent(val)}`);
-            setSugs(data.personas || []);
-            data.personas?.forEach(p => cachePersona(p).catch(() => {}));
-            if (!data.personas?.length) setMatchEstado('nuevo');
+            const todas = data.personas || [];
+            todas.forEach(p => cachePersona(p).catch(() => {}));
+            const autorizadas = todas.filter(p => p.autorizadoFirma);
+            setSugs(autorizadas);
+            if (!autorizadas.length) setMatchEstado(todas.length ? 'no-autorizado' : 'no-encontrado');
         } catch {
             const local = await buscarPersonaLocal(val).catch(() => []);
-            setSugs(local || []);
-            if (!local?.length) setMatchEstado('nuevo');
+            const autorizadas = (local || []).filter(p => p.autorizadoFirma);
+            setSugs(autorizadas);
+            if (!autorizadas.length) setMatchEstado((local || []).length ? 'no-autorizado' : 'no-encontrado');
         }
     };
 
@@ -3929,7 +3941,7 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
     const handleNombresChange = val => {
         setNombres(val);
         setError('');
-        if (matchEstado === 'cargado') setMatchEstado(null);
+        setMatchEstado(null);
         if (val.trim().length < 3) { setSugsNombres([]); return; }
         clearTimeout(timerNombres.current);
         timerNombres.current = setTimeout(() => buscarYSugerir(val, setSugsNombres), 300);
@@ -3941,7 +3953,7 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
         setError('');
         setAvisoExistente(null);
         setReemplazaA(null);
-        if (matchEstado === 'cargado') setMatchEstado(null);
+        setMatchEstado(null);
         if (soloDigitos.length < 3) { setSugsCedula([]); return; }
         clearTimeout(timerCedula.current);
         timerCedula.current = setTimeout(async () => {
@@ -3980,18 +3992,20 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
 
     const nombresOk = nombres.trim().length > 2;
     const cedulaOk = cedula.trim().length === 10;
-    const datosExtraOk = matchEstado !== 'nuevo' || (empresa.trim() && cargo.trim());
-    const puedeGuardar = !!imagen && nombresOk && cedulaOk && datosExtraOk;
+    const autorizadoOk = matchEstado === 'cargado';
+    const puedeGuardar = !!imagen && nombresOk && cedulaOk && autorizadoOk;
 
     const footerHint = !imagen
         ? 'Captura la firma para continuar.'
-        : (matchEstado === 'nuevo' && !datosExtraOk)
-            ? 'Completa nombre, cédula (10 dígitos), empresa y cargo.'
-            : (avisoExistente && !reemplazaA)
-                ? 'Esta persona ya tiene firma: elige "Agregar otra" para vincular una adicional.'
-                : (matchEstado === 'nuevo')
-                    ? 'Al guardar se creará la persona y se vinculará la firma.'
-                    : 'Al guardar, la firma se vinculará a la persona seleccionada.';
+        : matchEstado === 'no-encontrado'
+            ? 'Esta persona no está registrada. Pide a un administrador que la registre en Personas y la autorice.'
+            : matchEstado === 'no-autorizado'
+                ? 'Esta persona no está autorizada para registrar firma. Pide a un administrador que la autorice desde Personas.'
+                : !autorizadoOk
+                    ? 'Busca y selecciona a la persona autorizada desde las sugerencias.'
+                    : (avisoExistente && !reemplazaA)
+                        ? 'Esta persona ya tiene firma: elige "Agregar otra" para vincular una adicional.'
+                        : 'Al guardar, la firma se vinculará a la persona seleccionada.';
 
     const handleGuardar = async () => {
         if (!puedeGuardar || guardando) return;
@@ -4061,13 +4075,14 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
                     <span className="firma-section-num">2</span>
                     <span className="firma-section-title">Datos del funcionario</span>
                     {matchEstado === 'cargado' && <span className="firma-badge firma-badge-verde">Datos cargados desde la base</span>}
-                    {matchEstado === 'nuevo' && <span className="firma-badge firma-badge-violeta">Nuevo registro</span>}
+                    {matchEstado === 'no-autorizado' && <span className="firma-badge firma-badge-rojo">No autorizada</span>}
+                    {matchEstado === 'no-encontrado' && <span className="firma-badge firma-badge-violeta">No registrada</span>}
                 </div>
 
                 <div className="firma-field">
                     <label>Nombres y apellidos</label>
                     <div className="firma-input-wrap">
-                        <input value={nombres} onChange={e => handleNombresChange(e.target.value)} placeholder="Busca o escribe el nombre completo" />
+                        <input value={nombres} onChange={e => handleNombresChange(e.target.value)} onBlur={() => setSugsNombres([])} placeholder="Busca o escribe el nombre completo" />
                         <PersonaSugMini items={sugsNombres} onSel={seleccionarPersona} />
                     </div>
                 </div>
@@ -4075,15 +4090,22 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
                 <div className="firma-field">
                     <label>Cédula</label>
                     <div className="firma-input-wrap">
-                        <input value={cedula} onChange={e => handleCedulaChange(e.target.value)} placeholder="10 dígitos" inputMode="numeric" maxLength={10} />
+                        <input value={cedula} onChange={e => handleCedulaChange(e.target.value)} onBlur={() => setSugsCedula([])} placeholder="10 dígitos" inputMode="numeric" maxLength={10} />
                         <PersonaSugMini items={sugsCedula} onSel={seleccionarPersona} />
                     </div>
                 </div>
 
-                {matchEstado === 'nuevo' && (
+                {matchEstado === 'no-encontrado' && (
                     <div className="firma-hint-box firma-hint-violeta">
-                        <strong>No encontrado — se registrará como nueva persona</strong>
-                        <p>Completa cédula, empresa, departamento y cargo manualmente.</p>
+                        <strong>Persona no registrada</strong>
+                        <p>Pide a un administrador que la registre en Personas y la autorice para firmas.</p>
+                    </div>
+                )}
+
+                {matchEstado === 'no-autorizado' && (
+                    <div className="firma-hint-box firma-hint-rojo">
+                        <strong>Persona no autorizada para firmar</strong>
+                        <p>Existe en Personas pero no está autorizada. Pide a un administrador que la autorice.</p>
                     </div>
                 )}
 
@@ -4606,10 +4628,18 @@ const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => {
 };
 
 // ── Modal detalle Persona ─────────────────────────────────
-const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR }) => {
+const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onToggleAutorizado }) => {
+    const { isAdmin } = useAuth();
+    const [togglingAuth, setTogglingAuth] = useState(false);
     const initials = (p.nombres || '')
         .split(' ').filter(Boolean).slice(0, 2)
         .map(w => w[0].toUpperCase()).join('');
+
+    const handleToggleAuth = async () => {
+        if (!onToggleAutorizado || togglingAuth) return;
+        setTogglingAuth(true);
+        try { await onToggleAutorizado(p._id, !p.autorizadoFirma); } catch { } finally { setTogglingAuth(false); }
+    };
 
     const fields = [
         { label: 'Empresa',      value: p.empresa },
@@ -4689,6 +4719,41 @@ const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR }) =>
                             {p.cedula}
                         </div>
                     </div>
+                </div>
+
+                {/* Autorización para registrar firma — solo el admin puede cambiarla */}
+                <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                        onClick={isAdmin ? handleToggleAuth : undefined}
+                        disabled={!isAdmin || togglingAuth}
+                        style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            gap: 10, padding: '10px 14px', borderRadius: 12,
+                            background: p.autorizadoFirma ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${p.autorizadoFirma ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                            cursor: isAdmin ? 'pointer' : 'default', opacity: togglingAuth ? 0.6 : 1,
+                        }}
+                    >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: p.autorizadoFirma ? '#4ade80' : '#9a9ba3' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                            </svg>
+                            {p.autorizadoFirma ? 'Autorizada para registrar firma' : 'No autorizada para registrar firma'}
+                        </span>
+                        {isAdmin && (
+                            <span style={{
+                                flexShrink: 0, width: 38, height: 22, borderRadius: 999, position: 'relative',
+                                background: p.autorizadoFirma ? '#4ade80' : 'rgba(255,255,255,0.12)',
+                                transition: 'background 0.15s ease',
+                            }}>
+                                <span style={{
+                                    position: 'absolute', top: 2, left: p.autorizadoFirma ? 18 : 2,
+                                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                                    transition: 'left 0.15s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                }} />
+                            </span>
+                        )}
+                    </button>
                 </div>
 
                 {/* Campos */}
@@ -5429,7 +5494,10 @@ const PantallaPersonas = () => {
                                                 }}
                                             >
                                                 <span className="ftable-cell ftable-cell-accent">{p.cedula || '—'}</span>
-                                                <span className="ftable-cell ftable-cell-bold">{(p.nombres || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-bold">
+                                                    {(p.nombres || '—').toUpperCase()}
+                                                    {p.autorizadoFirma && <span title="Autorizada para registrar firma" style={{ color: '#4ade80', marginLeft: 5 }}>●</span>}
+                                                </span>
                                                 <span className="ftable-cell">{(p.empresa || '—').toUpperCase()}</span>
                                                 <span className="ftable-cell ftable-cell-dim">{p.cargo || '—'}</span>
                                                 <span className="ftable-cell ftable-cell-dim">{(p.departamento || '—').toUpperCase()}</span>
@@ -5465,6 +5533,11 @@ const PantallaPersonas = () => {
                     onEdit={per => { setEditPersona(per); setDetailPersona(null); }}
                     onDelete={id => { handleDelete(id); setDetailPersona(null); }}
                     onQR={per => { setQrPersona(per); setDetailPersona(null); }}
+                    onToggleAutorizado={async (id, autorizado) => {
+                        const { data } = await api.put(`/personas/${id}/autorizar`, { autorizado });
+                        setDetailPersona(data.persona);
+                        setPersonas(prev => prev.map(per => per._id === id ? data.persona : per));
+                    }}
                 />
             )}
             {qrPersona && (
