@@ -10,7 +10,7 @@ const generateRefreshToken = () => crypto.randomBytes(48).toString('hex');
 const REFRESH_TTL_DAYS = 30;
 const REFRESH_TTL_MS = REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
 
-const buildUserResponse = (user) => ({
+export const buildUserResponse = (user) => ({
     id: user._id,
     name: user.name,
     email: user.email,
