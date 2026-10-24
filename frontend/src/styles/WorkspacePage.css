@@ -17,16 +17,35 @@
     position: relative;
 }
 
-/* Top bar */
+/* Top bar + barra de búsqueda — envueltos juntos para que, con la búsqueda
+   activa, la fila de íconos se oculte al bajar y la barra de búsqueda quede
+   fija ocupando ese espacio arriba (ver ws-topbar-collapsed). */
+.ws-topbar-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #0d0d0d;
+}
+
 .ws-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
     background: #0d0d0d;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    overflow: hidden;
+    max-height: 72px;
+    transition: max-height 0.22s ease, padding-top 0.22s ease, padding-bottom 0.22s ease, opacity 0.18s ease;
+    opacity: 1;
+}
+
+.ws-topbar-wrap-searching .ws-topbar.ws-topbar-collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-bottom-width: 0;
+    box-shadow: none;
 }
 
 .ws-topbar-title {
@@ -3355,6 +3374,7 @@
 [data-theme="light"] .ws-wrapper { background: #edf0f7; }
 
 /* ── Topbar ── */
+[data-theme="light"] .ws-topbar-wrap { background: #ffffff; }
 [data-theme="light"] .ws-topbar {
     background: #ffffff;
     border-bottom: 1px solid #dde4ef;

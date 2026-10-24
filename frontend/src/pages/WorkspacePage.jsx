@@ -5926,6 +5926,29 @@ const WorkspacePage = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    // Con la búsqueda activa, al bajar se oculta la fila de íconos (menú,
+    // usuario, día/noche, lupa) y la barra de búsqueda sube a ocupar ese
+    // espacio; al subir un poco vuelve a aparecer la fila para poder
+    // desactivar la búsqueda desde la lupa.
+    const [topbarIconsHidden, setTopbarIconsHidden] = useState(false);
+    const lastScrollYRef = useRef(0);
+
+    useEffect(() => {
+        if (!showSearch) { setTopbarIconsHidden(false); return; }
+        lastScrollYRef.current = window.scrollY;
+        const UMBRAL = 10;
+        const onScroll = () => {
+            const y = window.scrollY;
+            const delta = y - lastScrollYRef.current;
+            if (y < 40) setTopbarIconsHidden(false);
+            else if (delta > UMBRAL) setTopbarIconsHidden(true);
+            else if (delta < -UMBRAL) setTopbarIconsHidden(false);
+            lastScrollYRef.current = y;
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, [showSearch]);
+
     const [diasActivos, setDiasActivos] = useState(0);
     const [movimientos, setMovimientos] = useState([]);
     const [turnoActivo, setTurnoActivo] = useState(null);
@@ -6479,8 +6502,11 @@ const WorkspacePage = () => {
                 />
             )}
 
-            {/* Top bar */}
-            <div className="ws-topbar">
+            {/* Top bar + barra de búsqueda: envueltos juntos para que, con la
+                búsqueda activa, la fila de íconos se pueda ocultar al bajar
+                sin que la barra de búsqueda deje de estar fija arriba. */}
+            <div className={`ws-topbar-wrap${showSearch && !isDrawerTab ? ' ws-topbar-wrap-searching' : ''}`}>
+            <div className={`ws-topbar${topbarIconsHidden && showSearch && !isDrawerTab ? ' ws-topbar-collapsed' : ''}`}>
                 <button className="ws-topbar-btn"
                     onClick={isDrawerTab ? () => { handleTabChange('inicio'); setShowDrawer(true); } : () => setShowDrawer(true)}>
                     {isDrawerTab ? <IconArrowLeft /> : (
@@ -6539,6 +6565,7 @@ const WorkspacePage = () => {
                     )}
                 </div>
             )}
+            </div>
 
             <div className="ws-body">
                 {tabActiva === 'inicio' && (
