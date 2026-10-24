@@ -52,4 +52,18 @@ db.version(5).stores({
     firmasCache: '_id, updatedAt',
 });
 
+// v6: caché offline de Plataformas y Nominativos (solo lectura, por bloque)
+db.version(6).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+});
+
 export default db;

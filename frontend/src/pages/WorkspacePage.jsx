@@ -34,6 +34,9 @@ import {
     cacheFirma,
     getFirmasCache,
     deleteCachedFirma,
+    cacheNominativo,
+    getNominativosCache,
+    deleteCachedNominativo,
     touchCatalogMeta,
     getCatalogMeta,
 } from '../lib/syncEngine.js';
@@ -4419,6 +4422,354 @@ const PantallaFirmas = ({ turnoActivo }) => {
     );
 };
 
+// ── Pantalla Plataformas y Nominativos ────────────────────
+const SECCIONES_NOMINATIVO = [
+    {
+        id: 'puesto', label: 'Personal y Puestos',
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 3v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V5l8-3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>,
+    },
+    {
+        id: 'locacion', label: 'Locaciones',
+        icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" strokeWidth="1.8"/></svg>,
+    },
+];
+
+const NominativoForm = ({ bloque, bloqueInfo, editando, nominativos, onCancelar, onGuardado, onEliminado }) => {
+    const [seccion, setSeccion] = useState(editando?.seccion || 'puesto');
+    const [nombre, setNombre] = useState(editando?.nombre || '');
+    const [codigo, setCodigo] = useState(editando?.codigo || '');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+
+    const codigoNorm = codigo.trim().toUpperCase();
+    const duplicado = !!codigoNorm && nominativos.some(n => n.codigo === codigoNorm && n._id !== editando?._id);
+    const puedeGuardar = !!nombre.trim() && !!codigoNorm && !duplicado;
+
+    const handleGuardar = async () => {
+        if (!puedeGuardar || loading) return;
+        setLoading(true);
+        setError('');
+        try {
+            if (editando) {
+                const { data } = await api.put(`/nominativos/${editando._id}`, { seccion, nombre: nombre.trim(), codigo: codigoNorm });
+                onGuardado(data.nominativo);
+            } else {
+                const { data } = await api.post('/nominativos', { bloque, seccion, nombre: nombre.trim(), codigo: codigoNorm });
+                onGuardado(data.nominativo);
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'No se pudo guardar. Verifica tu conexión.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEliminar = async () => {
+        setLoading(true);
+        try {
+            await api.delete(`/nominativos/${editando._id}`);
+            onEliminado(editando._id);
+        } catch {
+            setError('No se pudo eliminar. Verifica tu conexión.');
+            setConfirmarEliminar(false);
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onCancelar}>
+            <div className="plat-form-card" onClick={e => e.stopPropagation()}>
+                <div className="plat-form-header">
+                    <div>
+                        <div className="plat-form-titulo">{editando ? 'Editar nominativo' : 'Nuevo nominativo'}</div>
+                        <div className="plat-form-subtitulo">
+                            Bloque {bloque} – {bloqueInfo.sitio || bloqueInfo.codigo}{editando ? ` · Actual: ${editando.codigo}` : ''}
+                        </div>
+                    </div>
+                    <button className="plat-form-close" onClick={onCancelar} aria-label="Cerrar">✕</button>
+                </div>
+
+                <label className="plat-form-label">Sección</label>
+                <div className="plat-seccion-toggle">
+                    {SECCIONES_NOMINATIVO.map(s => (
+                        <button key={s.id} type="button" className={`plat-seccion-btn${seccion === s.id ? ' active' : ''}`} onClick={() => setSeccion(s.id)}>
+                            {s.icon}{s.label}
+                        </button>
+                    ))}
+                </div>
+
+                <label className="plat-form-label">Nombre del puesto</label>
+                <input className="plat-form-input" type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Garita Secundaria" />
+
+                <label className="plat-form-label">Nominativo de radio</label>
+                <input className="plat-form-input plat-form-input-mono" type="text" value={codigo} onChange={e => setCodigo(e.target.value.toUpperCase())} placeholder="Ej. ECO-44" />
+                <p className="plat-form-hint">
+                    Se guarda en mayúsculas. Debe ser único dentro del bloque.
+                    {duplicado && <span className="plat-form-hint-error"> Ese código ya está en uso en este bloque.</span>}
+                </p>
+
+                <label className="plat-form-label">Vista previa</label>
+                <div className="plat-preview-row">
+                    <span className={nombre.trim() ? '' : 'plat-preview-dim'}>{nombre.trim() || 'Nombre del puesto'}</span>
+                    <span className={`plat-pill${codigoNorm ? '' : ' plat-pill-dim'}`}>{codigoNorm || 'NOMINATIVO'}</span>
+                </div>
+
+                {error && <p className="plat-form-error">{error}</p>}
+
+                {editando && (
+                    <>
+                        <div className="plat-form-divider" />
+                        <div className="plat-form-eliminar-row">
+                            <span>Quitar este nominativo del bloque</span>
+                            <button type="button" className="plat-btn-danger-outline" onClick={() => setConfirmarEliminar(true)} disabled={loading}>🗑 Eliminar</button>
+                        </div>
+                    </>
+                )}
+
+                <div className="plat-form-divider" />
+                <div className="plat-form-footer">
+                    <button type="button" className="plat-btn-secondary" onClick={onCancelar} disabled={loading}>Cancelar</button>
+                    <button type="button" className="plat-btn-primary" onClick={handleGuardar} disabled={!puedeGuardar || loading}>
+                        {editando ? 'Guardar cambios' : 'Guardar nominativo'}
+                    </button>
+                </div>
+
+                {confirmarEliminar && (
+                    <ModalConfirm
+                        mensaje={`"${editando.nombre}" (${editando.codigo}) dejará de estar disponible en el bloque. Esta acción no se puede deshacer.`}
+                        onConfirm={handleEliminar}
+                        onCancel={() => setConfirmarEliminar(false)}
+                    />
+                )}
+            </div>
+        </div>
+    );
+};
+
+const PantallaPlataformas = ({ turnoActivo }) => {
+    const bloqueId = turnoActivo?.bloque;
+    const bloqueInfo = bloqueId ? BLOQUES_DATA[bloqueId] : null;
+    const [nominativos, setNominativos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [fromCache, setFromCache] = useState(false);
+    const [cachedAt, setCachedAt] = useState(null);
+    const [search, setSearch] = useState('');
+    const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
+    const [form, setForm] = useState(null); // null | 'nueva' | {nominativo a editar}
+    const [copiado, setCopiado] = useState(null);
+    const [importMsg, setImportMsg] = useState('');
+    const fileInputRef = useRef(null);
+
+    const cargar = async () => {
+        if (!bloqueId) { setLoading(false); return; }
+        setLoading(true);
+        setFromCache(false);
+        try {
+            const { data } = await api.get(`/nominativos?bloque=${bloqueId}`);
+            setNominativos(data.nominativos);
+            data.nominativos.forEach(n => cacheNominativo(n).catch(() => {}));
+            await touchCatalogMeta('nominativos');
+        } catch {
+            try {
+                const cached = await getNominativosCache(bloqueId);
+                setNominativos(cached);
+                setFromCache(cached.length > 0);
+                const meta = await getCatalogMeta('nominativos');
+                setCachedAt(meta?.cachedAt || null);
+            } catch { /* se queda en lista vacía */ }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { cargar(); }, [bloqueId]);
+
+    const sq = search.trim().toLowerCase();
+    const filtrados = nominativos.filter(n =>
+        !sq || n.nombre.toLowerCase().includes(sq) || n.codigo.toLowerCase().includes(sq)
+    );
+
+    const handleCopiar = codigo => {
+        navigator.clipboard?.writeText(codigo);
+        setCopiado(codigo);
+        setTimeout(() => setCopiado(c => (c === codigo ? null : c)), 1200);
+    };
+
+    const handleGuardado = nominativo => {
+        cacheNominativo(nominativo).catch(() => {});
+        setNominativos(prev => {
+            const idx = prev.findIndex(n => n._id === nominativo._id);
+            if (idx >= 0) { const next = [...prev]; next[idx] = nominativo; return next; }
+            return [...prev, nominativo];
+        });
+        setForm(null);
+    };
+
+    const handleEliminado = id => {
+        deleteCachedNominativo(id).catch(() => {});
+        setNominativos(prev => prev.filter(n => n._id !== id));
+        setForm(null);
+    };
+
+    const mapHeaderNominativo = h => {
+        const n = (h || '').toString().trim().toLowerCase();
+        if (n.includes('secci')) return 'seccion';
+        if (n.includes('nombre') || n.includes('puesto')) return 'nombre';
+        if (n.includes('nominat') || n.includes('cod')) return 'codigo';
+        return null;
+    };
+
+    const handleImportFile = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+        setImportMsg('Importando...');
+        const reader = new FileReader();
+        reader.onload = async evt => {
+            try {
+                const XLSX = await import('xlsx');
+                const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                if (rows.length < 2) { setImportMsg('El archivo está vacío o no tiene datos'); return; }
+                const hMap = rows[0].map(mapHeaderNominativo);
+                const items = rows.slice(1)
+                    .filter(r => r.some(v => String(v).trim()))
+                    .map(r => {
+                        const obj = {};
+                        hMap.forEach((f, i) => { if (f) obj[f] = String(r[i] || '').trim(); });
+                        return obj;
+                    })
+                    .map(o => ({ ...o, seccion: /locaci/i.test(o.seccion || '') ? 'locacion' : 'puesto' }))
+                    .filter(o => o.nombre && o.codigo);
+                if (!items.length) { setImportMsg('No se encontraron filas válidas. Asegúrate de que el encabezado incluya NOMBRE y NOMINATIVO.'); return; }
+                const { data } = await api.post('/nominativos/bulk', { bloque: bloqueId, items });
+                setImportMsg(`Importado: ${data.created} nuevo${data.created !== 1 ? 's' : ''}, ${data.updated} actualizado${data.updated !== 1 ? 's' : ''}`);
+                cargar();
+            } catch (err) {
+                setImportMsg(err.response?.data?.message || 'No se pudo importar el archivo. Verifica que sea CSV o Excel válido.');
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    const handleExportar = async () => {
+        const XLSX = await import('xlsx');
+        const cols = ['SECCIÓN', 'NOMBRE', 'NOMINATIVO'];
+        const rows = nominativos.map(n => [n.seccion === 'locacion' ? 'Locaciones' : 'Personal y Puestos', n.nombre, n.codigo]);
+        const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Nominativos');
+        XLSX.writeFile(wb, `nominativos_bloque_${bloqueId}.xlsx`);
+    };
+
+    if (!bloqueId || !bloqueInfo) {
+        return <p className="ws-empty">No hay un bloque activo en este turno.</p>;
+    }
+
+    return (
+        <div className="plat-galeria">
+            <div className="plat-galeria-header">
+                <div className="plat-galeria-titulo">Plataformas y Nominativos</div>
+            </div>
+
+            <div className="ws-search-bar" style={{ margin: '0 16px 10px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <input className="ws-search-input" type="text" placeholder="Buscar puesto, PAD o nominativo..."
+                    value={search} onChange={e => setSearch(e.target.value)} />
+                {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+            </div>
+
+            {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
+
+            <div className="plat-bloque-card">
+                <div className="plat-bloque-info">
+                    <div className="plat-bloque-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="8" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M9 2V1h2v1" stroke="currentColor" strokeWidth="1.8"/><path d="M8 22h4M10 15v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </div>
+                    <div>
+                        <div className="plat-bloque-nombre">Bloque {bloqueId} – {bloqueInfo.sitio || bloqueInfo.codigo}</div>
+                        <div className="plat-bloque-meta">
+                            <span className="plat-count-pill">{nominativos.length} nominativo{nominativos.length !== 1 ? 's' : ''}</span>
+                            <span className="plat-bloque-hint">Toca un nominativo para copiarlo</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="plat-bloque-acciones">
+                    <button type="button" className="plat-btn-primary" onClick={() => setForm('nueva')}>+ Nuevo</button>
+                    <button type="button" className="plat-btn-icon" onClick={() => fileInputRef.current?.click()}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M3 9h18M8 4v16" stroke="currentColor" strokeWidth="1.8"/></svg>
+                        Importar Excel
+                    </button>
+                    <button type="button" className="plat-btn-icon" onClick={handleExportar}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Exportar Excel
+                    </button>
+                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
+                </div>
+            </div>
+            {importMsg && <p className="plat-import-msg">{importMsg}</p>}
+
+            {loading ? (
+                <p className="ws-empty">Cargando...</p>
+            ) : (
+                SECCIONES_NOMINATIVO.map(s => {
+                    const items = filtrados.filter(n => n.seccion === s.id);
+                    const abierta = seccionesAbiertas[s.id];
+                    return (
+                        <div className="plat-seccion" key={s.id}>
+                            <button type="button" className="plat-seccion-header" onClick={() => setSeccionesAbiertas(prev => ({ ...prev, [s.id]: !prev[s.id] }))}>
+                                <span className="plat-seccion-icon">{s.icon}</span>
+                                <span className="plat-seccion-titulo">{s.label}</span>
+                                <span className="plat-seccion-count">{items.length}</span>
+                                <svg className={`plat-chevron${abierta ? ' open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                            {abierta && (
+                                items.length === 0 ? (
+                                    <p className="ws-empty" style={{ padding: '8px 16px' }}>Sin nominativos{search ? ' para la búsqueda' : ''}</p>
+                                ) : (
+                                    <div className={s.id === 'locacion' ? 'plat-locacion-grid' : 'plat-lista'}>
+                                        {items.map(n => (
+                                            <div key={n._id} className={`plat-row${s.id === 'locacion' && !/^pad-/i.test(n.nombre) ? ' plat-row-full' : ''}`}>
+                                                <span className="plat-row-nombre">{n.nombre}</span>
+                                                <div className="plat-row-right">
+                                                    <button type="button" className="plat-pill plat-pill-btn" onClick={() => handleCopiar(n.codigo)} title="Copiar">
+                                                        {copiado === n.codigo ? '✓' : n.codigo}
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>
+                                                    </button>
+                                                    <button type="button" className="plat-edit-btn" onClick={() => setForm(n)} title="Editar">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    );
+                })
+            )}
+
+            {form && (
+                <NominativoForm
+                    bloque={bloqueId}
+                    bloqueInfo={bloqueInfo}
+                    editando={form === 'nueva' ? null : form}
+                    nominativos={nominativos}
+                    onCancelar={() => setForm(null)}
+                    onGuardado={handleGuardado}
+                    onEliminado={handleEliminado}
+                />
+            )}
+        </div>
+    );
+};
+
 const PantallaUtilidades = ({ turnoActivo }) => {
     const [detalle, setDetalle] = useState(null);
 
@@ -4433,6 +4784,8 @@ const PantallaUtilidades = ({ turnoActivo }) => {
                 </button>
                 {detalle.id === 'firmas' ? (
                     <PantallaFirmas turnoActivo={turnoActivo} />
+                ) : detalle.id === 'plataformas' ? (
+                    <PantallaPlataformas turnoActivo={turnoActivo} />
                 ) : (
                     <>
                         <h2 className="util-detalle-titulo">{detalle.label.replace('\n', ' ')}</h2>

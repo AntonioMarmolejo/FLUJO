@@ -246,6 +246,22 @@ export const deleteCachedFirma = async (id) => {
     await db.firmasCache.delete(id);
 };
 
+// Cachea los nominativos de un bloque para Plataformas y Nominativos offline
+export const cacheNominativo = async (n) => {
+    if (!n._id) return;
+    await db.nominativosCache.put({ ...n, updatedAt: Date.now() });
+};
+
+export const getNominativosCache = async (bloque) => {
+    const arr = await db.nominativosCache.where('bloque').equals(bloque).toArray();
+    return arr.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+};
+
+export const deleteCachedNominativo = async (id) => {
+    if (!id) return;
+    await db.nominativosCache.delete(id);
+};
+
 // ── Vigencia de caché tipo Netflix (cachedAt/expiresAt) ───
 // Un registro por catálogo ('vehiculos' | 'personas' | 'extensiones' | 'firmas').
 export const CATALOG_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 días

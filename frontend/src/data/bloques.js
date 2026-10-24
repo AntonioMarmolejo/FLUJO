@@ -2,6 +2,7 @@ export const BLOQUES_DATA = {
     '12': {
         nombre: 'Bloque 12',
         codigo: 'EDY',
+        sitio: 'Eden Yuturi',
         color: '#4ade80',
         bg: 'rgba(74,222,128,0.15)',
         puestos: [
