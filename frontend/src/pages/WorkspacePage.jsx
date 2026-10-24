@@ -6267,6 +6267,34 @@ const WorkspacePage = () => {
     }, [theme]);
     const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
+    // Pregunta antes de salir con el botón/gesto de retroceso (celulares).
+    // Sin esto, dos retrocesos seguidos sacaban al usuario de /workspace sin
+    // avisar y, por el bug ya corregido en ProtectedRoute, eso se sentía como
+    // un cierre de sesión. Truco estándar: se "atasca" un estado extra en el
+    // historial; al detectar un retroceso se vuelve a atascar (cancelándolo)
+    // y se muestra el aviso. Si el usuario confirma, se deja pasar el
+    // siguiente retroceso real — nunca se llama a logout(), la sesión y el
+    // vault quedan intactos para cuando vuelva a abrir la app.
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
+    const exitingRef = useRef(false);
+
+    useEffect(() => {
+        window.history.pushState({ __exitGuard: true }, '', window.location.href);
+        const handlePopState = () => {
+            if (exitingRef.current) return;
+            window.history.pushState({ __exitGuard: true }, '', window.location.href);
+            setShowExitConfirm(true);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    const confirmarSalida = () => {
+        exitingRef.current = true;
+        setShowExitConfirm(false);
+        window.history.go(-2);
+    };
+
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(true);
     const [movCollapsed, setMovCollapsed] = useState(false);
@@ -7525,6 +7553,22 @@ const WorkspacePage = () => {
                     </button>
                 ))}
             </nav>
+
+            {showExitConfirm && (
+                <div className="modal-overlay" onClick={() => setShowExitConfirm(false)}>
+                    <div className="modal-card" style={{ maxWidth: 320, gap: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto' }}>
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <p style={{ color: '#ddd', fontSize: 15, fontWeight: 600, lineHeight: 1.5, margin: 0 }}>¿Quieres salir de FLUJO?</p>
+                        <p style={{ color: '#888', fontSize: 12.5, lineHeight: 1.5, margin: '-12px 0 0' }}>Tu sesión y tu turno activo se mantienen guardados.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
+                            <button onClick={() => setShowExitConfirm(false)} style={{ padding: '11px 0', borderRadius: 10, border: '1px solid #2e2e2e', background: '#1e1e1e', color: '#aaa', fontSize: 14, cursor: 'pointer' }}>Seguir aquí</button>
+                            <button onClick={confirmarSalida} style={{ padding: '11px 0', borderRadius: 10, border: 'none', background: '#6c63ff', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Salir</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
