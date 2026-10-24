@@ -1,8 +1,9 @@
-.post-wrapper {    display: flex;
+.post-wrapper {    width: 100%;
+    display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: 24px;
+    padding: 8px;
 }
 
 .post-card {
@@ -10,7 +11,7 @@
     max-width: 480px;
     background: #1c1c1c;
     border-radius: 20px;
-    padding: 32px;
+    padding: 3px;
     display: flex;
     flex-direction: column;
     gap: 20px;
