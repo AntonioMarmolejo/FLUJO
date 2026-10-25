@@ -4604,6 +4604,8 @@ const PantallaPlataformas = ({ turnoActivo }) => {
     const [fromCache, setFromCache] = useState(false);
     const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+    const [menuAbierto, setMenuAbierto] = useState(false);
     const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
     const [vistaGrid, setVistaGrid] = useState(true);
     const [form, setForm] = useState(null); // null | 'nueva' | {nominativo a editar}
@@ -4735,43 +4737,50 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                 <div className="plat-galeria-titulo">Plataformas y Nominativos</div>
             </div>
 
-            <div className="ws-search-bar" style={{ margin: '0 16px 10px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
-                    <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <input className="ws-search-input" type="text" placeholder="Buscar puesto, PAD o nominativo..."
-                    value={search} onChange={e => setSearch(e.target.value)} />
-                {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
-            </div>
+            {showSearch && (
+                <div className="ws-search-bar" style={{ margin: '0 16px 10px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <input className="ws-search-input" type="text" placeholder="Buscar puesto, PAD o nominativo..." autoFocus
+                        value={search} onChange={e => setSearch(e.target.value)} />
+                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                </div>
+            )}
 
             {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             <div className="plat-bloque-card">
-                <div className="plat-bloque-info">
-                    <div className="plat-bloque-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="8" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M9 2V1h2v1" stroke="currentColor" strokeWidth="1.8"/><path d="M8 22h4M10 15v7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
+                <div className="plat-bloque-header-row">
                     <div>
                         <div className="plat-bloque-nombre">Bloque {bloqueId} – {bloqueInfo.sitio || bloqueInfo.codigo}</div>
                         <div className="plat-bloque-meta">
                             <span className="plat-count-pill">{nominativos.length} nominativo{nominativos.length !== 1 ? 's' : ''}</span>
-                            <span className="plat-bloque-hint">Desliza un nominativo para editar, copiar o compartir</span>
+                        </div>
+                    </div>
+                    <div className="plat-bloque-tools">
+                        <button type="button" className="plat-icon-btn" onClick={() => setShowSearch(s => !s)} title="Buscar">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                        </button>
+                        <div className="plat-menu-wrap">
+                            <button type="button" className="plat-icon-btn" onClick={() => setMenuAbierto(o => !o)} title="Más opciones">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                            </button>
+                            {menuAbierto && (
+                                <>
+                                    <div className="plat-menu-backdrop" onClick={() => setMenuAbierto(false)} />
+                                    <div className="plat-menu-dropdown">
+                                        <button type="button" onClick={() => { setForm('nueva'); setMenuAbierto(false); }}>+ Nuevo</button>
+                                        <button type="button" onClick={() => { handleExportar(); setMenuAbierto(false); }}>Exportar Excel</button>
+                                        <button type="button" onClick={() => { fileInputRef.current?.click(); setMenuAbierto(false); }}>Importar Excel</button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
-                <div className="plat-bloque-acciones">
-                    <button type="button" className="plat-btn-primary" onClick={() => setForm('nueva')}>+ Nuevo</button>
-                    <button type="button" className="plat-btn-icon" onClick={() => fileInputRef.current?.click()}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M3 9h18M8 4v16" stroke="currentColor" strokeWidth="1.8"/></svg>
-                        Importar Excel
-                    </button>
-                    <button type="button" className="plat-btn-icon" onClick={handleExportar}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        Exportar Excel
-                    </button>
-                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
-                </div>
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
             </div>
             {importMsg && <p className="plat-import-msg">{importMsg}</p>}
 
