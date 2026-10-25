@@ -4549,8 +4549,10 @@ const NominativoForm = ({ bloque, bloqueInfo, editando, nominativos, onCancelar,
 
 // Fila de nominativo con swipe izq→der para revelar Eliminar/Editar/Copiar/
 // Compartir — mismo gesto y mismos refs/helpers que usan las filas de
-// Movimientos (addMouseSwipe, IconMinus/IconPencil/IconCopy/IconShare).
-const NominativoRow = ({ n, copiado, onCopiar, onEditar, onEliminar, onCompartir, swiped, onSwipe, swipeRef }) => (
+// Movimientos (addMouseSwipe, IconMinus/IconPencil/IconCopy/IconShare). El
+// badge con el código ya no se toca para copiar: esa acción vive solo en el
+// panel de swipe, para no duplicar gestos.
+const NominativoRow = ({ n, onCopiar, onEditar, onEliminar, onCompartir, swiped, onSwipe, swipeRef }) => (
     <div className="plat-row-wrap">
         <div className="plat-row-actions" onClick={e => e.stopPropagation()}>
             <button type="button" className="plat-row-act-btn danger" title="Eliminar" onClick={() => { onEliminar(n); onSwipe(null); }}><IconMinus /></button>
@@ -4589,10 +4591,7 @@ const NominativoRow = ({ n, copiado, onCopiar, onEditar, onEliminar, onCompartir
             }}
         >
             <span className="plat-row-nombre">{n.nombre}</span>
-            <button type="button" className="plat-pill plat-pill-btn" onClick={e => { e.stopPropagation(); onCopiar(n.codigo); }} title="Copiar">
-                {copiado === n.codigo ? '✓' : n.codigo}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>
-            </button>
+            <span className="plat-pill">{n.codigo}</span>
         </div>
     </div>
 );
@@ -4606,9 +4605,8 @@ const PantallaPlataformas = ({ turnoActivo }) => {
     const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
     const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
-    const [vistaGridLoc, setVistaGridLoc] = useState(true);
+    const [vistaGrid, setVistaGrid] = useState(true);
     const [form, setForm] = useState(null); // null | 'nueva' | {nominativo a editar}
-    const [copiado, setCopiado] = useState(null);
     const [importMsg, setImportMsg] = useState('');
     const [swipedId, setSwipedId] = useState(null);
     const [confirmarEliminarRow, setConfirmarEliminarRow] = useState(null);
@@ -4646,8 +4644,6 @@ const PantallaPlataformas = ({ turnoActivo }) => {
 
     const handleCopiar = codigo => {
         navigator.clipboard?.writeText(codigo);
-        setCopiado(codigo);
-        setTimeout(() => setCopiado(c => (c === codigo ? null : c)), 1200);
     };
 
     const handleGuardado = nominativo => {
@@ -4760,7 +4756,7 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                         <div className="plat-bloque-nombre">Bloque {bloqueId} – {bloqueInfo.sitio || bloqueInfo.codigo}</div>
                         <div className="plat-bloque-meta">
                             <span className="plat-count-pill">{nominativos.length} nominativo{nominativos.length !== 1 ? 's' : ''}</span>
-                            <span className="plat-bloque-hint">Toca un nominativo para copiarlo</span>
+                            <span className="plat-bloque-hint">Desliza un nominativo para editar, copiar o compartir</span>
                         </div>
                     </div>
                 </div>
@@ -4779,43 +4775,43 @@ const PantallaPlataformas = ({ turnoActivo }) => {
             </div>
             {importMsg && <p className="plat-import-msg">{importMsg}</p>}
 
+            {!loading && nominativos.length > 0 && (
+                <div className="plat-vista-toolbar">
+                    <span className="plat-vista-label">Vista</span>
+                    <div className="firma-view-toggle">
+                        <button type="button" className={vistaGrid ? 'active' : ''} onClick={() => setVistaGrid(true)} title="Vista cuadrícula">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/></svg>
+                        </button>
+                        <button type="button" className={!vistaGrid ? 'active' : ''} onClick={() => setVistaGrid(false)} title="Vista lista">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <p className="ws-empty">Cargando...</p>
             ) : (
                 SECCIONES_NOMINATIVO.map(s => {
                     const items = filtrados.filter(n => n.seccion === s.id);
                     const abierta = seccionesAbiertas[s.id];
-                    const esGrid = s.id === 'locacion' && vistaGridLoc;
                     return (
                         <div className="plat-seccion" key={s.id}>
-                            <div className="plat-seccion-header-row">
-                                <button type="button" className="plat-seccion-header" onClick={() => setSeccionesAbiertas(prev => ({ ...prev, [s.id]: !prev[s.id] }))}>
-                                    <span className="plat-seccion-icon">{s.icon}</span>
-                                    <span className="plat-seccion-titulo">{s.label}</span>
-                                    <span className="plat-seccion-count">{items.length}</span>
-                                    <svg className={`plat-chevron${abierta ? ' open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                </button>
-                                {s.id === 'locacion' && abierta && items.length > 0 && (
-                                    <div className="firma-view-toggle">
-                                        <button type="button" className={vistaGridLoc ? 'active' : ''} onClick={() => setVistaGridLoc(true)} title="Vista cuadrícula">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/></svg>
-                                        </button>
-                                        <button type="button" className={!vistaGridLoc ? 'active' : ''} onClick={() => setVistaGridLoc(false)} title="Vista lista">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            <button type="button" className="plat-seccion-header" onClick={() => setSeccionesAbiertas(prev => ({ ...prev, [s.id]: !prev[s.id] }))}>
+                                <span className="plat-seccion-icon">{s.icon}</span>
+                                <span className="plat-seccion-titulo">{s.label}</span>
+                                <span className="plat-seccion-count">{items.length}</span>
+                                <svg className={`plat-chevron${abierta ? ' open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
                             {abierta && (
                                 items.length === 0 ? (
                                     <p className="ws-empty" style={{ padding: '8px 16px' }}>Sin nominativos{search ? ' para la búsqueda' : ''}</p>
                                 ) : (
-                                    <div className={esGrid ? 'plat-locacion-grid' : 'plat-lista'}>
+                                    <div className={vistaGrid ? 'plat-locacion-grid' : 'plat-lista'}>
                                         {items.map(n => (
                                             <NominativoRow
                                                 key={n._id}
                                                 n={n}
-                                                copiado={copiado}
                                                 onCopiar={handleCopiar}
                                                 onEditar={setForm}
                                                 onEliminar={setConfirmarEliminarRow}
