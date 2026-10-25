@@ -4596,15 +4596,13 @@ const NominativoRow = ({ n, onCopiar, onEditar, onEliminar, onCompartir, swiped,
     </div>
 );
 
-const PantallaPlataformas = ({ turnoActivo }) => {
+const PantallaPlataformas = ({ turnoActivo, search = '' }) => {
     const bloqueId = turnoActivo?.bloque;
     const bloqueInfo = bloqueId ? BLOQUES_DATA[bloqueId] : null;
     const [nominativos, setNominativos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [fromCache, setFromCache] = useState(false);
     const [cachedAt, setCachedAt] = useState(null);
-    const [search, setSearch] = useState('');
-    const [showSearch, setShowSearch] = useState(false);
     const [menuAbierto, setMenuAbierto] = useState(false);
     const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
     const [vistaGrid, setVistaGrid] = useState(true);
@@ -4737,18 +4735,6 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                 <div className="plat-galeria-titulo">Plataformas y Nominativos</div>
             </div>
 
-            {showSearch && (
-                <div className="ws-search-bar" style={{ margin: '0 16px 10px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
-                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <input className="ws-search-input" type="text" placeholder="Buscar puesto, PAD o nominativo..." autoFocus
-                        value={search} onChange={e => setSearch(e.target.value)} />
-                    {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
-                </div>
-            )}
-
             {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             <div className="plat-bloque-card">
@@ -4760,9 +4746,6 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                         </div>
                     </div>
                     <div className="plat-bloque-tools">
-                        <button type="button" className="plat-icon-btn" onClick={() => setShowSearch(s => !s)} title="Buscar">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                        </button>
                         <div className="plat-menu-wrap">
                             <button type="button" className="plat-icon-btn" onClick={() => setMenuAbierto(o => !o)} title="Más opciones">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -4861,8 +4844,9 @@ const PantallaPlataformas = ({ turnoActivo }) => {
     );
 };
 
-const PantallaUtilidades = ({ turnoActivo }) => {
-    const [detalle, setDetalle] = useState(null);
+const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQuery }) => {
+    const [detalle, setDetalleRaw] = useState(null);
+    const setDetalle = tile => { setDetalleRaw(tile); onDetalleChange?.(tile?.id ?? null); };
 
     if (detalle) {
         return (
@@ -4876,7 +4860,7 @@ const PantallaUtilidades = ({ turnoActivo }) => {
                 {detalle.id === 'firmas' ? (
                     <PantallaFirmas turnoActivo={turnoActivo} />
                 ) : detalle.id === 'plataformas' ? (
-                    <PantallaPlataformas turnoActivo={turnoActivo} />
+                    <PantallaPlataformas turnoActivo={turnoActivo} search={platSearchQuery} />
                 ) : (
                     <>
                         <h2 className="util-detalle-titulo">{detalle.label.replace('\n', ' ')}</h2>
@@ -6414,15 +6398,30 @@ const WorkspacePage = () => {
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Con la búsqueda activa, al bajar se oculta la fila de íconos (menú,
-    // usuario, día/noche, lupa) y la barra de búsqueda sube a ocupar ese
-    // espacio; al subir un poco vuelve a aparecer la fila para poder
-    // desactivar la búsqueda desde la lupa.
+    // Qué utilidad está abierta dentro de la pestaña Utilidades (lo reporta
+    // PantallaUtilidades) y el estado de SU propia búsqueda — se maneja acá
+    // arriba, no dentro de la pantalla, para poder mostrar la lupa en el
+    // top bar global (reemplazando el ícono de día/noche) y que la barra de
+    // búsqueda quede pegada arriba al bajar, igual que en Movimientos.
+    const [utilidadActiva, setUtilidadActiva] = useState(null);
+    const [platSearchShow, setPlatSearchShow] = useState(false);
+    const [platSearchQuery, setPlatSearchQuery] = useState('');
+    const handleUtilidadDetalleChange = id => {
+        setUtilidadActiva(id);
+        if (id !== 'plataformas') { setPlatSearchShow(false); setPlatSearchQuery(''); }
+    };
+
+    // Con la búsqueda activa (la de Movimientos o la de Plataformas y
+    // Nominativos), al bajar se oculta la fila de íconos (menú, usuario,
+    // día/noche, lupa) y la barra de búsqueda sube a ocupar ese espacio; al
+    // subir un poco vuelve a aparecer la fila para poder desactivar la
+    // búsqueda desde la lupa.
+    const searchBarActive = showSearch || (tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && platSearchShow);
     const [topbarIconsHidden, setTopbarIconsHidden] = useState(false);
     const lastScrollYRef = useRef(0);
 
     useEffect(() => {
-        if (!showSearch) { setTopbarIconsHidden(false); return; }
+        if (!searchBarActive) { setTopbarIconsHidden(false); return; }
         lastScrollYRef.current = window.scrollY;
         const UMBRAL = 10;
         const onScroll = () => {
@@ -6435,7 +6434,7 @@ const WorkspacePage = () => {
         };
         window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
-    }, [showSearch]);
+    }, [searchBarActive]);
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -6702,6 +6701,7 @@ const WorkspacePage = () => {
         setTabActiva(tab);
         setShowSearch(false);
         setSearchQuery('');
+        if (tab !== 'utilidades') { setPlatSearchShow(false); setPlatSearchQuery(''); }
     };
 
     const toggleSelectMode = () => { setSelectMode(s => !s); setSelectedIds(new Set()); setSwipedMovId(null); };
@@ -6977,8 +6977,8 @@ const WorkspacePage = () => {
             {/* Top bar + barra de búsqueda: envueltos juntos para que, con la
                 búsqueda activa, la fila de íconos se pueda ocultar al bajar
                 sin que la barra de búsqueda deje de estar fija arriba. */}
-            <div className={`ws-topbar-wrap${showSearch && !isDrawerTab ? ' ws-topbar-wrap-searching' : ''}`}>
-            <div className={`ws-topbar${topbarIconsHidden && showSearch && !isDrawerTab ? ' ws-topbar-collapsed' : ''}`}>
+            <div className={`ws-topbar-wrap${searchBarActive && !isDrawerTab ? ' ws-topbar-wrap-searching' : ''}`}>
+            <div className={`ws-topbar${topbarIconsHidden && searchBarActive && !isDrawerTab ? ' ws-topbar-collapsed' : ''}`}>
                 <button className="ws-topbar-btn"
                     onClick={isDrawerTab ? () => { handleTabChange('inicio'); setShowDrawer(true); } : () => setShowDrawer(true)}>
                     {isDrawerTab ? <IconArrowLeft /> : (
@@ -6999,21 +6999,31 @@ const WorkspacePage = () => {
                             </svg>
                         </button>
                     )}
-                    {/* Toggle tema día / noche */}
-                    <button className="ws-topbar-btn ws-theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}>
-                        {theme === 'dark' ? (
-                            /* Sol — modo día */
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="4"/>
-                                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                    {tabActiva === 'utilidades' && utilidadActiva === 'plataformas' ? (
+                        /* En Plataformas y Nominativos este espacio es solo la lupa de su propia búsqueda */
+                        <button className="ws-topbar-btn" onClick={() => { setPlatSearchShow(s => !s); setPlatSearchQuery(''); }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="8" stroke={platSearchShow ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" />
+                                <path d="M21 21l-4.35-4.35" stroke={platSearchShow ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" strokeLinecap="round" />
                             </svg>
-                        ) : (
-                            /* Luna — modo noche */
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                            </svg>
-                        )}
-                    </button>
+                        </button>
+                    ) : (
+                        /* Toggle tema día / noche */
+                        <button className="ws-topbar-btn ws-theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}>
+                            {theme === 'dark' ? (
+                                /* Sol — modo día */
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="4"/>
+                                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                                </svg>
+                            ) : (
+                                /* Luna — modo noche */
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                </svg>
+                            )}
+                        </button>
+                    )}
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => handleTabChange(tabActiva === 'perfil' ? 'inicio' : 'perfil')}>
                             <IconUserCircle active={tabActiva === 'perfil'} />
@@ -7022,7 +7032,7 @@ const WorkspacePage = () => {
                 </div>
             </div>
 
-            {/* Barra de búsqueda */}
+            {/* Barra de búsqueda (Movimientos) */}
             {showSearch && !isDrawerTab && (
                 <div className="ws-search-bar">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
@@ -7034,6 +7044,22 @@ const WorkspacePage = () => {
                         value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
                     {searchQuery && (
                         <button className="ws-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                    )}
+                </div>
+            )}
+
+            {/* Barra de búsqueda (Plataformas y Nominativos) */}
+            {platSearchShow && tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && (
+                <div className="ws-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text"
+                        placeholder="Buscar puesto, PAD o nominativo..."
+                        value={platSearchQuery} onChange={e => setPlatSearchQuery(e.target.value)} autoFocus />
+                    {platSearchQuery && (
+                        <button className="ws-search-clear" onClick={() => setPlatSearchQuery('')}>✕</button>
                     )}
                 </div>
             )}
@@ -7436,7 +7462,9 @@ const WorkspacePage = () => {
 
                 {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} hasPermiso={hasPermiso} isAdmin={isAdmin} />}
 
-                {tabActiva === 'utilidades' && <PantallaUtilidades turnoActivo={turnoActivo} />}
+                {tabActiva === 'utilidades' && (
+                    <PantallaUtilidades turnoActivo={turnoActivo} onDetalleChange={handleUtilidadDetalleChange} platSearchQuery={platSearchQuery} />
+                )}
 
                 {tabActiva === 'perfil' && (
                     <PantallaPerfil user={user} turnoActivo={turnoActivo} onLogout={logout} />
