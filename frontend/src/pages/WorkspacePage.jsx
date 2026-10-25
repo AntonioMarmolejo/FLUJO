@@ -4547,6 +4547,56 @@ const NominativoForm = ({ bloque, bloqueInfo, editando, nominativos, onCancelar,
     );
 };
 
+// Fila de nominativo con swipe izq→der para revelar Eliminar/Editar/Copiar/
+// Compartir — mismo gesto y mismos refs/helpers que usan las filas de
+// Movimientos (addMouseSwipe, IconMinus/IconPencil/IconCopy/IconShare).
+const NominativoRow = ({ n, copiado, onCopiar, onEditar, onEliminar, onCompartir, swiped, onSwipe, swipeRef }) => (
+    <div className="plat-row-wrap">
+        <div className="plat-row-actions" onClick={e => e.stopPropagation()}>
+            <button type="button" className="plat-row-act-btn danger" title="Eliminar" onClick={() => { onEliminar(n); onSwipe(null); }}><IconMinus /></button>
+            <button type="button" className="plat-row-act-btn" title="Editar" onClick={() => { onEditar(n); onSwipe(null); }}><IconPencil /></button>
+            <button type="button" className="plat-row-act-btn" title="Copiar" onClick={() => { onCopiar(n.codigo); onSwipe(null); }}><IconCopy /></button>
+            <button type="button" className="plat-row-act-btn" title="Compartir" onClick={() => { onCompartir(n); onSwipe(null); }}><IconShare /></button>
+        </div>
+        <div
+            className={`plat-row${swiped ? ' plat-row-swiped' : ''}`}
+            onTouchStart={e => {
+                swipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false };
+            }}
+            onTouchMove={e => {
+                const dx = e.touches[0].clientX - swipeRef.current.startX;
+                const dy = e.touches[0].clientY - swipeRef.current.startY;
+                if (!swipeRef.current.moved && !swipeRef.current.vertScroll) {
+                    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                    if (Math.abs(dy) > Math.abs(dx)) { swipeRef.current.vertScroll = true; return; }
+                    swipeRef.current.moved = true;
+                }
+                if (swipeRef.current.moved) e.preventDefault();
+            }}
+            onTouchEnd={e => {
+                if (!swipeRef.current.moved) return;
+                const dx = e.changedTouches[0].clientX - swipeRef.current.startX;
+                if (swiped) { if (dx < -30) onSwipe(null); }
+                else if (dx > 55) onSwipe(n._id);
+            }}
+            {...addMouseSwipe(swipeRef, dx => {
+                if (swiped) { if (dx < -30) onSwipe(null); }
+                else if (dx > 55) onSwipe(n._id);
+            })}
+            onClick={() => {
+                if (swipeRef.current?.didDrag) { swipeRef.current.didDrag = false; return; }
+                if (swiped) onSwipe(null);
+            }}
+        >
+            <span className="plat-row-nombre">{n.nombre}</span>
+            <button type="button" className="plat-pill plat-pill-btn" onClick={e => { e.stopPropagation(); onCopiar(n.codigo); }} title="Copiar">
+                {copiado === n.codigo ? '✓' : n.codigo}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>
+            </button>
+        </div>
+    </div>
+);
+
 const PantallaPlataformas = ({ turnoActivo }) => {
     const bloqueId = turnoActivo?.bloque;
     const bloqueInfo = bloqueId ? BLOQUES_DATA[bloqueId] : null;
@@ -4556,10 +4606,14 @@ const PantallaPlataformas = ({ turnoActivo }) => {
     const [cachedAt, setCachedAt] = useState(null);
     const [search, setSearch] = useState('');
     const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
+    const [vistaGridLoc, setVistaGridLoc] = useState(true);
     const [form, setForm] = useState(null); // null | 'nueva' | {nominativo a editar}
     const [copiado, setCopiado] = useState(null);
     const [importMsg, setImportMsg] = useState('');
+    const [swipedId, setSwipedId] = useState(null);
+    const [confirmarEliminarRow, setConfirmarEliminarRow] = useState(null);
     const fileInputRef = useRef(null);
+    const platSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
 
     const cargar = async () => {
         if (!bloqueId) { setLoading(false); return; }
@@ -4610,6 +4664,17 @@ const PantallaPlataformas = ({ turnoActivo }) => {
         deleteCachedNominativo(id).catch(() => {});
         setNominativos(prev => prev.filter(n => n._id !== id));
         setForm(null);
+    };
+
+    const nomToText = n => `NOMBRE: ${n.nombre}\nNOMINATIVO: ${n.codigo}`;
+    const handleCompartir = n => handleShareText(nomToText(n));
+
+    const handleEliminarRapido = async id => {
+        try {
+            await api.delete(`/nominativos/${id}`);
+            handleEliminado(id);
+        } catch { /* sin conexión: no se puede borrar ahora */ }
+        setConfirmarEliminarRow(null);
     };
 
     const mapHeaderNominativo = h => {
@@ -4720,32 +4785,45 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                 SECCIONES_NOMINATIVO.map(s => {
                     const items = filtrados.filter(n => n.seccion === s.id);
                     const abierta = seccionesAbiertas[s.id];
+                    const esGrid = s.id === 'locacion' && vistaGridLoc;
                     return (
                         <div className="plat-seccion" key={s.id}>
-                            <button type="button" className="plat-seccion-header" onClick={() => setSeccionesAbiertas(prev => ({ ...prev, [s.id]: !prev[s.id] }))}>
-                                <span className="plat-seccion-icon">{s.icon}</span>
-                                <span className="plat-seccion-titulo">{s.label}</span>
-                                <span className="plat-seccion-count">{items.length}</span>
-                                <svg className={`plat-chevron${abierta ? ' open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            </button>
+                            <div className="plat-seccion-header-row">
+                                <button type="button" className="plat-seccion-header" onClick={() => setSeccionesAbiertas(prev => ({ ...prev, [s.id]: !prev[s.id] }))}>
+                                    <span className="plat-seccion-icon">{s.icon}</span>
+                                    <span className="plat-seccion-titulo">{s.label}</span>
+                                    <span className="plat-seccion-count">{items.length}</span>
+                                    <svg className={`plat-chevron${abierta ? ' open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                                {s.id === 'locacion' && abierta && items.length > 0 && (
+                                    <div className="firma-view-toggle">
+                                        <button type="button" className={vistaGridLoc ? 'active' : ''} onClick={() => setVistaGridLoc(true)} title="Vista cuadrícula">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/></svg>
+                                        </button>
+                                        <button type="button" className={!vistaGridLoc ? 'active' : ''} onClick={() => setVistaGridLoc(false)} title="Vista lista">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             {abierta && (
                                 items.length === 0 ? (
                                     <p className="ws-empty" style={{ padding: '8px 16px' }}>Sin nominativos{search ? ' para la búsqueda' : ''}</p>
                                 ) : (
-                                    <div className={s.id === 'locacion' ? 'plat-locacion-grid' : 'plat-lista'}>
+                                    <div className={esGrid ? 'plat-locacion-grid' : 'plat-lista'}>
                                         {items.map(n => (
-                                            <div key={n._id} className={`plat-row${s.id === 'locacion' && !/^pad-/i.test(n.nombre) ? ' plat-row-full' : ''}`}>
-                                                <span className="plat-row-nombre">{n.nombre}</span>
-                                                <div className="plat-row-right">
-                                                    <button type="button" className="plat-pill plat-pill-btn" onClick={() => handleCopiar(n.codigo)} title="Copiar">
-                                                        {copiado === n.codigo ? '✓' : n.codigo}
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>
-                                                    </button>
-                                                    <button type="button" className="plat-edit-btn" onClick={() => setForm(n)} title="Editar">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            <NominativoRow
+                                                key={n._id}
+                                                n={n}
+                                                copiado={copiado}
+                                                onCopiar={handleCopiar}
+                                                onEditar={setForm}
+                                                onEliminar={setConfirmarEliminarRow}
+                                                onCompartir={handleCompartir}
+                                                swiped={swipedId === n._id}
+                                                onSwipe={setSwipedId}
+                                                swipeRef={platSwipeRef}
+                                            />
                                         ))}
                                     </div>
                                 )
@@ -4764,6 +4842,14 @@ const PantallaPlataformas = ({ turnoActivo }) => {
                     onCancelar={() => setForm(null)}
                     onGuardado={handleGuardado}
                     onEliminado={handleEliminado}
+                />
+            )}
+
+            {confirmarEliminarRow && (
+                <ModalConfirm
+                    mensaje={`"${confirmarEliminarRow.nombre}" (${confirmarEliminarRow.codigo}) dejará de estar disponible en el bloque. Esta acción no se puede deshacer.`}
+                    onConfirm={() => handleEliminarRapido(confirmarEliminarRow._id)}
+                    onCancel={() => setConfirmarEliminarRow(null)}
                 />
             )}
         </div>

@@ -3412,10 +3412,11 @@
 }
 
 .plat-seccion { margin: 0 0 14px; }
+.plat-seccion-header-row { display: flex; align-items: center; gap: 8px; padding: 0 16px; }
 .plat-seccion-header {
-    width: 100%; display: flex; align-items: center; gap: 10px;
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
     background: none; border: none; color: #e2e8f0; cursor: pointer;
-    padding: 6px 16px; font-family: inherit;
+    padding: 6px 0; font-family: inherit;
 }
 .plat-seccion-icon {
     width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
@@ -3427,15 +3428,33 @@
 .plat-chevron { margin-left: auto; color: #666; transition: transform 0.15s; }
 .plat-chevron.open { transform: rotate(180deg); }
 
-.plat-lista { display: flex; flex-direction: column; padding: 4px 16px 0; }
-.plat-locacion-grid { display: flex; flex-direction: column; padding: 4px 16px 0; gap: 0; }
+.plat-lista { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 4px; }
+.plat-locacion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; padding: 8px 16px 4px; }
+
+/* Swipe izq→der revela Eliminar/Editar/Copiar/Compartir — mismo patrón que .mov-item */
+.plat-row-wrap { position: relative; overflow: hidden; border-radius: 10px; }
+.plat-row-actions {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 152px;
+    display: flex; align-items: center; gap: 5px; padding: 0 10px; z-index: 0;
+}
+.plat-row-act-btn {
+    width: 28px; height: 28px; border-radius: 7px; background: transparent;
+    border: 1px solid #282828; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #666; transition: all 0.15s; padding: 0; flex-shrink: 0;
+}
+.plat-row-act-btn:hover { color: #ccc; border-color: #444; }
+.plat-row-act-btn.danger:hover { color: #f87171; border-color: #f87171; }
 
 .plat-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 13px 2px; border-bottom: 1px solid #1e1e1e;
+    background: #141414; border-radius: 10px; padding: 13px 14px;
+    position: relative; z-index: 1; transform: translateX(0);
+    transition: transform 0.25s ease, background 0.15s ease; cursor: pointer;
 }
+@media (hover: hover) { .plat-row:hover { background: #181818; } }
+.plat-row.plat-row-swiped { transform: translateX(152px); border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .plat-row-nombre { font-size: 13.5px; color: #e2e8f0; min-width: 0; }
-.plat-row-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.plat-locacion-grid .plat-row { flex-direction: column; align-items: flex-start; gap: 10px; }
 
 .plat-pill {
     display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800;
@@ -3444,10 +3463,6 @@
 }
 .plat-pill-btn { border: none; cursor: pointer; }
 .plat-pill-dim { background: rgba(129,140,248,0.14); color: #6b7280; }
-.plat-edit-btn {
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: #999; cursor: pointer;
-}
 
 .plat-form-card {
     width: 100%; max-width: min(92vw, 420px); background: #1a1a1a; border-radius: 20px;
@@ -3497,22 +3512,6 @@
     padding: 10px 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-align: center;
 }
 .plat-seccion-btn.active { background: rgba(129,140,248,0.12); border-color: #818cf8; color: #a5b4fc; }
-
-@media (min-width: 900px) {
-    .plat-locacion-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 10px;
-        padding: 8px 16px 0;
-    }
-    .plat-locacion-grid .plat-row {
-        flex-direction: column; align-items: flex-start; gap: 10px;
-        background: #161616; border: 1px solid #222; border-radius: 12px; padding: 14px;
-    }
-    .plat-locacion-grid .plat-row-full { grid-column: 1 / -1; flex-direction: row; align-items: center; background: none; border: none; border-bottom: 1px solid #1e1e1e; border-radius: 0; padding: 13px 2px; }
-    .plat-locacion-grid .plat-row-right { width: 100%; justify-content: space-between; }
-    .plat-locacion-grid .plat-row-full .plat-row-right { width: auto; }
-}
 
 
 /* ══════════════════════════════════════════════════════════
