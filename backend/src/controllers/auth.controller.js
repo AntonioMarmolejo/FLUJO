@@ -23,14 +23,21 @@ export const buildUserResponse = (user) => ({
     onboardingCompleto: user.onboardingCompleto,
 });
 
-const issueTokens = async (user, deviceId = '') => {
+export const issueTokens = async (user, deviceId = '') => {
     const accessToken = generateAccessToken(user._id, user.role);
     const refreshToken = generateRefreshToken();
 
-    // Guardar refresh token; limpiar los vencidos y limitar a 5 por usuario
+    // Guardar refresh token; limpiar los vencidos y limitar a 5 por usuario.
+    // refreshTokens tiene select:false, así que hay que leerlos explícitamente:
+    // el `user` que llega desde login/google no los trae, y usar
+    // user.refreshTokens borraba las sesiones de los demás dispositivos.
+    // Un token anterior del mismo dispositivo ya no sirve (ese dispositivo
+    // acaba de recibir uno nuevo), así que se reemplaza en vez de acumularse.
     const ahora = Date.now();
-    const vigentes = (user.refreshTokens || [])
+    const actual = await User.findById(user._id).select('+refreshTokens');
+    const vigentes = (actual?.refreshTokens || [])
         .filter(r => new Date(r.createdAt).getTime() + REFRESH_TTL_MS > ahora)
+        .filter(r => !deviceId || r.deviceId !== deviceId)
         .slice(-4); // máx 4 existentes + 1 nuevo = 5
     vigentes.push({ token: refreshToken, deviceId, createdAt: new Date() });
 

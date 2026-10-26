@@ -4,22 +4,15 @@ import {
     generateAuthenticationOptions,
     verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
-import crypto from 'crypto';
 import User from '../models/User.model.js';
-import jwt from 'jsonwebtoken';
+import { issueTokens } from './auth.controller.js';
 
 const RP_NAME = 'FlujoSecurity';
 const RP_ID = process.env.WEBAUTHN_RP_ID || 'flujosecurity.com';
 const ORIGIN = process.env.WEBAUTHN_ORIGIN || 'https://flujosecurity.com';
-const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Desafíos temporales (en producción mover a Redis o colección Mongo con TTL)
 const challenges = new Map();
-
-const generateRefreshToken = () => crypto.randomBytes(48).toString('hex');
-
-const generateAccessToken = (id, role) =>
-    jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1d' });
 
 const buildUserResponse = (user) => ({
     id: user._id,
@@ -33,18 +26,6 @@ const buildUserResponse = (user) => ({
     puestos: Object.fromEntries(user.puestos || new Map()),
     onboardingCompleto: user.onboardingCompleto,
 });
-
-const issueSession = async (user, deviceId = '') => {
-    const accessToken = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken();
-    const ahora = Date.now();
-    const vigentes = ((await User.findById(user._id).select('+refreshTokens'))?.refreshTokens || [])
-        .filter(r => new Date(r.createdAt).getTime() + REFRESH_TTL_MS > ahora)
-        .slice(-4);
-    vigentes.push({ token: refreshToken, deviceId, createdAt: new Date() });
-    await User.findByIdAndUpdate(user._id, { refreshTokens: vigentes });
-    return { accessToken, refreshToken };
-};
 
 // POST /api/webauthn/register/options  (requiere autenticación previa con contraseña)
 export const registrationOptions = async (req, res) => {
@@ -185,7 +166,7 @@ export const authenticationVerify = async (req, res) => {
 
         if (user.activo === false) return res.status(403).json({ message: 'Tu cuenta está desactivada.' });
 
-        const { accessToken, refreshToken } = await issueSession(user, deviceId);
+        const { accessToken, refreshToken } = await issueTokens(user, deviceId);
 
         res.json({
             verified: true,

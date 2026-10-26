@@ -61,6 +61,10 @@ api.interceptors.response.use(
                 return api(original);
             } catch (refreshError) {
                 processRefreshQueue(refreshError, null);
+                // Si el refresh falló por red, servidor reiniciándose o un 5xx,
+                // la sesión sigue siendo válida: no cerrarla por un fallo pasajero.
+                const rechazado = [401, 403].includes(refreshError.response?.status);
+                if (!rechazado) return Promise.reject(refreshError);
                 // El refreshToken guardado ya no es válido en el servidor (revocado
                 // o expirado): no tiene sentido mantener un vault que nunca más va
                 // a poder refrescar sesión, así que se borra y se manda a login.
