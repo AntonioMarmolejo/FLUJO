@@ -1132,8 +1132,16 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                                 onBlur={() => setTimeout(() => setActividadSugs([]), 200)}
                                 autoComplete="off"
                                 rows={3}
-                                className="modal-textarea"
+                                className="modal-textarea modal-textarea-clearable"
                             />
+                            {form.actividad && (
+                                <button className="field-clear-btn field-clear-btn-top" type="button" title="Limpiar" onMouseDown={e => {
+                                    e.preventDefault();
+                                    setForm(f => ({ ...f, actividad: '' }));
+                                    setActividadSugs([]);
+                                    setTimeout(() => actividadRef.current?.focus(), 0);
+                                }}>✕</button>
+                            )}
                             {actividadSugs.length > 0 && (
                                 <div className="placa-suggestions">
                                     {actividadSugs.map((s, i) => (

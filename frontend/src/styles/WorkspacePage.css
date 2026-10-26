@@ -763,6 +763,13 @@
 }
 .field-clear-btn:hover { color: #f87171; }
 
+/* Variante para textarea (Actividad / Observación): esquina superior derecha */
+.field-clear-btn-top {
+    top: 8px;
+    transform: none;
+}
+.modal-textarea-clearable { padding-right: 34px; }
+
 .placa-suggestions {
     position: absolute;
     top: calc(100% + 4px);
