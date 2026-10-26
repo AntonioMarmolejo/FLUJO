@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
     crearMovimiento, getMovimientos, getMovimientosTodos, getStats,
     deleteMovimiento, batchDeleteMovimientos, updateMovimiento,
-    getFlujoAnios, getFlujoMeses, getFlujoDias, deleteMovimientosPorFecha, buscarMovimientos,
+    getFlujoAnios, getFlujoMeses, getFlujoDias, deleteMovimientosPorFecha, buscarMovimientos, getUltimoMovimientoPlaca,
     getBloquePuestos, getBloqueAnios, getBloqueMeses, getBloqueDias, getBloqueDia,
 } from '../controllers/movimiento.controller.js';
 import { protect, requireActive, requirePuestosBloque } from '../middleware/auth.middleware.js';
@@ -17,6 +17,7 @@ router.get('/anios', protect, getFlujoAnios);
 router.get('/meses', protect, getFlujoMeses);
 router.get('/dias', protect, getFlujoDias);
 router.get('/buscar', protect, buscarMovimientos);
+router.get('/ultimo', protect, getUltimoMovimientoPlaca);
 
 // "Puestos": archivo de TODO el bloque (todos los usuarios), gateado por permiso de admin
 router.get('/bloque/puestos', protect, requirePuestosBloque, getBloquePuestos);

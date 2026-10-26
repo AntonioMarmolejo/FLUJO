@@ -670,6 +670,13 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
     const [showPersonaScanner, setShowPersonaScanner] = useState(false);
     const [personaNotFound, setPersonaNotFound] = useState(false);
     const [placaNotFound, setPlacaNotFound] = useState(false);
+    // Destino/actividad precargados del último movimiento de la placa:
+    // historialRef guarda los valores puestos para saber si el usuario los
+    // cambió (si no, se pueden reemplazar al cambiar INGRESA/SALE).
+    const [historialInfo, setHistorialInfo] = useState(null); // { tipo, fecha }
+    const historialRef = useRef(null);
+    const formRef = useRef(form);
+    useEffect(() => { formRef.current = form; }, [form]);
 
     const handleChange = e => {
         setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -682,6 +689,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         setAutoFilled(false);
         setError('');
         setPlacaNotFound(false);
+        setHistorialInfo(null);
         if (val.length < 3) { setSuggestions([]); return; }
 
         const seen = new Set();
@@ -708,6 +716,51 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         }, 300);
     };
 
+    // Último movimiento de la placa entre los del flujo actual (incluye los
+    // que aún no se sincronizan, que se toman como los más recientes).
+    const ultimoMovimientoLocal = (placa, tipo) => {
+        const ts = m => (m.createdAt ? Date.parse(m.createdAt) : Number.MAX_SAFE_INTEGER);
+        return movimientos
+            .filter(m => m.placa === placa && (!tipo || m.tipo === tipo))
+            .sort((a, b) => ts(b) - ts(a))[0] || null;
+    };
+
+    // Una salida toma destino y actividad de la última SALIDA del vehículo; un
+    // ingreso, del último movimiento sea cual sea. Solo reemplaza campos vacíos,
+    // con la ubicación por defecto, o que sigan con lo precargado antes.
+    const precargarHistorial = async (placa, tipo) => {
+        if (editData || !placa) return;
+        const filtroTipo = tipo === 'salida' ? 'salida' : '';
+        let ultimo = ultimoMovimientoLocal(placa, filtroTipo);
+        if (!ultimo) {
+            try {
+                const { data } = await api.get('/movimientos/ultimo', { params: { placa, ...(filtroTipo && { tipo: filtroTipo }) } });
+                ultimo = data.movimiento;
+            } catch { /* sin conexión: solo se usa lo local */ }
+        }
+
+        const f = formRef.current;
+        if (f.placa !== placa || f.tipo !== tipo) return; // cambió mientras se consultaba
+        const prev = historialRef.current;
+        const reemplazable = campo => !f[campo] || f[campo] === prev?.[campo]
+            || (campo === 'destino' && [ubiIngreso, ubiSalida].includes(f.destino));
+
+        const cambios = {};
+        ['destino', 'actividad'].forEach(campo => {
+            if (!reemplazable(campo)) return;
+            if (ultimo?.[campo]) cambios[campo] = ultimo[campo];
+            else if (prev?.[campo] && f[campo] === prev[campo]) cambios[campo] = '';
+        });
+        if (ultimo && (ultimo.destino || ultimo.actividad)) {
+            historialRef.current = { destino: cambios.destino ?? prev?.destino, actividad: cambios.actividad ?? prev?.actividad };
+            if (Object.keys(cambios).length > 0) setHistorialInfo({ tipo: ultimo.tipo, fecha: ultimo.fecha });
+        } else {
+            historialRef.current = null;
+            setHistorialInfo(null);
+        }
+        if (Object.keys(cambios).length > 0) setForm(cur => ({ ...cur, ...cambios }));
+    };
+
     const selectSuggestion = v => {
         setForm(f => ({ ...f, placa: v.placa, marca: v.marca || '', color: v.color || '', tipoVehiculo: v.tipoVehiculo || '', empresa: v.empresa || '', conductor: v.conductor || '', cedula: v.cedula || '' }));
         setSuggestions([]);
@@ -715,6 +768,8 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         setConductorSugs([]);
         setAutoFilled(true);
         setPlacaNotFound(false);
+        formRef.current = { ...formRef.current, placa: v.placa };
+        precargarHistorial(v.placa, formRef.current.tipo);
     };
 
     const handleCedulaChange = e => {
@@ -876,6 +931,10 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         setPersonaNotFound(false);
         setPlacaNotFound(false);
         setShowScanner(false);
+        if (placa) {
+            formRef.current = { ...formRef.current, placa };
+            precargarHistorial(placa, formRef.current.tipo);
+        }
     };
 
     const handlePersonaQRScanned = data => {
@@ -932,6 +991,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
         setTipoSugs([]); setPersonasTags([]); setShowTagInput(false); setTagQuery(''); setTagSugs([]);
         setHoraManual(''); setShowHoraInput(false);
         setAutoFilled(false); setPersonaNotFound(false); setPlacaNotFound(false); setError('');
+        setHistorialInfo(null); historialRef.current = null;
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
@@ -977,12 +1037,18 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                 <div className="modal-tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
                         <button key={val} className={`modal-tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
-                            onClick={() => setForm(f => ({
-                                ...f,
-                                tipo: val,
-                                ...(val === 'ingreso' && !f.destino ? { destino: ubiIngreso } :
-                    val === 'salida' && !f.destino && ubiSalida ? { destino: ubiSalida } : {}),
-                            }))}>
+                            onClick={() => {
+                                const f = formRef.current;
+                                const next = {
+                                    ...f,
+                                    tipo: val,
+                                    ...(val === 'ingreso' && !f.destino ? { destino: ubiIngreso } :
+                                        val === 'salida' && !f.destino && ubiSalida ? { destino: ubiSalida } : {}),
+                                };
+                                setForm(next);
+                                formRef.current = next;
+                                if (val !== f.tipo && (historialRef.current || autoFilled)) precargarHistorial(f.placa, val);
+                            }}>
                             {label}
                         </button>
                     ))}
@@ -1153,6 +1219,13 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                                 </div>
                             )}
                         </div>
+                        {historialInfo && (
+                            <div className="historial-hint">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                Destino y actividad tomados {historialInfo.tipo === 'salida' ? 'de la última salida' : 'del último ingreso'}
+                                {historialInfo.fecha && ` (${historialInfo.fecha.split('-').reverse().slice(0, 2).join('/')})`}
+                            </div>
+                        )}
                         <div className="activ-tags-row">
                             {personasTags.map((p, i) => (
                                 <span key={i} className="activ-persona-tag">

@@ -380,6 +380,27 @@ export const buscarMovimientos = async (req, res) => {
     }
 };
 
+// GET /api/movimientos/ultimo?placa=ABC1234&tipo=salida
+// Último movimiento del usuario para una placa (de cualquier puesto o día),
+// usado para precargar destino y actividad al registrar ese vehículo de nuevo.
+// Sin `tipo` devuelve el último movimiento sea ingreso o salida.
+export const getUltimoMovimientoPlaca = async (req, res) => {
+    try {
+        const placa = (req.query.placa || '').trim().toUpperCase();
+        if (!placa) return res.json({ movimiento: null });
+
+        const filter = { usuario: req.user._id, placa };
+        if (['ingreso', 'salida'].includes(req.query.tipo)) filter.tipo = req.query.tipo;
+
+        const movimiento = await Movimiento.findOne(filter)
+            .sort({ createdAt: -1 })
+            .select('tipo destino actividad fecha hora createdAt');
+        res.json({ movimiento });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // PUT /api/movimientos/:id
 export const updateMovimiento = async (req, res) => {
     try {

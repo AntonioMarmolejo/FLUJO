@@ -45,6 +45,8 @@ const movimientoSchema = new mongoose.Schema(
 // Acelera los filtros por usuario/puesto/bloque/fecha que usa la pantalla de Flujos
 // (listado por años, meses y días, y el detalle de un día puntual).
 movimientoSchema.index({ usuario: 1, puesto: 1, bloque: 1, fecha: 1 });
+// Último movimiento de una placa (precarga de destino/actividad en el formulario).
+movimientoSchema.index({ usuario: 1, placa: 1, createdAt: -1 });
 
 // Evita duplicados reales: si dos peticiones con el mismo clientUUID (reintento
 // del cliente offline-first) llegan casi al mismo tiempo, la verificación de

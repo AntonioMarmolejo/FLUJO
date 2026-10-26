@@ -1461,6 +1461,16 @@
 }
 
 /* Fila de etiquetas de persona en campo actividad */
+.historial-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: #818cf8;
+}
+[data-theme="light"] .historial-hint { color: #4f46e5; }
+
 .activ-tags-row {
     display: flex;
     flex-wrap: wrap;
