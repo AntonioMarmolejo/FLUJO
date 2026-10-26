@@ -4,6 +4,7 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 import api from '../api/axios';
 import { setAccessToken, setRefreshToken, getRefreshToken, clearAuthStore } from '../lib/authStore.js';
 import { vaultExists, destroyVault } from '../lib/vault.js';
+import { getHomeRoute } from '../lib/homeRoute.js';
 
 const AuthContext = createContext();
 
@@ -149,7 +150,7 @@ export const AuthProvider = ({ children }) => {
         cacheUser(data.user);
         setUser(data.user);
 
-        const dest = data.user.onboardingCompleto ? '/workspace' : '/onboarding';
+        const dest = getHomeRoute(data.user);
         if (!(await vaultExists())) {
             navigate('/crear-pin', { state: { refreshToken: data.refreshToken, dest } });
         } else {
@@ -213,7 +214,7 @@ export const AuthProvider = ({ children }) => {
     const role = user?.role || 'operador';
     const isAdmin = role === 'admin';
     const isSupervisor = role === 'supervisor' || role === 'admin';
-    const isPending = (user?.status || 'pending') === 'pending';
+    const isPending = !isAdmin && (user?.status || 'pending') === 'pending';
     const permisosPanel = user?.permisosPanel || [];
     const hasPermiso = (panel) => isAdmin || permisosPanel.includes(panel);
 

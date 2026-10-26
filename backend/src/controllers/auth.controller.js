@@ -217,3 +217,18 @@ export const googleAuth = async (req, res) => {
         res.status(500).json({ message: 'Error con Google auth', error: error.message });
     }
 };
+
+// GET /api/auth/admin-contacto
+// Usado por la pantalla de cuenta pendiente ("Contactar al administrador"):
+// solo expone el nombre y correo de un administrador activo.
+export const getAdminContacto = async (req, res) => {
+    try {
+        const admin = await User.findOne({ role: 'admin', status: 'active', activo: { $ne: false } })
+            .sort({ createdAt: 1 })
+            .select('name email');
+        if (!admin) return res.status(404).json({ message: 'No hay un administrador disponible' });
+        res.json({ name: admin.name, email: admin.email });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};

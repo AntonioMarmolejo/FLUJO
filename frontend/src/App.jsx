@@ -12,6 +12,7 @@ import ConfirmacionTurnoPage from './pages/ConfirmacionTurnoPage';
 import FlujoPersonalPage from './pages/FlujoPersonalPage';
 import CalendarioPage from './pages/CalendarioPage';
 import AdminPage from './pages/AdminPage';
+import CuentaEstadoPage from './pages/CuentaEstadoPage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -26,25 +27,28 @@ function App() {
                             <ProtectedRoute><CreatePinScreen /></ProtectedRoute>
                         } />
                         <Route path="/onboarding" element={
-                            <ProtectedRoute><BlockSelectPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><BlockSelectPage /></ProtectedRoute>
                         } />
                         <Route path="/onboarding/puestos" element={
-                            <ProtectedRoute><PostSelectPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><PostSelectPage /></ProtectedRoute>
+                        } />
+                        <Route path="/cuenta-pendiente" element={
+                            <ProtectedRoute><CuentaEstadoPage /></ProtectedRoute>
                         } />
                         <Route path="/workspace" element={
                             <ProtectedRoute><WorkspacePage /></ProtectedRoute>
                         } />
                         <Route path="/turno" element={
-                            <ProtectedRoute><TurnoPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><TurnoPage /></ProtectedRoute>
                         } />
                         <Route path="/turno/confirmacion" element={
-                            <ProtectedRoute><ConfirmacionTurnoPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><ConfirmacionTurnoPage /></ProtectedRoute>
                         } />
                         <Route path="/flujos/personal" element={
-                            <ProtectedRoute><FlujoPersonalPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><FlujoPersonalPage /></ProtectedRoute>
                         } />
                         <Route path="/calendario" element={
-                            <ProtectedRoute><CalendarioPage /></ProtectedRoute>
+                            <ProtectedRoute requireActive><CalendarioPage /></ProtectedRoute>
                         } />
                         <Route path="/admin" element={
                             <ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>

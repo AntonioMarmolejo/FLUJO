@@ -21,8 +21,10 @@ const Spinner = () => (
 
 // allowedRoles: array de roles permitidos, ej. ['admin'] o ['admin', 'supervisor']
 // Si no se pasa allowedRoles, solo verifica que el usuario esté autenticado.
-const ProtectedRoute = ({ children, allowedRoles }) => {
-    const { user, loading, role } = useAuth();
+// requireActive: la ruta permite hacer cambios (crear flujos, turnos...), así
+// que una cuenta pendiente de aprobación se manda a /cuenta-pendiente.
+const ProtectedRoute = ({ children, allowedRoles, requireActive }) => {
+    const { user, loading, role, isPending } = useAuth();
     const [checkingVault, setCheckingVault] = useState(true);
     const [hasVault, setHasVault] = useState(false);
     const [unlocked, setUnlocked] = useState(false);
@@ -46,6 +48,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (allowedRoles && !allowedRoles.includes(role)) {
         return <Navigate to="/workspace" replace />;
     }
+
+    if (requireActive && isPending) return <Navigate to="/cuenta-pendiente" replace />;
 
     return children;
 };

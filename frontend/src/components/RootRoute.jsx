@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getHomeRoute } from '../lib/homeRoute.js';
 import { vaultExists } from '../lib/vault.js';
 import LoginPage from '../pages/LoginPage';
 import LockScreen from '../pages/LockScreen';
@@ -38,7 +39,7 @@ const RootRoute = () => {
     if (hasVault && !unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
 
     if (loading) return <Spinner />;
-    if (user) return <Navigate to={user.onboardingCompleto ? '/workspace' : '/onboarding'} replace />;
+    if (user) return <Navigate to={getHomeRoute(user)} replace />;
     return <LoginPage />;
 };
 
