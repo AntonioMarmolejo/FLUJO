@@ -374,7 +374,9 @@ const SuggestionField = ({ name, label, required, placeholder, value, onChange, 
     );
 };
 
-const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, suggestions, onSelect, multiline }) => (
+const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, onClear, suggestions, onSelect, multiline }) => {
+    const inputRef = useRef(null);
+    return (
     <div className="modal-field">
         <label>{label}</label>
         <div className="placa-wrapper">
@@ -383,8 +385,15 @@ const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onCl
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off"
                     rows={3} className="modal-textarea" />
             ) : (
-                <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
+                <input ref={inputRef} type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
+            )}
+            {value && onClear && !multiline && (
+                <button className="field-clear-btn" type="button" title="Limpiar" onMouseDown={e => {
+                    e.preventDefault();
+                    onClear();
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                }}>✕</button>
             )}
             {suggestions.length > 0 && (
                 <div className="placa-suggestions">
@@ -398,7 +407,8 @@ const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onCl
             )}
         </div>
     </div>
-);
+    );
+};
 
 // ── Menú cajón ────────────────────────────────────────────
 const DRAWER_ITEMS = [
@@ -1162,6 +1172,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                             value={form.empresa} onChange={handleEmpresaChange}
                             onFocus={() => setEmpresaSugs(recentUnique('empresa', form.empresa))}
                             onClearSugs={() => setEmpresaSugs([])}
+                            onClear={() => { setForm(f => ({ ...f, empresa: '' })); setEmpresaSugs([]); }}
                             suggestions={empresaSugs} onSelect={s => { setForm(f => ({ ...f, empresa: s })); setEmpresaSugs([]); }} />
                     </div>
                     <SuggestionField name="conductor" label="CONDUCTOR" placeholder="Nombre completo"
@@ -1202,6 +1213,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                         value={form.destino} onChange={handleDestinoChange}
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
                         onClearSugs={() => setDestinoSugs([])}
+                        onClear={() => { setForm(f => ({ ...f, destino: '' })); setDestinoSugs([]); }}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
                     <div className="modal-field">
                         <label>ACTIVIDAD / OBSERVACIÓN</label>
