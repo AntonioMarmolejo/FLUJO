@@ -3428,9 +3428,17 @@ const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
 // ── Pantalla lista de flujos ───────────────────────────────
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin }) => {
+// La barra de búsqueda de "General" vive en la barra superior de WorkspacePage
+// (para quedarse fija al bajar, igual que la de Movimientos): por eso genQuery
+// y genCampo llegan como props, y onBusquedaVisible avisa cuándo mostrarla.
+const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, setGenCampo, onBusquedaVisible }) => {
     const [vistaFlujos, setVistaFlujos] = useState('archivo');
     const [flujoSeleccionado, setFlujoSeleccionado] = useState(null);
+
+    useEffect(() => {
+        onBusquedaVisible(vistaFlujos === 'general' && !flujoSeleccionado);
+    }, [vistaFlujos, flujoSeleccionado, onBusquedaVisible]);
+    useEffect(() => () => onBusquedaVisible(false), [onBusquedaVisible]);
     const [confirmarFlujo, setConfirmarFlujo] = useState(null);
     const returnTabRef = useRef('archivo');
 
@@ -3447,8 +3455,6 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin }) => {
     const [loadingDias, setLoadingDias] = useState(false);
     const [loadingDia, setLoadingDia] = useState(false);
 
-    const [genCampo, setGenCampo] = useState('todos');
-    const [genQuery, setGenQuery] = useState('');
     const [genResultados, setGenResultados] = useState([]);
     const [genLoading, setGenLoading] = useState(false);
 
@@ -3745,21 +3751,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin }) => {
                     ))}
                 </div>
 
-                {/* Barra de búsqueda */}
-                <div className="ws-search-bar" style={{ background: 'transparent' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
-                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <input
-                        className="ws-search-input"
-                        type="text"
-                        placeholder={`Buscar por ${genCampo === 'todos' ? 'cualquier campo' : genCampo}…`}
-                        value={genQuery}
-                        onChange={e => setGenQuery(e.target.value)}
-                    />
-                    {genQuery && <button className="ws-search-clear" onClick={() => setGenQuery('')}>✕</button>}
-                </div>
+                {/* La barra de búsqueda está en la barra superior (fija al bajar) */}
 
                 {/* Resultados */}
                 {!genQuery.trim() ? (
@@ -6747,7 +6739,14 @@ const WorkspacePage = () => {
     // día/noche, lupa) y la barra de búsqueda sube a ocupar ese espacio; al
     // subir un poco vuelve a aparecer la fila para poder desactivar la
     // búsqueda desde la lupa.
-    const searchBarActive = showSearch || (tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && platSearchShow);
+    // Búsqueda de Flujos → General (su barra también vive en la barra superior)
+    const [flujosGenQuery, setFlujosGenQuery] = useState('');
+    const [flujosGenCampo, setFlujosGenCampo] = useState('todos');
+    const [flujosBusquedaVisible, setFlujosBusquedaVisible] = useState(false);
+    const flujosBusquedaActiva = tabActiva === 'flujos' && flujosBusquedaVisible;
+    const searchBarActive = showSearch
+        || (tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && platSearchShow)
+        || flujosBusquedaActiva;
     const [topbarIconsHidden, setTopbarIconsHidden] = useState(false);
 
     useEffect(() => {
@@ -7074,6 +7073,7 @@ const WorkspacePage = () => {
         setShowSearch(false);
         setSearchQuery('');
         if (tab !== 'utilidades') { setPlatSearchShow(false); setPlatSearchQuery(''); }
+        if (tab !== 'flujos') { setFlujosGenQuery(''); setFlujosGenCampo('todos'); }
     };
 
     const toggleSelectMode = () => { setSelectMode(s => !s); setSelectedIds(new Set()); setSwipedMovId(null); };
@@ -7434,6 +7434,22 @@ const WorkspacePage = () => {
                         value={platSearchQuery} onChange={e => setPlatSearchQuery(e.target.value)} autoFocus />
                     {platSearchQuery && (
                         <button className="ws-search-clear" onClick={() => setPlatSearchQuery('')}>✕</button>
+                    )}
+                </div>
+            )}
+
+            {/* Barra de búsqueda (Flujos → General) */}
+            {flujosBusquedaActiva && (
+                <div className="ws-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                        <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input className="ws-search-input" type="text"
+                        placeholder={`Buscar por ${flujosGenCampo === 'todos' ? 'cualquier campo' : flujosGenCampo}…`}
+                        value={flujosGenQuery} onChange={e => setFlujosGenQuery(e.target.value)} />
+                    {flujosGenQuery && (
+                        <button className="ws-search-clear" onClick={() => setFlujosGenQuery('')}>✕</button>
                     )}
                 </div>
             )}
@@ -7834,7 +7850,11 @@ const WorkspacePage = () => {
                         : <PantallaAvance turnoActivo={turnoActivo} user={user} />
                 )}
 
-                {tabActiva === 'flujos' && <PantallaFlujos turnoActivo={turnoActivo} hasPermiso={hasPermiso} isAdmin={isAdmin} />}
+                {tabActiva === 'flujos' && (
+                    <PantallaFlujos turnoActivo={turnoActivo} hasPermiso={hasPermiso} isAdmin={isAdmin}
+                        genQuery={flujosGenQuery} genCampo={flujosGenCampo} setGenCampo={setFlujosGenCampo}
+                        onBusquedaVisible={setFlujosBusquedaVisible} />
+                )}
 
                 {tabActiva === 'utilidades' && (
                     <PantallaUtilidades turnoActivo={turnoActivo} onDetalleChange={handleUtilidadDetalleChange} platSearchQuery={platSearchQuery} />
