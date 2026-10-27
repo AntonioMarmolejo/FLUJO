@@ -753,12 +753,13 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
             .sort((a, b) => ts(b) - ts(a))[0] || null;
     };
 
-    // Una salida toma destino y actividad de la última SALIDA del vehículo; un
-    // ingreso, del último movimiento sea cual sea. Solo reemplaza campos vacíos,
-    // con la ubicación por defecto, o que sigan con lo precargado antes.
+    // Destino y actividad salen del último movimiento del MISMO tipo: una salida
+    // toma los de la última salida del vehículo y un ingreso los del último
+    // ingreso. Solo reemplaza campos vacíos, con la ubicación por defecto, o
+    // que sigan con lo precargado antes.
     const precargarHistorial = async (placa, tipo) => {
         if (editData || !placa) return;
-        const filtroTipo = tipo === 'salida' ? 'salida' : '';
+        const filtroTipo = tipo === 'salida' ? 'salida' : 'ingreso';
         let ultimo = ultimoMovimientoLocal(placa, filtroTipo);
         if (!ultimo) {
             try {
