@@ -385,8 +385,22 @@ const getRegistroConfig = puesto => {
         return { ubicacion: PUESTO_UBICACION[puesto] || puesto || 'EPF' };
     }
 };
+const esPetro = m => !!m.empresa?.toLowerCase().includes('petroecuador');
+
+// Movimiento con guía o materiales: tiene guías registradas, o la actividad
+// menciona "guía", "guia", "G#" o "material(es)".
+const GUIA_REGEX = /gu[ií]a|g\s*#|material/i;
+const movTieneGuia = m => !!m.guia || (m.guias || []).length > 0 || GUIA_REGEX.test(m.actividad || '');
+
+// Filtros de las tarjetas del Dashboard (Contratistas, EP Petro., Guías)
+const DASH_FILTROS = {
+    contratistas: { label: 'Contratistas', fn: m => !esPetro(m) },
+    petro: { label: 'EP Petroecuador', fn: esPetro },
+    guias: { label: 'Guías y materiales', fn: movTieneGuia },
+};
+
 const buildStats = (movs, diasActivos = 0) => {
-    const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
+    const isPetro = esPetro;
     const placaMap = {};
     movs.forEach(m => {
         if (!placaMap[m.placa] || (!placaMap[m.placa].empresa && m.empresa)) placaMap[m.placa] = m;
@@ -417,6 +431,7 @@ const buildStats = (movs, diasActivos = 0) => {
     return {
         totalFlujos: movs.length,
         diasActivos,
+        guias: movs.filter(movTieneGuia).length,
         petroecuador: unicos.filter(isPetro).length,
         contratistas: unicos.filter(m => !isPetro(m)).length,
         grafico,
@@ -6978,12 +6993,19 @@ const WorkspacePage = () => {
         return sq ? movimientos.filter(m => movCoincideBusqueda(m, sq)) : movimientos;
     }, [movimientos, searchQuery]);
 
+    // Filtro de las tarjetas del Dashboard: solo afecta la lista de Movimientos
+    const [dashFiltro, setDashFiltro] = useState(null); // null | 'contratistas' | 'petro' | 'guias'
+    const movsLista = useMemo(
+        () => dashFiltro ? movsFiltrados.filter(DASH_FILTROS[dashFiltro].fn) : movsFiltrados,
+        [movsFiltrados, dashFiltro]
+    );
+
     const sortedMovs = useMemo(() => {
-        const arr = [...movsFiltrados];
+        const arr = [...movsLista];
         return movSort === 'desc'
             ? arr.sort((a, b) => (b.hora || '').localeCompare(a.hora || ''))
             : arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
-    }, [movsFiltrados, movSort]);
+    }, [movsLista, movSort]);
 
     const sortedRegs = useMemo(() => {
         const arr = [...movsFiltrados];
@@ -7864,18 +7886,19 @@ const WorkspacePage = () => {
                             {!dashCollapsed && (
                                 <div className="ws-section-content">
                                     <div className="ws-counters">
+                                        {/* Cada tarjeta filtra la lista de Movimientos; otro clic quita el filtro */}
                                         {[
-                                            { valor: stats?.contratistas ?? '–', label: 'CONTRATISTAS' },
-                                            { valor: stats?.petroecuador ?? '–', label: 'EP PETRO.' },
-                                            { valor: stats?.diasActivos ?? '–', label: 'DÍAS', suffix: 'd' },
+                                            { id: 'contratistas', valor: stats?.contratistas ?? '–', label: 'CONTRATISTAS' },
+                                            { id: 'petro', valor: stats?.petroecuador ?? '–', label: 'EP PETRO.' },
+                                            { id: 'guias', valor: stats?.guias ?? '–', label: 'GUÍAS' },
                                         ].map(c => (
-                                            <div key={c.label} className="ws-counter-card">
-                                                <span className="ws-counter-val">
-                                                    {c.valor}
-                                                    {c.suffix && <sub className="ws-counter-suffix">{c.suffix}</sub>}
-                                                </span>
+                                            <button key={c.id} type="button"
+                                                className={`ws-counter-card ws-counter-filtro${dashFiltro === c.id ? ' activo' : ''}`}
+                                                title={dashFiltro === c.id ? 'Quitar filtro' : `Ver solo ${DASH_FILTROS[c.id].label.toLowerCase()}`}
+                                                onClick={() => { setDashFiltro(f => (f === c.id ? null : c.id)); setMovCollapsed(false); }}>
+                                                <span className="ws-counter-val">{c.valor}</span>
                                                 <span className="ws-counter-label">{c.label}</span>
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                     <div className="ws-chart-card">
@@ -7916,9 +7939,15 @@ const WorkspacePage = () => {
                             <button className="ws-section-header" onClick={() => setMovCollapsed(p => !p)}>
                                 <span>
                                     MOVIMIENTOS
-                                    {searchQuery && (
+                                    {(searchQuery || dashFiltro) && (
                                         <span style={{ color: '#818cf8', marginLeft: 6, fontWeight: 700 }}>
-                                            · {movsFiltrados.length} resultado{movsFiltrados.length !== 1 ? 's' : ''}
+                                            · {movsLista.length} resultado{movsLista.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                    {dashFiltro && (
+                                        <span className="ws-filtro-chip" role="button" title="Quitar filtro"
+                                            onClick={e => { e.stopPropagation(); setDashFiltro(null); }}>
+                                            {DASH_FILTROS[dashFiltro].label} ✕
                                         </span>
                                     )}
                                 </span>
@@ -7967,8 +7996,12 @@ const WorkspacePage = () => {
                                     <div className="ws-section-content">
                                         {movimientos.length === 0
                                             ? <p className="ws-empty">Sin movimientos registrados hoy</p>
-                                            : movsFiltrados.length === 0
-                                                ? <p className="ws-empty">Sin resultados para "{searchQuery}"</p>
+                                            : movsLista.length === 0
+                                                ? <p className="ws-empty">
+                                                    {dashFiltro && !searchQuery
+                                                        ? `Sin movimientos de ${DASH_FILTROS[dashFiltro].label.toLowerCase()} hoy`
+                                                        : `Sin resultados para "${searchQuery}"`}
+                                                </p>
                                                 : sortedMovs.map(m => (
                                                     <MovCard key={m._id} m={m}
                                                         count={bitPlacaCounts[m.placa] || 1}

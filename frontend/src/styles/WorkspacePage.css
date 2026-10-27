@@ -155,6 +155,39 @@
     font-weight: 600;
 }
 
+/* Tarjetas del Dashboard que funcionan como filtro */
+.ws-counter-filtro {
+    border: 1px solid transparent;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.ws-counter-filtro:active {
+    transform: scale(0.97);
+}
+.ws-counter-filtro.activo {
+    border-color: #818cf8;
+    background: rgba(129, 140, 248, 0.12);
+}
+.ws-counter-filtro.activo .ws-counter-label {
+    color: #818cf8;
+}
+.ws-filtro-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: rgba(129, 140, 248, 0.15);
+    color: #818cf8;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    cursor: pointer;
+}
+
 /* Gráfico */
 .ws-chart-card {
     background: #1e1e1e;
@@ -5220,6 +5253,14 @@
 }
 [data-theme="light"] .ws-counter-label {
     color: #6b7280;
+}
+[data-theme="light"] .ws-counter-filtro.activo {
+    border-color: #4f46e5;
+    background: rgba(99, 102, 241, 0.08);
+}
+[data-theme="light"] .ws-counter-filtro.activo .ws-counter-label,
+[data-theme="light"] .ws-filtro-chip {
+    color: #4f46e5;
 }
 
 /* ── Tarjetas movimientos ── */
