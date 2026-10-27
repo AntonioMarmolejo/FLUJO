@@ -28,8 +28,10 @@ export const iniciarTurno = async (req, res) => {
         }
         if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
 
-        const fecha = getFechaActual();
-        const horaInicio = getHoraActual();
+        // Un turno abierto sin conexión llega después con la fecha y hora en
+        // que realmente se abrió en el dispositivo.
+        const fecha = /^\d{4}-\d{2}-\d{2}$/.test(req.body.fecha || '') ? req.body.fecha : getFechaActual();
+        const horaInicio = /^\d{2}:\d{2}$/.test(req.body.horaInicio || '') ? req.body.horaInicio : getHoraActual();
         const horaECU = getHoraECU();
 
         // Buscar turno activo de hoy; si es madrugada (00-05) también revisar nocturno de ayer
@@ -44,6 +46,10 @@ export const iniciarTurno = async (req, res) => {
         if (turnoExistente) {
             // Registrar cambio de turno
             const nuevoTurno = turno === 'diurno' ? 'diurno' : 'nocturno';
+            // Mismo turno que el actual (p. ej. un reintento de la cola offline): nada que registrar
+            if (turnoExistente.turnoActual === nuevoTurno) {
+                return res.status(200).json({ message: 'Turno ya activo', turno: turnoExistente, esCambio: true });
+            }
             turnoExistente.cambios.push({
                 de: turnoExistente.turnoActual,
                 a: nuevoTurno,

@@ -39,6 +39,12 @@ import {
     deleteCachedNominativo,
     touchCatalogMeta,
     getCatalogMeta,
+    encolarOperacion,
+    getOperacionesPendientes,
+    descartarOperacion,
+    registrarPersona,
+    guardarTurnoLocal,
+    leerTurnoLocal,
 } from '../lib/syncEngine.js';
 import '../styles/WorkspacePage.css';
 
@@ -206,6 +212,18 @@ const getTurnoFecha = (turnoActual) => {
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
 const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
+
+// Marca de un registro hecho sin conexión que todavía no se sube. Si el
+// servidor lo rechazó, muestra el motivo y permite descartarlo.
+const PendienteBadge = ({ error, onDescartar }) => (
+    <span className={`pendiente-badge${error ? ' pendiente-badge-error' : ''}`}
+        title={error || 'Guardado en el dispositivo; se subirá al volver la conexión'}
+        onClick={e => e.stopPropagation()}>
+        {error ? 'No se pudo subir' : 'Pendiente'}
+        {/* span y no button: la marca puede ir dentro de una tarjeta que ya es un botón */}
+        {error && <span role="button" tabIndex={0} className="pendiente-descartar" onClick={onDescartar}>Descartar</span>}
+    </span>
+);
 
 const LAST_TURNO_KEY = 'flujo_last_turno';
 
@@ -997,7 +1015,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
 
         const payload = { ...formFinal, puesto, bloque, fecha, hora, clientUUID: tempId };
         if (personaNotFound && form.cedula) {
-            api.post('/personas', { nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
+            registrarPersona({ nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
         // Write-ahead: guardar en Dexie ANTES de intentar la API.
         // Así, si el usuario refresca durante el vuelo o el servidor no responde,
@@ -1572,7 +1590,7 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
     const handleSubmit = () => {
         if (!hora) return;
         if (personaNotFound && cedula) {
-            api.post('/personas', { nombres: conductor, cedula, empresa: b.empresa || '' }).catch(() => {});
+            registrarPersona({ nombres: conductor, cedula, empresa: b.empresa || '' }).catch(() => {});
         }
         onGuardar({ b, hora, conductor: conductor.trim(), cedula: cedula.trim(), actividad: actividad.trim(), destino: destino.trim() });
     };
@@ -4103,13 +4121,29 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
             };
             if (reemplazaA) payload.reemplazaA = reemplazaA;
 
+            // Sin conexión, una firma nueva queda guardada en el dispositivo y se
+            // sube al volver internet (editar sí requiere conexión).
+            const registrarOffline = async () => {
+                if (!payload.bloque) { setError('Inicia un turno en tu bloque para registrar firmas'); return; }
+                const uuid = await encolarOperacion('firma', payload);
+                if (reemplazaA) onReemplazo(reemplazaA);
+                onGuardada({ ...payload, _id: uuid, createdAt: new Date().toISOString(), _pendiente: true });
+            };
+
             if (editando) {
                 const { data } = await api.put(`/firmas/${editando._id}`, payload);
                 onGuardada(data.firma);
+            } else if (!navigator.onLine) {
+                await registrarOffline();
             } else {
-                const { data } = await api.post('/firmas', payload);
-                if (reemplazaA) onReemplazo(reemplazaA);
-                onGuardada(data.firma);
+                try {
+                    const { data } = await api.post('/firmas', payload);
+                    if (reemplazaA) onReemplazo(reemplazaA);
+                    onGuardada(data.firma);
+                } catch (err) {
+                    if (err.response) throw err;
+                    await registrarOffline();
+                }
             }
         } catch (err) {
             setError(err.response?.data?.message || 'No se pudo guardar la firma');
@@ -4262,15 +4296,18 @@ const PantallaFirmas = ({ turnoActivo }) => {
     const cargar = async () => {
         setLoading(true);
         setFromCache(false);
+        // Firmas registradas sin conexión que todavía no se suben
+        const pendientes = (await getOperacionesPendientes('firma').catch(() => []))
+            .map(op => ({ ...op.payload, _id: op.uuid, createdAt: new Date(op.createdAt).toISOString(), _pendiente: true, _error: op.error }));
         try {
             const { data } = await api.get('/firmas');
-            setFirmas(data.firmas);
+            setFirmas([...pendientes, ...data.firmas]);
             data.firmas.forEach(f => cacheFirma(f).catch(() => {}));
             await touchCatalogMeta('firmas');
         } catch {
             try {
                 const cached = await getFirmasCache();
-                setFirmas(cached);
+                setFirmas([...pendientes, ...cached]);
                 setFromCache(cached.length > 0);
                 const meta = await getCatalogMeta('firmas');
                 setCachedAt(meta?.cachedAt || null);
@@ -4281,6 +4318,20 @@ const PantallaFirmas = ({ turnoActivo }) => {
     };
 
     useEffect(() => { cargar(); }, []);
+
+    // Recargar cuando una firma pendiente se sube (o se rechaza). Si se está
+    // viendo su detalle, se vuelve a la galería porque cambia de identificador.
+    const firmaSelRef = useRef(null);
+    useEffect(() => { firmaSelRef.current = firmaSel; }, [firmaSel]);
+    useEffect(() => {
+        const onOperacion = e => {
+            if (e.detail?.tipo !== 'firma') return;
+            if (firmaSelRef.current?._id === e.detail.uuid) { setFirmaSel(null); setVista('galeria'); }
+            cargar();
+        };
+        window.addEventListener('flujo:operaciones', onOperacion);
+        return () => window.removeEventListener('flujo:operaciones', onOperacion);
+    }, []);
 
     const empresas = useMemo(() => [...new Set(firmas.map(f => f.empresa).filter(Boolean))].sort(), [firmas]);
     const departamentos = useMemo(() => [...new Set(firmas.map(f => f.departamento).filter(Boolean))].sort(), [firmas]);
@@ -4293,6 +4344,15 @@ const PantallaFirmas = ({ turnoActivo }) => {
     );
 
     const handleEliminar = async (id) => {
+        if (firmas.find(f => f._id === id)?._pendiente) {
+            // Aún no está en el servidor: basta con sacarla de la cola
+            await descartarOperacion(id).catch(() => {});
+            setFirmas(prev => prev.filter(f => f._id !== id));
+            setConfirmarEliminar(null);
+            setFirmaSel(null);
+            setVista('galeria');
+            return;
+        }
         try {
             await api.delete(`/firmas/${id}`);
             deleteCachedFirma(id).catch(() => {});
@@ -4313,7 +4373,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
                 editando={editando}
                 onCancelar={() => { setVista(firmaSel ? 'detalle' : 'galeria'); setEditando(null); }}
                 onGuardada={firma => {
-                    cacheFirma(firma).catch(() => {});
+                    if (!firma._pendiente) cacheFirma(firma).catch(() => {});
                     setFirmas(prev => {
                         const idx = prev.findIndex(f => f._id === firma._id);
                         if (idx >= 0) { const n = [...prev]; n[idx] = firma; return n; }
@@ -4347,7 +4407,11 @@ const PantallaFirmas = ({ turnoActivo }) => {
                     </div>
                 </div>
                 <div className="firma-detalle-img-wrap">
-                    <span className="firma-badge-registrada">Firma registrada</span>
+                    {firmaSel._pendiente
+                        ? <span className="firma-badge-registrada" style={{ color: firmaSel._error ? '#f87171' : '#f59e0b' }}>
+                            {firmaSel._error ? `No se pudo subir: ${firmaSel._error}` : 'Pendiente de subir · guardada en el dispositivo'}
+                        </span>
+                        : <span className="firma-badge-registrada">Firma registrada</span>}
                     <div style={{ overflow: 'hidden' }}>
                         <img src={firmaSel.imagen} alt="" style={{ transform: `scale(${zoom})`, transition: 'transform 0.15s' }} />
                     </div>
@@ -4380,8 +4444,14 @@ const PantallaFirmas = ({ turnoActivo }) => {
                     ))}
                 </div>
                 <div className="firma-detalle-acciones">
-                    <button className="firma-btn-secondary" onClick={() => { setEditando(firmaSel); setVista('form'); }}>Editar</button>
-                    <button className="firma-btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Eliminar</button>
+                    {firmaSel._pendiente ? (
+                        <button className="firma-btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Descartar</button>
+                    ) : (
+                        <>
+                            <button className="firma-btn-secondary" onClick={() => { setEditando(firmaSel); setVista('form'); }}>Editar</button>
+                            <button className="firma-btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Eliminar</button>
+                        </>
+                    )}
                 </div>
                 {confirmarEliminar && (
                     <ModalConfirm
@@ -4478,6 +4548,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
                         <button key={f._id} className="firma-card" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
                             <img src={f.imagen} alt="" className="firma-card-img" />
                             <div className="firma-card-nombre">{f.nombres}</div>
+                            {f._pendiente && <PendienteBadge error={f._error} onDescartar={() => handleEliminar(f._id)} />}
                             {f.cargo && <span className="firma-pill">{f.cargo}</span>}
                             {f.empresa && <div className="firma-card-meta">{f.empresa}</div>}
                             {f.departamento && <div className="firma-card-meta firma-card-meta-dim">{f.departamento}</div>}
@@ -4491,6 +4562,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
                             <img src={f.imagen} alt="" className="firma-list-thumb" />
                             <div className="firma-list-info">
                                 <div className="firma-card-nombre">{f.nombres}</div>
+                                {f._pendiente && <PendienteBadge error={f._error} onDescartar={() => handleEliminar(f._id)} />}
                                 {f.cargo && <span className="firma-pill">{f.cargo}</span>}
                                 <div className="firma-card-meta">{f.empresa}{f.departamento ? ' · ' + f.departamento : ''}</div>
                             </div>
@@ -5587,7 +5659,8 @@ const ModalPersona = ({ onClose, onGuardado, editData }) => {
             if (editData?._id) {
                 await api.put(`/personas/${editData._id}`, form);
             } else {
-                await api.post('/personas', form);
+                // Sin conexión queda guardada en el dispositivo y se sube al volver internet
+                await registrarPersona(form);
             }
             onGuardado();
             onClose();
@@ -5875,16 +5948,23 @@ const PantallaPersonas = () => {
     const cargar = async () => {
         setLoading(true);
         setFromCache(false);
+        // Personas registradas sin conexión que todavía no se suben
+        const pendientes = (await getOperacionesPendientes('persona').catch(() => []))
+            .map(op => ({ ...op.payload, _id: op.uuid, _pendiente: true, _error: op.error }));
+        const conPendientes = lista => {
+            const cedulas = new Set(pendientes.map(p => p.cedula));
+            return [...pendientes, ...lista.filter(p => !cedulas.has(p.cedula))];
+        };
         try {
             const { data } = await api.get('/personas');
-            setPersonas(data.personas);
+            setPersonas(conPendientes(data.personas));
             data.personas.forEach(p => cachePersona(p).catch(() => {}));
             await touchCatalogMeta('personas');
         } catch {
             // Sin conexión: mostrar lo último que se tenga cacheado localmente
             try {
                 const cached = await getPersonasCache();
-                setPersonas(cached);
+                setPersonas(conPendientes(cached));
                 setFromCache(cached.length > 0);
                 const meta = await getCatalogMeta('personas');
                 setCachedAt(meta?.cachedAt || null);
@@ -5895,6 +5975,13 @@ const PantallaPersonas = () => {
     };
 
     useEffect(() => { cargar(); }, []);
+
+    // Recargar cuando una persona pendiente se sube (o se rechaza)
+    useEffect(() => {
+        const onOperacion = e => { if (e.detail?.tipo === 'persona') cargar(); };
+        window.addEventListener('flujo:operaciones', onOperacion);
+        return () => window.removeEventListener('flujo:operaciones', onOperacion);
+    }, []);
 
     const sq = search.toLowerCase();
     const filtrados = sq
@@ -6006,6 +6093,7 @@ const PantallaPersonas = () => {
                                                 <span className="ftable-cell ftable-cell-bold">
                                                     {(p.nombres || '—').toUpperCase()}
                                                     {p.autorizadoFirma && <span title="Autorizada para registrar firma" style={{ color: '#4ade80', marginLeft: 5 }}>●</span>}
+                                                    {p._pendiente && <PendienteBadge error={p._error} onDescartar={() => descartarOperacion(p._id)} />}
                                                 </span>
                                                 <span className="ftable-cell">{(p.empresa || '—').toUpperCase()}</span>
                                                 <span className="ftable-cell ftable-cell-dim">{p.cargo || '—'}</span>
@@ -6684,11 +6772,28 @@ const WorkspacePage = () => {
         return c;
     }, [bitacora]);
 
+    // El turno se guarda también en el dispositivo: sin conexión se sigue
+    // trabajando con él (incluido uno abierto offline que aún no se sube).
     useEffect(() => {
-        api.get('/turnos/activo')
-            .then(({ data }) => { if (data.turno) setTurnoActivo(data.turno); })
-            .catch(() => { });
-    }, []);
+        const cargarTurno = () => {
+            const local = leerTurnoLocal(user?.id);
+            if (local) setTurnoActivo(local);
+            api.get('/turnos/activo')
+                .then(({ data }) => {
+                    if (data.turno) {
+                        setTurnoActivo(data.turno);
+                        guardarTurnoLocal(data.turno, user?.id);
+                    } else if (!local?._pendiente) {
+                        setTurnoActivo(null);
+                    }
+                })
+                .catch(() => { });
+        };
+        cargarTurno();
+        const onOperacion = e => { if (e.detail?.tipo === 'turno' && e.detail.data) cargarTurno(); };
+        window.addEventListener('flujo:operaciones', onOperacion);
+        return () => window.removeEventListener('flujo:operaciones', onOperacion);
+    }, [user?.id]);
 
     const cargarDatos = async () => {
         if (!turnoActivo) return;

@@ -3,10 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import api from '../api/axios';
+import { guardarTurnoLocal, leerUltimoTurnoLocal, iniciarTurnoOffline } from '../lib/syncEngine.js';
 import '../styles/TurnoPage.css';
 
 const TurnoPage = () => {
-    const { user } = useAuth();
+    const { user, tieneBloque } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -29,21 +30,26 @@ const TurnoPage = () => {
     const [autoFilled, setAutoFilled] = useState(false);
 
     useEffect(() => {
+        const autollenar = (t) => {
+            setForm({
+                cedula: t.cedula || '',
+                nombre: t.nombre || '',
+                apellidos: t.apellidos || '',
+                empresa: t.empresa || '',
+            });
+            setAutoFilled(true);
+        };
         api.get('/turnos/ultimo')
             .then(({ data }) => {
-                if (data.turno) {
-                    setForm({
-                        cedula: data.turno.cedula || '',
-                        nombre: data.turno.nombre || '',
-                        apellidos: data.turno.apellidos || '',
-                        empresa: data.turno.empresa || '',
-                    });
-                    setAutoFilled(true);
-                }
+                if (data.turno) autollenar(data.turno);
                 if (data.turnoFrecuente) setTurno(data.turnoFrecuente);
             })
-            .catch(() => {});
-    }, []);
+            .catch(() => {
+                // Sin conexión: autollenar con el último turno guardado en el dispositivo
+                const local = leerUltimoTurnoLocal(user?.id);
+                if (local) { autollenar(local); setTurno(local.turnoActual || ''); }
+            });
+    }, [user?.id]);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -57,13 +63,22 @@ const TurnoPage = () => {
         }
 
         setLoading(true);
+        const datos = { ...form, bloque: bloqueId, puesto: puestoActual, turno };
         try {
-            const { data } = await api.post('/turnos/iniciar', {
-                ...form,
-                bloque: bloqueId,
-                puesto: puestoActual,
-                turno,
-            });
+            let data;
+            try {
+                if (!navigator.onLine) throw new Error('offline');
+                ({ data } = await api.post('/turnos/iniciar', datos));
+                guardarTurnoLocal(data.turno, user?.id);
+            } catch (err) {
+                if (err.response) throw err; // el servidor lo rechazó: mostrar el motivo
+                // Sin conexión: el turno se abre en el dispositivo y se sube al volver internet
+                if (!tieneBloque(bloqueId)) {
+                    setError('No tienes acceso a este bloque. Pide al administrador que lo apruebe.');
+                    return;
+                }
+                data = await iniciarTurnoOffline(datos, user?.id);
+            }
 
             const esUltimoPuesto = bloqueIndex + 1 === totalBloques;
 

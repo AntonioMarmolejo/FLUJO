@@ -43,7 +43,8 @@ export const createPersona = async (req, res) => {
         const persona = await Persona.create({ cedula: cedula.trim(), ...fields(req.body) });
         res.status(201).json({ message: 'Persona registrada', persona });
     } catch (error) {
-        if (error.code === 11000) return res.status(400).json({ message: 'Esa cédula ya está registrada' });
+        // 409: la cola offline lo toma como "ya estaba registrada", no como error
+        if (error.code === 11000) return res.status(409).json({ message: 'Esa cédula ya está registrada' });
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };

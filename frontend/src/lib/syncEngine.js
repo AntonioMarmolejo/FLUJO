@@ -281,3 +281,170 @@ export const isCatalogStale = async (catalogo) => {
     const meta = await getCatalogMeta(catalogo);
     return !meta || meta.expiresAt < Date.now();
 };
+
+// ── Cola offline de operaciones de garita ─────────────────
+// Abrir turno, registrar firmas y personas nuevas sin conexión: se guardan en
+// Dexie y se suben en orden cuando vuelve internet (ver SyncOperaciones).
+const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas' };
+
+// Rechazos que pueden cambiar si el admin devuelve el acceso: la operación
+// sigue en cola en vez de marcarse como fallida.
+const RECHAZO_TEMPORAL = ['ACCOUNT_PENDING', 'ACCOUNT_SUSPENDED', 'PANEL_DENIED', 'BLOQUE_DENIED'];
+
+// Avisa a las pantallas abiertas que la cola cambió (detail: { tipo, uuid, data? })
+const notificarOperaciones = (detail) =>
+    window.dispatchEvent(new CustomEvent('flujo:operaciones', { detail }));
+
+export const encolarOperacion = async (tipo, payload, uuid = crypto.randomUUID()) => {
+    await db.operacionesPending.add({ uuid, tipo, payload, createdAt: Date.now(), error: null });
+    notificarOperaciones({ tipo, uuid });
+    return uuid;
+};
+
+export const getOperacionesPendientes = async (tipo) =>
+    (await db.operacionesPending.where('tipo').equals(tipo).toArray()).sort((a, b) => a.createdAt - b.createdAt);
+
+export const descartarOperacion = async (uuid) => {
+    const op = await db.operacionesPending.get(uuid);
+    await db.operacionesPending.delete(uuid);
+    if (op) notificarOperaciones({ tipo: op.tipo, uuid });
+};
+
+let sincronizandoOperaciones = false;
+
+export const syncPendingOperaciones = async () => {
+    if (!navigator.onLine || sincronizandoOperaciones) return;
+    sincronizandoOperaciones = true;
+    try {
+        const pendientes = (await db.operacionesPending.orderBy('createdAt').toArray()).filter(op => !op.error);
+        for (const op of pendientes) {
+            try {
+                const { data } = await api.post(ENDPOINT_OPERACION[op.tipo], op.payload);
+                await db.operacionesPending.delete(op.uuid);
+                if (op.tipo === 'turno' && data.turno) reemplazarTurnoLocal(data.turno);
+                if (op.tipo === 'persona' && data.persona) cachePersona(data.persona).catch(() => {});
+                notificarOperaciones({ tipo: op.tipo, uuid: op.uuid, data });
+            } catch (err) {
+                const status = err.response?.status;
+                // Sin red o servidor caído: se corta y se reintenta en el próximo ciclo
+                if (!status || status >= 500) break;
+                // La persona ya existía en el servidor: el objetivo ya se cumplió
+                if (op.tipo === 'persona' && status === 409) {
+                    await db.operacionesPending.delete(op.uuid);
+                    notificarOperaciones({ tipo: op.tipo, uuid: op.uuid });
+                    continue;
+                }
+                if (status === 401 || RECHAZO_TEMPORAL.includes(err.response.data?.code)) continue;
+                // Rechazo definitivo (datos inválidos, persona no autorizada...):
+                // se marca para que el usuario lo vea y decida descartarlo.
+                await db.operacionesPending.update(op.uuid, { error: err.response.data?.message || 'El servidor rechazó el registro' });
+                notificarOperaciones({ tipo: op.tipo, uuid: op.uuid });
+            }
+        }
+    } finally {
+        sincronizandoOperaciones = false;
+    }
+};
+
+// Registra una persona: en línea va directo al servidor; sin conexión (o si
+// la red falla) queda en cola. Un rechazo del servidor se propaga al llamador.
+export const registrarPersona = async (persona) => {
+    if (navigator.onLine) {
+        try {
+            const { data } = await api.post('/personas', persona);
+            cachePersona(data.persona).catch(() => {});
+            return data.persona;
+        } catch (err) {
+            if (err.response) throw err;
+        }
+    }
+    const uuid = await encolarOperacion('persona', persona);
+    cachePersona(persona).catch(() => {});
+    return { ...persona, _id: uuid, _pendiente: true };
+};
+
+// ── Turno activo guardado en el dispositivo ───────────────
+// Permite seguir trabajando (y abrir turno) sin conexión. Se guarda por
+// usuario para que otra cuenta en el mismo equipo no vea un turno ajeno.
+const TURNO_LOCAL_KEY = 'flujo-turno-activo';
+const TZ_ECU = 'America/Guayaquil';
+
+export const fechaECU = (d = new Date()) => d.toLocaleDateString('en-CA', { timeZone: TZ_ECU });
+export const horaECU = (d = new Date()) =>
+    d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ_ECU });
+
+export const guardarTurnoLocal = (turno, usuarioId) => {
+    if (!turno || !usuarioId) return;
+    try { localStorage.setItem(TURNO_LOCAL_KEY, JSON.stringify({ usuarioId: String(usuarioId), turno })); } catch { /* sin espacio */ }
+};
+
+// Último turno guardado del usuario, sin importar la fecha (para autollenar)
+export const leerUltimoTurnoLocal = (usuarioId) => {
+    try {
+        const guardado = JSON.parse(localStorage.getItem(TURNO_LOCAL_KEY) || 'null');
+        return guardado && guardado.usuarioId === String(usuarioId) ? guardado.turno : null;
+    } catch { return null; }
+};
+
+// Turno todavía vigente: el de hoy, o el nocturno de ayer antes de las 06:00,
+// con la misma regla que GET /turnos/activo en el servidor.
+export const leerTurnoLocal = (usuarioId) => {
+    const turno = leerUltimoTurnoLocal(usuarioId);
+    if (!turno || turno.activo === false) return null;
+    const ahora = new Date();
+    if (turno.fecha === fechaECU(ahora)) return turno;
+    const ayer = fechaECU(new Date(ahora.getTime() - 24 * 60 * 60 * 1000));
+    const horaActual = parseInt(horaECU(ahora).slice(0, 2), 10);
+    if (turno.fecha === ayer && turno.turnoActual === 'nocturno' && horaActual < 6) return turno;
+    return null;
+};
+
+// Al sincronizar, el turno guardado pasa a ser el del servidor (con su _id
+// real) si corresponde al mismo puesto, bloque y fecha.
+const reemplazarTurnoLocal = (turnoServidor) => {
+    try {
+        const guardado = JSON.parse(localStorage.getItem(TURNO_LOCAL_KEY) || 'null');
+        const t = guardado?.turno;
+        if (t && t.puesto === turnoServidor.puesto && t.bloque === turnoServidor.bloque && t.fecha === turnoServidor.fecha) {
+            guardarTurnoLocal(turnoServidor, guardado.usuarioId);
+        }
+    } catch { /* ignorar */ }
+};
+
+// Abre (o cambia) el turno sin conexión, con la misma lógica que el servidor:
+// si ya hay un turno vigente en ese puesto y bloque, se registra como cambio.
+export const iniciarTurnoOffline = async (datos, usuarioId) => {
+    const ahora = new Date();
+    const fecha = fechaECU(ahora);
+    const hora = horaECU(ahora);
+    const vigente = leerTurnoLocal(usuarioId);
+
+    let turno;
+    let esCambio = false;
+    if (vigente && vigente.puesto === datos.puesto && vigente.bloque === datos.bloque) {
+        esCambio = true;
+        turno = {
+            ...vigente,
+            cambios: vigente.turnoActual === datos.turno
+                ? (vigente.cambios || [])
+                : [...(vigente.cambios || []), { de: vigente.turnoActual, a: datos.turno, hora }],
+            turnoActual: datos.turno,
+        };
+    } else {
+        turno = {
+            _id: crypto.randomUUID(),
+            usuario: String(usuarioId),
+            cedula: datos.cedula, nombre: datos.nombre, apellidos: datos.apellidos, empresa: datos.empresa,
+            bloque: datos.bloque, puesto: datos.puesto,
+            turnoInicial: datos.turno, turnoActual: datos.turno,
+            fecha, horaInicio: hora, activo: true, cambios: [],
+        };
+    }
+    turno._pendiente = true;
+
+    // El servidor usa la fecha y hora en que realmente se abrió, no la de la sincronización
+    const uuid = esCambio ? crypto.randomUUID() : turno._id;
+    await encolarOperacion('turno', { ...datos, fecha: turno.fecha, horaInicio: hora }, uuid);
+    guardarTurnoLocal(turno, usuarioId);
+    return { turno, esCambio };
+};

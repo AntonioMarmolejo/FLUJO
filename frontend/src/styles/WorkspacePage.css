@@ -1461,6 +1461,32 @@
 }
 
 /* Fila de etiquetas de persona en campo actividad */
+.pendiente-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.14);
+    vertical-align: middle;
+}
+.pendiente-badge-error { color: #f87171; background: rgba(239, 68, 68, 0.14); }
+.pendiente-descartar {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .historial-hint {
     display: flex;
     align-items: center;

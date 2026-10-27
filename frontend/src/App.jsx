@@ -13,6 +13,7 @@ import FlujoPersonalPage from './pages/FlujoPersonalPage';
 import CalendarioPage from './pages/CalendarioPage';
 import AdminPage from './pages/AdminPage';
 import CuentaEstadoPage from './pages/CuentaEstadoPage';
+import SyncOperaciones from './components/SyncOperaciones';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
@@ -21,6 +22,7 @@ function App() {
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
             <BrowserRouter>
                 <AuthProvider>
+                    <SyncOperaciones />
                     <Routes>
                         <Route path="/" element={<RootRoute />} />
                         <Route path="/crear-pin" element={
