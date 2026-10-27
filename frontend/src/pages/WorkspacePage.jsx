@@ -7794,7 +7794,8 @@ const WorkspacePage = () => {
             )}
             {bitDetailIdx !== null && (
                 <ModalBitacoraDetalle
-                    bitacora={bitacora}
+                    // La lista muestra bitacoraFiltrada y el índice viene de ella
+                    bitacora={bitacoraFiltrada}
                     idx={bitDetailIdx}
                     onClose={() => setBitDetailIdx(null)}
                     onChange={setBitDetailIdx}
