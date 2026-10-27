@@ -178,6 +178,12 @@ const IconShield = () => (
         <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
 );
+const IconChat = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M8.5 10.5h7M8.5 14h4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+);
 
 // ── Helpers ───────────────────────────────────────────────
 const EMPTY_FORM = { tipo: 'salida', placa: '', marca: '', color: '', tipoVehiculo: '', empresa: '', conductor: '', cedula: '', destino: '', actividad: '', genero: 'm' };
@@ -434,7 +440,7 @@ const DRAWER_PERMISSION = {
     'calendario':  null,
 };
 
-const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin, isPending, hasPermiso }) => {
+const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, onComentarios, activeTab, isAdmin, isPending, hasPermiso }) => {
     const canAccess = (tab) => {
         if (isAdmin) return true;
         const perm = DRAWER_PERMISSION[tab];
@@ -475,6 +481,11 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin, isP
                     <span className="drawer-item-icon"><IconBolt /></span>
                     <span className="drawer-item-label">Crear nuevo flujo</span>
                 </button>
+                <button className="drawer-item" onClick={() => { onComentarios(); onClose(); }}>
+                    <span className="drawer-item-icon"><IconChat /></span>
+                    <span className="drawer-item-label">Enviar comentarios</span>
+                    <IconChevronRight />
+                </button>
                 {isAdmin && (
                     <>
                         <div className="drawer-divider" />
@@ -488,6 +499,112 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, activeTab, isAdmin, isP
             </div>
         </div>
     </div>
+    );
+};
+
+// ── Caja de comentarios ───────────────────────────────────
+const TIPOS_COMENTARIO = [
+    { id: 'opinion', label: 'Opinión' },
+    { id: 'sugerencia', label: 'Sugerencia' },
+    { id: 'error', label: 'Reportar un error' },
+];
+
+const ModalComentario = ({ onClose }) => {
+    const [tipo, setTipo] = useState('opinion');
+    const [calificacion, setCalificacion] = useState(0);
+    const [mensaje, setMensaje] = useState('');
+    const [enviando, setEnviando] = useState(false);
+    const [error, setError] = useState('');
+    const [enviado, setEnviado] = useState(null); // 'ok' | 'offline'
+
+    const handleEnviar = async () => {
+        if (!mensaje.trim() || enviando) return;
+        setEnviando(true);
+        setError('');
+        const payload = { tipo, calificacion: calificacion || null, mensaje: mensaje.trim() };
+        try {
+            if (!navigator.onLine) throw new Error('offline');
+            await api.post('/comentarios', payload);
+            setEnviado('ok');
+        } catch (err) {
+            if (err.response) {
+                setError(err.response.data?.message || 'No se pudo enviar el comentario');
+            } else {
+                // Sin conexión: se guarda en el dispositivo y se envía al volver internet
+                await encolarOperacion('comentario', payload);
+                setEnviado('offline');
+            }
+        } finally {
+            setEnviando(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h3>Enviar comentarios</h3>
+                    <button className="modal-close" onClick={onClose}>✕</button>
+                </div>
+
+                {enviado ? (
+                    <div className="coment-gracias">
+                        <div className="coment-gracias-icon">✓</div>
+                        <strong>¡Gracias por tu comentario!</strong>
+                        <p>{enviado === 'offline'
+                            ? 'Quedó guardado en tu dispositivo y se enviará cuando vuelva la conexión.'
+                            : 'Lo revisaremos para seguir mejorando FLUJO.'}</p>
+                        <button className="modal-btn active" onClick={onClose}>Cerrar</button>
+                    </div>
+                ) : (
+                    <>
+                        <p className="coment-intro">Cuéntanos qué te parece la aplicación, qué mejorarías o si encontraste algún problema.</p>
+
+                        <div className="modal-field">
+                            <label>TIPO</label>
+                            <div className="coment-tipos">
+                                {TIPOS_COMENTARIO.map(t => (
+                                    <button key={t.id} type="button"
+                                        className={`coment-tipo${tipo === t.id ? ' active' : ''}`}
+                                        onClick={() => setTipo(t.id)}>
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="modal-field">
+                            <label>¿CÓMO CALIFICAS LA APLICACIÓN? (OPCIONAL)</label>
+                            <div className="coment-estrellas">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                    <button key={n} type="button" title={`${n} de 5`}
+                                        className={`coment-estrella${n <= calificacion ? ' active' : ''}`}
+                                        onClick={() => setCalificacion(c => (c === n ? 0 : n))}>
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="modal-field">
+                            <label>COMENTARIO</label>
+                            <textarea className="modal-textarea" rows={5} maxLength={2000}
+                                placeholder={tipo === 'error'
+                                    ? 'Describe qué pasó y en qué pantalla estabas...'
+                                    : 'Escribe aquí tu opinión...'}
+                                value={mensaje}
+                                onChange={e => { setMensaje(e.target.value); setError(''); }} />
+                            <span className="coment-contador">{mensaje.length} / 2000</span>
+                        </div>
+
+                        {error && <p className="modal-error">{error}</p>}
+                        <button className={`modal-btn ${mensaje.trim() ? 'active' : ''}`} onClick={handleEnviar} disabled={enviando}>
+                            {enviando ? 'Enviando...' : 'Enviar comentario'}
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
     );
 };
 
@@ -6581,6 +6698,7 @@ const WorkspacePage = () => {
     const [editMov, setEditMov] = useState(null);
 
     const [showDrawer, setShowDrawer] = useState(false);
+    const [showComentario, setShowComentario] = useState(false);
     const [lastDrawerTab, setLastDrawerTab] = useState(null);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -7152,6 +7270,7 @@ const WorkspacePage = () => {
                     isAdmin={isAdmin}
                     isPending={isPending}
                     hasPermiso={hasPermiso}
+                    onComentarios={() => setShowComentario(true)}
                     onNavigate={tab => {
                         setLastDrawerTab(tab);
                         if (tab === 'admin') navigate('/admin');
@@ -7177,6 +7296,7 @@ const WorkspacePage = () => {
                     }}
                 />
             )}
+            {showComentario && <ModalComentario onClose={() => setShowComentario(false)} />}
 
             {/* Top bar + barra de búsqueda: envueltos juntos para que, con la
                 búsqueda activa, la fila de íconos se pueda ocultar al bajar

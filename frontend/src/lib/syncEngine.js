@@ -285,7 +285,7 @@ export const isCatalogStale = async (catalogo) => {
 // ── Cola offline de operaciones de garita ─────────────────
 // Abrir turno, registrar firmas y personas nuevas sin conexión: se guardan en
 // Dexie y se suben en orden cuando vuelve internet (ver SyncOperaciones).
-const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas' };
+const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas', comentario: '/comentarios' };
 
 // Rechazos que pueden cambiar si el admin devuelve el acceso: la operación
 // sigue en cola en vez de marcarse como fallida.

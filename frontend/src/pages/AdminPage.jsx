@@ -168,6 +168,134 @@ const Btn = ({ onClick, children, color = C.purple, disabled, style: s }) => (
     }}>{children}</button>
 );
 
+const TIPO_COMENTARIO = {
+    opinion:    { label: 'Opinión',    color: C.purple },
+    sugerencia: { label: 'Sugerencia', color: C.green },
+    error:      { label: 'Error',      color: C.red },
+};
+
+// Comentarios que los usuarios envían desde "Enviar comentarios" en el menú
+const ComentariosAdmin = ({ onSinLeer }) => {
+    const [comentarios, setComentarios] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [filtro, setFiltro] = useState('todos');
+    const [aEliminar, setAEliminar] = useState(null);
+
+    const actualizar = useCallback((lista) => {
+        setComentarios(lista);
+        onSinLeer(lista.filter(c => !c.leido).length);
+    }, [onSinLeer]);
+
+    useEffect(() => {
+        api.get('/comentarios')
+            .then(({ data }) => actualizar(data.comentarios))
+            .catch(e => setError(e.response?.data?.message || 'No se pudieron cargar los comentarios'))
+            .finally(() => setLoading(false));
+    }, [actualizar]);
+
+    const marcar = async (c) => {
+        try {
+            const { data } = await api.patch(`/comentarios/${c._id}`, { leido: !c.leido });
+            actualizar(comentarios.map(x => x._id === c._id ? data.comentario : x));
+        } catch (e) {
+            alert(e.response?.data?.message || 'Error');
+        }
+    };
+
+    const eliminar = async () => {
+        try {
+            await api.delete(`/comentarios/${aEliminar._id}`);
+            actualizar(comentarios.filter(x => x._id !== aEliminar._id));
+        } catch (e) {
+            alert(e.response?.data?.message || 'Error');
+        } finally {
+            setAEliminar(null);
+        }
+    };
+
+    const conCalificacion = comentarios.filter(c => c.calificacion);
+    const promedio = conCalificacion.length
+        ? (conCalificacion.reduce((s, c) => s + c.calificacion, 0) / conCalificacion.length).toFixed(1)
+        : '—';
+    const visibles = comentarios.filter(c =>
+        filtro === 'todos' || (filtro === 'sin-leer' ? !c.leido : c.tipo === filtro));
+
+    if (loading) return <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>Cargando comentarios…</div>;
+    if (error) return <div style={{ color: C.red, padding: 20 }}>{error}</div>;
+
+    return (
+        <>
+            <div className="adm-stats">
+                <StatCard label="Comentarios" value={comentarios.length} />
+                <StatCard label="Sin leer" value={comentarios.filter(c => !c.leido).length} color={C.orange} />
+                <StatCard label="Calificación promedio" value={promedio === '—' ? promedio : `${promedio} ★`} color={C.yellow} />
+                <StatCard label="Errores reportados" value={comentarios.filter(c => c.tipo === 'error').length} color={C.red} />
+            </div>
+
+            <div style={{ marginBottom: 16, maxWidth: 260 }}>
+                <Select value={filtro} onChange={e => setFiltro(e.target.value)}>
+                    <option value="todos">Todos los comentarios</option>
+                    <option value="sin-leer">Sin leer</option>
+                    <option value="opinion">Opiniones</option>
+                    <option value="sugerencia">Sugerencias</option>
+                    <option value="error">Errores</option>
+                </Select>
+            </div>
+
+            {visibles.length === 0 ? (
+                <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>
+                    {comentarios.length === 0 ? 'Todavía nadie ha enviado comentarios' : 'Sin comentarios con este filtro'}
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {visibles.map(c => {
+                        const t = TIPO_COMENTARIO[c.tipo] || TIPO_COMENTARIO.opinion;
+                        return (
+                            <div key={c._id} style={{
+                                background: C.surface, borderRadius: 12, padding: '14px 16px',
+                                border: `1px solid ${c.leido ? C.border : C.purple + '66'}`,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 600, fontSize: 14 }}>{c.usuario?.name || 'Usuario eliminado'}</span>
+                                    <span style={{ fontSize: 11, color: t.color, background: t.color + '22', padding: '1px 8px', borderRadius: 10 }}>{t.label}</span>
+                                    {c.calificacion && (
+                                        <span style={{ fontSize: 13, color: C.yellow, letterSpacing: 1 }}>
+                                            {'★'.repeat(c.calificacion)}<span style={{ color: C.muted }}>{'★'.repeat(5 - c.calificacion)}</span>
+                                        </span>
+                                    )}
+                                    {!c.leido && <span style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 8px', borderRadius: 10 }}>nuevo</span>}
+                                    <span style={{ marginLeft: 'auto', fontSize: 11, color: C.muted }}>{fmt(c.createdAt)}</span>
+                                </div>
+                                {c.usuario?.email && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{c.usuario.email}</div>}
+                                <p style={{ margin: '10px 0 12px', fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.mensaje}</p>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <Btn onClick={() => marcar(c)} color={c.leido ? C.muted : C.green}>
+                                        {c.leido ? 'Marcar como no leído' : '✓ Marcar como leído'}
+                                    </Btn>
+                                    <Btn onClick={() => setAEliminar(c)} color={C.red}>Eliminar</Btn>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {aEliminar && (
+                <Modal title="Eliminar comentario" onClose={() => setAEliminar(null)}>
+                    <p style={{ fontSize: 14, color: C.muted, marginTop: 0 }}>
+                        Se eliminará el comentario de {aEliminar.usuario?.name || 'este usuario'}. Esta acción no se puede deshacer.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <Btn onClick={() => setAEliminar(null)} color={C.muted}>Cancelar</Btn>
+                        <Btn onClick={eliminar} color={C.red}>Eliminar</Btn>
+                    </div>
+                </Modal>
+            )}
+        </>
+    );
+};
+
 export default function AdminPage() {
     const navigate = useNavigate();
     const { user: me } = useAuth();
@@ -190,6 +318,15 @@ export default function AdminPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [loadError, setLoadError] = useState('');
+    const [seccion, setSeccion] = useState('usuarios');
+    const [comentariosSinLeer, setComentariosSinLeer] = useState(0);
+
+    // Contador de comentarios sin leer para la pestaña, aunque no esté abierta
+    useEffect(() => {
+        api.get('/comentarios')
+            .then(({ data }) => setComentariosSinLeer(data.comentarios.filter(c => !c.leido).length))
+            .catch(() => {});
+    }, []);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -330,6 +467,20 @@ export default function AdminPage() {
 
             <div style={{ padding: '20px', maxWidth: 900, margin: '0 auto' }}>
 
+                {/* Secciones */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                    {[['usuarios', 'Usuarios'], ['comentarios', `Comentarios${comentariosSinLeer ? ` (${comentariosSinLeer})` : ''}`]].map(([id, label]) => (
+                        <button key={id} onClick={() => setSeccion(id)} style={{
+                            padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                            border: `1px solid ${seccion === id ? C.purple : C.border}`,
+                            background: seccion === id ? C.purpleDim : C.surface2,
+                            color: seccion === id ? C.purple : C.muted,
+                        }}>{label}</button>
+                    ))}
+                </div>
+
+                {seccion === 'comentarios' ? <ComentariosAdmin onSinLeer={setComentariosSinLeer} /> : (<>
+
                 {/* Stats */}
                 {stats && (
                     <div className="adm-stats">
@@ -459,6 +610,7 @@ export default function AdminPage() {
                         ))}
                     </div>
                 )}
+                </>)}
             </div>
 
             {/* Modal: Crear usuario */}

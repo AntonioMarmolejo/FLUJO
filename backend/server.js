@@ -16,6 +16,7 @@ import flujoWorkerRoutes from './src/routes/flujoWorker.routes.js';
 import calendarioGrupoRoutes from './src/routes/calendarioGrupo.routes.js';
 import adminRoutes from './src/routes/admin.routes.js';
 import webauthnRoutes from './src/routes/webauthn.routes.js';
+import comentarioRoutes from './src/routes/comentario.routes.js';
 
 dotenv.config();
 connectDB().then(migrarBloquesAprobados);
@@ -48,6 +49,7 @@ app.use('/api/flujo-workers', flujoWorkerRoutes);
 app.use('/api/calendarios', calendarioGrupoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webauthn', webauthnRoutes);
+app.use('/api/comentarios', comentarioRoutes);
 
 // Health check
 app.get('/', (_req, res) => res.json({ message: '🚀 Flujo API corriendo' }));
