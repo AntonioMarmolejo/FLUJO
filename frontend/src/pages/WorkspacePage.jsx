@@ -1355,6 +1355,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div
+                className="movdet-card"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '94vw', maxWidth: 580,
@@ -1377,7 +1378,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                         }}>
                             {isIngreso ? 'INGRESO' : 'SALIDA'}
                         </span>
-                        <span style={{
+                        <span className="movdet-placa" style={{
                             fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{mov.placa}</span>
@@ -1402,7 +1403,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                     borderBottom: '1px solid rgba(255,255,255,0.07)',
                     display: 'flex', justifyContent: 'flex-end',
                 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: '#8b8b92' }}>{mov.fecha}</span>
+                    <span className="movdet-fecha" style={{ fontSize: 13, fontWeight: 500, color: '#8b8b92' }}>{mov.fecha}</span>
                 </div>
 
                 {/* ── Grid de campos ── */}
@@ -1414,10 +1415,10 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                     }}>
                         {campos.map(c => (
                             <div key={c.label} style={{ gridColumn: c.span ? 'span 2' : undefined }}>
-                                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
+                                <div className="movdet-label" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
                                     {c.label}
                                 </div>
-                                <div style={{ marginTop: 5, fontSize: 15, fontWeight: 600, color: '#f4f4f5' }}>
+                                <div className="movdet-valor" style={{ marginTop: 5, fontSize: 15, fontWeight: 600, color: '#f4f4f5' }}>
                                     {c.valor}
                                 </div>
                             </div>
@@ -1433,10 +1434,10 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                     border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: 12,
                 }}>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
+                    <div className="movdet-label" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
                         Actividad / Obs.
                     </div>
-                    <div style={{
+                    <div className="movdet-actividad" style={{
                         marginTop: 10, fontSize: 14.5, lineHeight: '26px', color: '#e4e4e7',
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.25) 0.8px, transparent 0.8px)',

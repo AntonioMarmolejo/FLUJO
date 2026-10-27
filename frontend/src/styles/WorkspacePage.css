@@ -5084,8 +5084,8 @@
     color: #111827;
 }
 [data-theme="light"] .ws-topbar-btn {
-    background: #f1f4fa;
-    color: #374151;
+    background: #888;
+    color: #000000;
 }
 [data-theme="light"] .ws-topbar-btn:hover {
     background: #e4e9f4;
@@ -5134,6 +5134,7 @@
 }
 [data-theme="light"] .ws-search-input {
     color: #111827;
+    background: #e2e8f0;
 }
 [data-theme="light"] .ws-search-input::placeholder {
     color: #9ca3af;
@@ -5205,7 +5206,7 @@
     color: #6b7280;
 }
 [data-theme="light"] .mov-chevron-btn {
-    color: #9ca3af;
+    color: #333;
 }
 [data-theme="light"] .mov-chevron-btn:hover {
     color: #374151;
@@ -5417,4 +5418,52 @@
     background: rgba(129, 140, 248, 0.12);
     border-color: #818cf8;
     color: #4f46e5;
+}
+
+/* ── Ajustes de tema claro: pestañas, flujos, formulario y registro ── */
+[data-theme="light"] .ws-vista-tabs {
+    background: #ccc;
+}
+[data-theme="light"] .flujo-tag {
+    background: #1a73e8;
+}
+[data-theme="light"] .flujo-tag-count {
+    color: #000;
+}
+[data-theme="light"] .modal-field input {
+    background: #ccc;
+}
+/* :not(...) para no tapar el color de INGRESA / SALE ni el botón habilitado */
+[data-theme="light"] .modal-tipo-btn:not(.active-ingreso):not(.active-salida) {
+    background: rgba(255, 255, 255, 0.7);
+}
+[data-theme="light"] .modal-btn:not(.active) {
+    background: #ccc;
+}
+[data-theme="light"] .reg-toolbar {
+    background: #fff;
+}
+[data-theme="light"] .reg-entry-inner {
+    background: #fff;
+}
+[data-theme="light"] .reg-narrativa {
+    color: #000000;
+}
+
+/* Detalle de movimiento: sus estilos están en línea en el JSX, por eso
+   el tema claro necesita !important para sobrescribirlos. */
+[data-theme="light"] .movdet-card {
+    background: #ffffff !important;
+}
+[data-theme="light"] .movdet-label {
+    color: #000000 !important;
+}
+[data-theme="light"] .movdet-fecha {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+[data-theme="light"] .movdet-placa,
+[data-theme="light"] .movdet-valor,
+[data-theme="light"] .movdet-actividad {
+    color: #111827 !important;
 }
