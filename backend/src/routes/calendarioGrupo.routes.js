@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { getGrupos, createGrupo, updateGrupo, deleteGrupo, updateDia } from '../controllers/calendarioGrupo.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect, requireActive } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-router.get('/', protect, getGrupos);
-router.post('/', protect, createGrupo);
-router.put('/:id', protect, updateGrupo);
-router.delete('/:id', protect, deleteGrupo);
-router.patch('/:id/dia', protect, updateDia);
+router.get('/', protect, requireActive, getGrupos);
+router.post('/', protect, requireActive, createGrupo);
+router.put('/:id', protect, requireActive, updateGrupo);
+router.delete('/:id', protect, requireActive, deleteGrupo);
+router.patch('/:id/dia', protect, requireActive, updateDia);
 
 export default router;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { vaultExists } from '../lib/vault.js';
 import LockScreen from '../pages/LockScreen';
@@ -24,7 +24,8 @@ const Spinner = () => (
 // requireActive: la ruta permite hacer cambios (crear flujos, turnos...), así
 // que una cuenta pendiente de aprobación se manda a /cuenta-pendiente.
 const ProtectedRoute = ({ children, allowedRoles, requireActive }) => {
-    const { user, loading, role, isPending } = useAuth();
+    const { user, loading, role, isPending, isSuspended } = useAuth();
+    const location = useLocation();
     const [checkingVault, setCheckingVault] = useState(true);
     const [hasVault, setHasVault] = useState(false);
     const [unlocked, setUnlocked] = useState(false);
@@ -50,6 +51,10 @@ const ProtectedRoute = ({ children, allowedRoles, requireActive }) => {
     }
 
     if (requireActive && isPending) return <Navigate to="/cuenta-pendiente" replace />;
+    // Una cuenta suspendida no puede usar ninguna pantalla, solo ver su estado
+    if (isSuspended && location.pathname !== '/cuenta-pendiente') {
+        return <Navigate to="/cuenta-pendiente" replace />;
+    }
 
     return children;
 };

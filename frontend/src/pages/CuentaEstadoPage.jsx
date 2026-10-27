@@ -117,7 +117,8 @@ const Paso = ({ estado, titulo, detalle, last }) => (
 // estado "pendiente" (puede ver el inicio pero no hacer cambios); cuando la
 // cuenta pasa a activa muestra una sola vez el aviso de "¡Cuenta activada!".
 const CuentaEstadoPage = () => {
-    const { user, updateUser, logout, isPending } = useAuth();
+    const { user, updateUser, logout, isPending, isSuspended } = useAuth();
+    const enEspera = isPending || isSuspended;
     const navigate = useNavigate();
 
     const [checking, setChecking] = useState(false);
@@ -136,8 +137,8 @@ const CuentaEstadoPage = () => {
     }, []);
 
     useEffect(() => {
-        if (isPending && user) localStorage.setItem(pendingFlagKey(user), '1');
-    }, [isPending, user]);
+        if (enEspera && user) localStorage.setItem(pendingFlagKey(user), '1');
+    }, [enEspera, user]);
 
     const verificar = useCallback(async ({ silencioso = false } = {}) => {
         if (checkingRef.current) return;
@@ -150,8 +151,9 @@ const CuentaEstadoPage = () => {
                 silencioso ? null : new Promise(r => setTimeout(r, 700)),
             ]);
             updateUserRef.current(data.user);
-            if (!silencioso && (data.user.status || 'pending') === 'pending') {
-                setAviso({ tipo: 'info', texto: 'Tu cuenta sigue en revisión', fecha: Date.now() });
+            const status = data.user.status || 'pending';
+            if (!silencioso && data.user.role !== 'admin' && status !== 'active') {
+                setAviso({ tipo: 'info', texto: status === 'suspended' ? 'Tu cuenta sigue suspendida' : 'Tu cuenta sigue en revisión', fecha: Date.now() });
                 setAhora(Date.now());
             }
         } catch {
@@ -171,12 +173,12 @@ const CuentaEstadoPage = () => {
 
     // Consulta periódica + al volver a la pestaña, solo mientras siga pendiente
     useEffect(() => {
-        if (!isPending) return;
+        if (!enEspera) return;
         const tick = () => { if (document.visibilityState === 'visible') verificar({ silencioso: true }); };
         const id = setInterval(tick, POLL_MS);
         document.addEventListener('visibilitychange', tick);
         return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
-    }, [isPending, verificar]);
+    }, [enEspera, verificar]);
 
     // Refresca el "Hace X min" del aviso
     useEffect(() => {
@@ -188,11 +190,13 @@ const CuentaEstadoPage = () => {
     const contactarAdmin = async () => {
         try {
             const { data } = await api.get('/auth/admin-contacto');
-            const asunto = encodeURIComponent('Activación de cuenta en FLUJO');
+            const asunto = encodeURIComponent(isSuspended ? 'Cuenta suspendida en FLUJO' : 'Activación de cuenta en FLUJO');
             const cuerpo = encodeURIComponent(
                 `Hola${data.name ? ` ${data.name.split(' ')[0]}` : ''},\n\n` +
-                `Me registré en FLUJO como ${user?.name} (${user?.email}) y mi cuenta está pendiente de activación. ` +
-                '¿Podrías revisarla y asignarme el rol, departamento y módulos que me corresponden?\n\nGracias.'
+                (isSuspended
+                    ? `Mi cuenta de FLUJO (${user?.name}, ${user?.email}) aparece suspendida. ¿Podrías revisarla?\n\nGracias.`
+                    : `Me registré en FLUJO como ${user?.name} (${user?.email}) y mi cuenta está pendiente de activación. ` +
+                      '¿Podrías revisarla y asignarme el rol, departamento y módulos que me corresponden?\n\nGracias.')
             );
             window.location.href = `mailto:${data.email}?subject=${asunto}&body=${cuerpo}`;
         } catch {
@@ -207,7 +211,7 @@ const CuentaEstadoPage = () => {
     };
 
     const nombre = user?.name?.trim().split(' ')[0] || '';
-    const activa = !isPending;
+    const activa = !enEspera;
 
     return (
         <div className={`ce-wrapper ${activa ? 'ce-active' : 'ce-pending'}`}>
@@ -226,19 +230,23 @@ const CuentaEstadoPage = () => {
 
                 <span className="ce-pill">
                     {activa ? <IconCheck size={13} /> : <span className="ce-pill-dot" />}
-                    {activa ? '¡Cuenta activada!' : 'Cuenta pendiente de activación'}
+                    {activa ? '¡Cuenta activada!' : isSuspended ? 'Cuenta suspendida' : 'Cuenta pendiente de activación'}
                 </span>
 
                 <h1 className="ce-title">
-                    {activa ? 'Ya tienes acceso' : `¡Hola${nombre ? `, ${nombre}` : ''}! Tu cuenta ya fue creada`}
+                    {activa ? 'Ya tienes acceso'
+                        : isSuspended ? `${nombre ? `${nombre}, tu` : 'Tu'} acceso está suspendido`
+                        : `¡Hola${nombre ? `, ${nombre}` : ''}! Tu cuenta ya fue creada`}
                 </h1>
                 <p className="ce-lead">
                     {activa
                         ? 'Un administrador revisó tu cuenta y asignó tu rol, departamento y módulos. Ya puedes empezar a trabajar en FLUJO.'
+                        : isSuspended
+                        ? 'Un administrador suspendió tu cuenta, así que por ahora no puedes ver ni registrar nada en FLUJO. Si crees que es un error, contáctalo.'
                         : 'Por seguridad, en FLUJO cada persona solo puede ver los módulos que corresponden a su cargo y área. Un administrador debe revisar tu cuenta y asignarte los permisos antes de que puedas acceder.'}
                 </p>
 
-                <section className="ce-panel ce-steps" aria-label="Progreso de activación">
+                {!isSuspended && <section className="ce-panel ce-steps" aria-label="Progreso de activación">
                     <Paso estado="done" titulo="Cuenta creada" />
                     <Paso
                         estado={activa ? 'done' : 'current'}
@@ -251,9 +259,9 @@ const CuentaEstadoPage = () => {
                         detalle={activa ? 'Listo para entrar' : null}
                         last
                     />
-                </section>
+                </section>}
 
-                {!activa && (
+                {isPending && (
                     <section className="ce-panel ce-meanwhile">
                         <h2 className="ce-panel-label">Mientras tanto</h2>
                         <div className="ce-info-row">
@@ -301,7 +309,7 @@ const CuentaEstadoPage = () => {
                 <div className="ce-divider" />
 
                 <div className="ce-footer">
-                    {!activa && (
+                    {isPending && (
                         <button className="ce-btn-ghost" onClick={() => navigate('/workspace')}>
                             <IconGrid /> Ver el inicio
                         </button>
@@ -310,7 +318,7 @@ const CuentaEstadoPage = () => {
                         <IconLogout /> Cerrar sesión
                     </button>
                 </div>
-                {!activa && (
+                {isPending && (
                     <p className="ce-footnote">
                         Podrás ver la pantalla de inicio, pero no registrar ni modificar nada hasta que tu cuenta esté activa.
                     </p>

@@ -5,10 +5,11 @@ export const pendingFlagKey = (user) => `flujo-pendiente-${user?.id}`;
 
 // A dónde llevar al usuario al entrar. Ya no depende de onboardingCompleto:
 // el inicio se puede ver sin haber creado un flujo. Una cuenta pendiente
-// pasa primero por /cuenta-pendiente (y desde ahí puede ver el inicio).
+// pasa primero por /cuenta-pendiente (y desde ahí puede ver el inicio); una
+// suspendida se queda ahí, porque el servidor no le responde nada más.
 export const getHomeRoute = (user) => {
     if (!user || user.role === 'admin') return '/workspace';
-    if ((user.status || 'pending') === 'pending') return '/cuenta-pendiente';
+    if (['pending', 'suspended'].includes(user.status || 'pending')) return '/cuenta-pendiente';
     if (localStorage.getItem(pendingFlagKey(user))) return '/cuenta-pendiente';
     return '/workspace';
 };

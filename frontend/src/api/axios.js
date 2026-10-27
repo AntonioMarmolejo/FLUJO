@@ -78,6 +78,14 @@ api.interceptors.response.use(
             }
         }
 
+        // El servidor negó el acceso por el estado de la cuenta o por un panel
+        // que el admin quitó: el perfil cacheado quedó desactualizado.
+        // AuthContext escucha este evento y vuelve a pedir /auth/me.
+        const ACCESO_CAMBIADO = ['ACCOUNT_PENDING', 'ACCOUNT_SUSPENDED', 'PANEL_DENIED'];
+        if (error.response?.status === 403 && ACCESO_CAMBIADO.includes(error.response.data?.code)) {
+            window.dispatchEvent(new Event('flujo:acceso-cambiado'));
+        }
+
         return Promise.reject(error);
     }
 );

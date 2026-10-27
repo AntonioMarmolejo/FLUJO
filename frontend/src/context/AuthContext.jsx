@@ -108,6 +108,26 @@ export const AuthProvider = ({ children }) => {
         setUser(newUserData);
     };
 
+    // El interceptor de axios avisa cuando el servidor niega algo por estado
+    // de cuenta o permisos: se resincroniza el perfil para que la interfaz
+    // (paneles visibles, redirección de cuenta suspendida) refleje lo real.
+    useEffect(() => {
+        if (!user) return;
+        let enCurso = false;
+        const resincronizar = async () => {
+            if (enCurso) return;
+            enCurso = true;
+            try {
+                const { data } = await api.get('/auth/me', { timeout: 8000 });
+                cacheUser(data.user);
+                setUser(data.user);
+            } catch { /* sin conexión: se queda con el perfil cacheado */ }
+            finally { enCurso = false; }
+        };
+        window.addEventListener('flujo:acceso-cambiado', resincronizar);
+        return () => window.removeEventListener('flujo:acceso-cambiado', resincronizar);
+    }, [user]);
+
     // Llamado por LockScreen tras un PIN/huella correcto: repuebla la sesión
     // SIN tocar el servidor (restaura el perfil cacheado de inmediato), y si
     // hay internet intenta refrescar el access token en background sin
@@ -215,6 +235,7 @@ export const AuthProvider = ({ children }) => {
     const isAdmin = role === 'admin';
     const isSupervisor = role === 'supervisor' || role === 'admin';
     const isPending = !isAdmin && (user?.status || 'pending') === 'pending';
+    const isSuspended = !isAdmin && user?.status === 'suspended';
     const permisosPanel = user?.permisosPanel || [];
     const hasPermiso = (panel) => isAdmin || permisosPanel.includes(panel);
 
@@ -223,7 +244,7 @@ export const AuthProvider = ({ children }) => {
             user, loading,
             login, register, loginWithGoogle, loginWithBiometric, registerPasskey,
             logout, updateUser, restoreFromVault,
-            role, isAdmin, isSupervisor, isPending, permisosPanel, hasPermiso,
+            role, isAdmin, isSupervisor, isPending, isSuspended, permisosPanel, hasPermiso,
         }}>
             {children}
         </AuthContext.Provider>
