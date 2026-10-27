@@ -28,7 +28,14 @@ const userSchema = new mongoose.Schema(
             type: Map,
             of: [String],
             default: {},
-        }, bloques: {
+        },
+        // Bloques que el usuario eligió (solicitados). Solo puede trabajar y
+        // ver la información de los que el admin aprobó en bloquesAprobados.
+        bloques: {
+            type: [String],
+            default: [],
+        },
+        bloquesAprobados: {
             type: [String],
             default: [],
         },

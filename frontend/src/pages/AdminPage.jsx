@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { BLOQUES_DATA } from '../data/bloques.js';
 
 const C = {
     bg: '#0a0a14',
@@ -44,6 +45,14 @@ const PANELS_DISPONIBLES = [
     { id: 'jefes',       label: 'Jefes Inmediatos' },
     { id: 'puestos',     label: 'Ver Puestos del Bloque' },
 ];
+
+const nombreBloque = (id) => {
+    const b = BLOQUES_DATA[id];
+    return b ? `${b.nombre} ${b.codigo}` : `Bloque ${id}`;
+};
+
+// Bloques que el usuario eligió y el admin todavía no aprobó
+const bloquesSolicitados = (u) => (u.bloques || []).filter(b => !(u.bloquesAprobados || []).includes(b));
 
 const adm_css = `
   .adm-hdr       { display:flex; align-items:center; gap:12px; }
@@ -176,7 +185,7 @@ export default function AdminPage() {
     const [modalDel, setModalDel] = useState(null);
 
     const [form, setForm] = useState({ name: '', email: '', password: '', role: 'operador' });
-    const [editForm, setEditForm] = useState({ name: '', role: 'operador', activo: true, status: 'active', permisosPanel: [] });
+    const [editForm, setEditForm] = useState({ name: '', role: 'operador', activo: true, status: 'active', permisosPanel: [], bloquesAprobados: [] });
     const [passForm, setPassForm] = useState({ password: '', confirm: '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -254,9 +263,11 @@ export default function AdminPage() {
 
     const handleAprobar = async (u) => {
         try {
+            // Aprobar la cuenta aprueba también los bloques que el usuario pidió
             await api.put(`/admin/usuarios/${u.id}`, {
                 status: 'active',
                 permisosPanel: ['movimientos'],
+                bloquesAprobados: [...new Set([...(u.bloquesAprobados || []), ...(u.bloques || [])])],
             });
             load();
         } catch (e) {
@@ -408,6 +419,20 @@ export default function AdminPage() {
                                             Paneles: {u.permisosPanel.join(', ')}
                                         </div>
                                     )}
+                                    {u.role !== 'admin' && (
+                                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 5 }}>
+                                            {u.bloquesAprobados?.map(b => (
+                                                <span key={b} style={{ fontSize: 11, color: C.green, background: C.greenDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                    {nombreBloque(b)}
+                                                </span>
+                                            ))}
+                                            {bloquesSolicitados(u).map(b => (
+                                                <span key={b} style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                    Solicita {nombreBloque(b)}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="adm-actions">
                                     {u.status === 'pending' && u.id !== me?.id && (
@@ -415,7 +440,7 @@ export default function AdminPage() {
                                             ✓ Aprobar
                                         </Btn>
                                     )}
-                                    <Btn onClick={() => { setEditForm({ name: u.name, role: u.role, activo: u.activo, status: u.status || 'pending', permisosPanel: u.permisosPanel || [] }); setError(''); setModalEdit(u); }}>
+                                    <Btn onClick={() => { setEditForm({ name: u.name, role: u.role, activo: u.activo, status: u.status || 'pending', permisosPanel: u.permisosPanel || [], bloquesAprobados: u.bloquesAprobados || [] }); setError(''); setModalEdit(u); }}>
                                         Editar
                                     </Btn>
                                     <Btn onClick={() => { setPassForm({ password: '', confirm: '' }); setError(''); setModalPass(u); }} color={C.orange}>
@@ -506,6 +531,39 @@ export default function AdminPage() {
                             })}
                         </div>
                     </Field>
+                    {editForm.role !== 'admin' && (
+                        <Field label="Bloques aprobados">
+                            <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 6 }}>
+                                Solo verá la información (firmas, nominativos, puestos) y podrá abrir turno en los bloques marcados.
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {[...new Set([...Object.keys(BLOQUES_DATA), ...(modalEdit.bloques || []), ...editForm.bloquesAprobados])].map(b => {
+                                    const checked = editForm.bloquesAprobados.includes(b);
+                                    return (
+                                        <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: C.text }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={() => setEditForm(f => ({
+                                                    ...f,
+                                                    bloquesAprobados: checked
+                                                        ? f.bloquesAprobados.filter(x => x !== b)
+                                                        : [...f.bloquesAprobados, b],
+                                                }))}
+                                                style={{ accentColor: C.purple, width: 15, height: 15 }}
+                                            />
+                                            {nombreBloque(b)}
+                                            {(modalEdit.bloques || []).includes(b) && !checked && (
+                                                <span style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                    solicitado
+                                                </span>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </Field>
+                    )}
                     {error && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                         <Btn onClick={() => setModalEdit(null)} color={C.muted}>Cancelar</Btn>

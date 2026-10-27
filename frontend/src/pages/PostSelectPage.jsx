@@ -6,7 +6,7 @@ import api from '../api/axios';
 import '../styles/PostSelectPage.css';
 
 const PostSelectPage = () => {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, tieneBloque } = useAuth();
     const navigate = useNavigate();
 
     // Índice del bloque actual que se está configurando
@@ -15,7 +15,8 @@ const PostSelectPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const bloques = user?.bloques || [];
+    // Solo se configuran puestos de los bloques que el admin ya aprobó
+    const bloques = (user?.bloques || []).filter(tieneBloque);
     const totalBloques = bloques.length;
     const bloqueActualId = bloques[bloqueIndex];
     const bloqueActual = BLOQUES_DATA[bloqueActualId];
@@ -48,6 +49,7 @@ const PostSelectPage = () => {
 
             const bloquesConPuestos = [];
             for (const [bId, puestosList] of Object.entries(puestosGuardados)) {
+                if (!bloques.includes(bId)) continue;
                 for (const p of puestosList) {
                     bloquesConPuestos.push({ bloqueId: bId, puesto: p });
                 }

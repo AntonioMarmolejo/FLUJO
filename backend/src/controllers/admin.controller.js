@@ -9,6 +9,8 @@ const buildUser = (u) => ({
     status: u.status || 'pending',
     permisosPanel: u.permisosPanel || [],
     activo: u.activo !== false,
+    bloques: u.bloques || [],
+    bloquesAprobados: u.bloquesAprobados || [],
     lastLogin: u.lastLogin || null,
     createdAt: u.createdAt,
 });
@@ -44,6 +46,7 @@ export const createUsuario = async (req, res) => {
             role: role || 'operador',
             status: 'active',
             activo: true,
+            bloquesAprobados: [],
         });
 
         res.status(201).json({ message: 'Usuario creado', user: buildUser(user) });
@@ -55,13 +58,14 @@ export const createUsuario = async (req, res) => {
 // PUT /api/admin/usuarios/:id  — cambiar role, activo, status y/o permisosPanel
 export const updateUsuario = async (req, res) => {
     try {
-        const { role, activo, name, status, permisosPanel } = req.body;
+        const { role, activo, name, status, permisosPanel, bloquesAprobados } = req.body;
         const update = {};
         if (role !== undefined) update.role = role;
         if (activo !== undefined) update.activo = activo;
         if (name !== undefined) update.name = name;
         if (status !== undefined) update.status = status;
         if (permisosPanel !== undefined) update.permisosPanel = permisosPanel;
+        if (Array.isArray(bloquesAprobados)) update.bloquesAprobados = [...new Set(bloquesAprobados.map(String))];
 
         // No dejar al admin desactivarse a sí mismo ni quitarse el rol
         if (req.params.id === String(req.user._id)) {

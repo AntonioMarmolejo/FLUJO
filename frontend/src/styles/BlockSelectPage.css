@@ -172,6 +172,36 @@
     text-align: center;
 }
 
+/* Estado de aprobación del bloque */
+.block-estado {
+    align-self: flex-start;
+    margin-top: 3px;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+}
+
+.block-estado-ok {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+}
+
+.block-estado-pend {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.block-aviso {
+    width: 100%;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: center;
+}
+
 /* Button */
 .block-btn {
     width: 100%;

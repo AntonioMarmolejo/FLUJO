@@ -1,5 +1,6 @@
 import Firma from '../models/Firma.model.js';
 import Persona from '../models/Persona.model.js';
+import { bloquesPermitidos, tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -18,6 +19,8 @@ export const getFirmas = async (req, res) => {
     try {
         const { search, cedula } = req.query;
         const filter = { vigente: true };
+        const permitidos = bloquesPermitidos(req.user);
+        if (permitidos) filter.bloque = { $in: permitidos };
         if (cedula) filter.cedula = cedula.trim();
         if (search && search.trim()) {
             const regex = new RegExp(escapeRegex(search.trim()), 'i');
@@ -37,6 +40,8 @@ export const createFirma = async (req, res) => {
         if (!cedula?.trim()) return res.status(400).json({ message: 'La cédula es obligatoria' });
         if (!req.body.nombres?.trim()) return res.status(400).json({ message: 'El nombre es obligatorio' });
         if (!imagen) return res.status(400).json({ message: 'La imagen de la firma es obligatoria' });
+        if (!bloque) return res.status(400).json({ message: 'Inicia un turno en tu bloque para registrar firmas' });
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
 
         const cedulaTrim = cedula.trim();
 
@@ -51,7 +56,7 @@ export const createFirma = async (req, res) => {
         }
 
         if (reemplazaA) {
-            await Firma.updateOne({ _id: reemplazaA, cedula: cedulaTrim }, { vigente: false });
+            await Firma.updateOne({ _id: reemplazaA, cedula: cedulaTrim, bloque }, { vigente: false });
         }
 
         const firma = await Firma.create({
@@ -59,7 +64,7 @@ export const createFirma = async (req, res) => {
             ...fields(req.body),
             imagen,
             puesto: puesto || '',
-            bloque: bloque || '',
+            bloque,
             usuario: req.user._id,
         });
 
@@ -72,10 +77,12 @@ export const createFirma = async (req, res) => {
 // PUT /api/firmas/:id
 export const updateFirma = async (req, res) => {
     try {
+        const actual = await Firma.findById(req.params.id);
+        if (!actual) return res.status(404).json({ message: 'Firma no encontrada' });
+        if (!tieneBloque(req.user, actual.bloque)) return denegarBloque(res);
         const update = { ...fields(req.body) };
         if (req.body.imagen) update.imagen = req.body.imagen;
         const firma = await Firma.findByIdAndUpdate(req.params.id, update, { new: true });
-        if (!firma) return res.status(404).json({ message: 'Firma no encontrada' });
         res.json({ message: 'Firma actualizada', firma });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
@@ -85,8 +92,10 @@ export const updateFirma = async (req, res) => {
 // DELETE /api/firmas/:id
 export const deleteFirma = async (req, res) => {
     try {
-        const firma = await Firma.findByIdAndDelete(req.params.id);
+        const firma = await Firma.findById(req.params.id);
         if (!firma) return res.status(404).json({ message: 'Firma no encontrada' });
+        if (!tieneBloque(req.user, firma.bloque)) return denegarBloque(res);
+        await firma.deleteOne();
         res.json({ message: 'Firma eliminada' });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });

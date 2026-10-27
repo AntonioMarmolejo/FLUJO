@@ -238,13 +238,16 @@ export const AuthProvider = ({ children }) => {
     const isSuspended = !isAdmin && user?.status === 'suspended';
     const permisosPanel = user?.permisosPanel || [];
     const hasPermiso = (panel) => isAdmin || permisosPanel.includes(panel);
+    // Bloques que el admin aprobó: solo en esos se puede abrir turno y ver su información
+    const bloquesAprobados = user?.bloquesAprobados || [];
+    const tieneBloque = (bloque) => isAdmin || bloquesAprobados.includes(String(bloque));
 
     return (
         <AuthContext.Provider value={{
             user, loading,
             login, register, loginWithGoogle, loginWithBiometric, registerPasskey,
             logout, updateUser, restoreFromVault,
-            role, isAdmin, isSupervisor, isPending, isSuspended, permisosPanel, hasPermiso,
+            role, isAdmin, isSupervisor, isPending, isSuspended, permisosPanel, hasPermiso, tieneBloque,
         }}>
             {children}
         </AuthContext.Provider>

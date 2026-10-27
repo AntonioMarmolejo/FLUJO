@@ -58,11 +58,24 @@ export const requirePuestosBloque = (req, res, next) => {
     if (!tienePermiso) {
         return res.status(403).json({ message: 'No tienes permiso para ver los Puestos del bloque. Solicítalo al administrador.' });
     }
-    if (!isAdmin && !(req.user?.bloques || []).includes(bloque)) {
-        return res.status(403).json({ message: 'No perteneces a este bloque' });
-    }
+    if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
     next();
 };
+
+// Bloques cuya información puede ver el usuario: los aprobados por el admin
+// (el admin ve todos). null significa "todos".
+export const bloquesPermitidos = (user) =>
+    user?.role === 'admin' ? null : (user?.bloquesAprobados || []);
+
+export const tieneBloque = (user, bloque) => {
+    const permitidos = bloquesPermitidos(user);
+    return permitidos === null || (!!bloque && permitidos.includes(String(bloque)));
+};
+
+export const denegarBloque = (res) => res.status(403).json({
+    message: 'No tienes acceso a este bloque. Pide al administrador que lo apruebe.',
+    code: 'BLOQUE_DENIED',
+});
 
 // Bloquea operaciones de escritura a usuarios pendientes de aprobación
 export const requireActive = (req, res, next) => {

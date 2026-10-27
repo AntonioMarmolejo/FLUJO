@@ -15,17 +15,21 @@ const getInitials = (name) =>
     name?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 const BlockSelectPage = () => {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, tieneBloque } = useAuth();
     const navigate = useNavigate();
-    const [selected, setSelected] = useState([]);
+    // Los bloques elegidos son una solicitud: el admin debe aprobarlos antes
+    // de que el usuario pueda abrir turno o ver su información.
+    const [selected, setSelected] = useState(() => user?.bloques || []);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [solicitudEnviada, setSolicitudEnviada] = useState(false);
 
     const toggleBloque = (id) => {
         setSelected((prev) =>
             prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
         );
         setError('');
+        setSolicitudEnviada(false);
     };
 
     const handleContinuar = async () => {
@@ -37,7 +41,8 @@ const BlockSelectPage = () => {
         try {
             const { data } = await api.post('/user/bloques', { bloques: selected });
             updateUser(data.user);
-            navigate('/onboarding/puestos');
+            if (selected.some(tieneBloque)) navigate('/onboarding/puestos');
+            else setSolicitudEnviada(true);
         } catch (err) {
             setError(err.response?.data?.message || 'Error al guardar');
         } finally {
@@ -65,13 +70,15 @@ const BlockSelectPage = () => {
                 {/* Pregunta */}
                 <div className="block-question">
                     <h3>¿A qué bloque perteneces?</h3>
-                    <p>Selecciona tu bloque para continuar con el registro.</p>
+                    <p>Selecciona tu bloque para continuar con el registro. Un administrador debe aprobar tu acceso a cada bloque.</p>
                 </div>
 
                 {/* Lista de bloques */}
                 <div className="block-list">
                     {BLOQUES.map((bloque) => {
                         const isSelected = selected.includes(bloque.id);
+                        const aprobado = tieneBloque(bloque.id);
+                        const solicitado = !aprobado && (user?.bloques || []).includes(bloque.id);
                         return (
                             <div
                                 key={bloque.id}
@@ -87,6 +94,8 @@ const BlockSelectPage = () => {
                                 <div className="block-info">
                                     <span className="block-nombre">{bloque.nombre}</span>
                                     <span className="block-codigo">{bloque.codigo}</span>
+                                    {aprobado && <span className="block-estado block-estado-ok">Aprobado</span>}
+                                    {solicitado && <span className="block-estado block-estado-pend">Pendiente de aprobación</span>}
                                 </div>
                                 <div className={`block-radio ${isSelected ? 'checked' : ''}`}>
                                     {isSelected && <div className="block-radio-inner" />}
@@ -97,15 +106,26 @@ const BlockSelectPage = () => {
                 </div>
 
                 {error && <p className="block-error">{error}</p>}
+                {solicitudEnviada && (
+                    <p className="block-aviso">
+                        Solicitud enviada. Podrás abrir turno en tu bloque cuando un administrador apruebe tu acceso.
+                    </p>
+                )}
 
                 {/* Botón */}
-                <button
-                    className={`block-btn ${selected.length > 0 ? 'active' : ''}`}
-                    onClick={handleContinuar}
-                    disabled={loading}
-                >
-                    {loading ? 'Guardando...' : 'Continuar →'}
-                </button>
+                {solicitudEnviada ? (
+                    <button className="block-btn active" onClick={() => navigate('/workspace')}>
+                        Ir al inicio
+                    </button>
+                ) : (
+                    <button
+                        className={`block-btn ${selected.length > 0 ? 'active' : ''}`}
+                        onClick={handleContinuar}
+                        disabled={loading}
+                    >
+                        {loading ? 'Guardando...' : 'Continuar →'}
+                    </button>
+                )}
 
             </div>
         </div>

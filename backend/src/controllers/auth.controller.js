@@ -19,6 +19,7 @@ export const buildUserResponse = (user) => ({
     permisosPanel: user.permisosPanel || [],
     activo: user.activo !== false,
     bloques: user.bloques,
+    bloquesAprobados: user.bloquesAprobados || [],
     puestos: Object.fromEntries(user.puestos || new Map()),
     onboardingCompleto: user.onboardingCompleto,
 });

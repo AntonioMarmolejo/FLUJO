@@ -1,4 +1,5 @@
 import Turno from '../models/Turno.model.js';
+import { tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 const TZ = 'America/Guayaquil';
 
@@ -25,6 +26,7 @@ export const iniciarTurno = async (req, res) => {
         if (!cedula || !nombre || !apellidos || !empresa || !bloque || !puesto || !turno) {
             return res.status(400).json({ message: 'Todos los campos son obligatorios' });
         }
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
 
         const fecha = getFechaActual();
         const horaInicio = getHoraActual();

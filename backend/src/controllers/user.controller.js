@@ -1,5 +1,6 @@
 import User from '../models/User.model.js';
 import { buildUserResponse } from './auth.controller.js';
+import { tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 // POST /api/user/bloques
 export const updateBloques = async (req, res) => {
@@ -33,6 +34,7 @@ export const updatePuestos = async (req, res) => {
         if (!bloqueId || !puestos || puestos.length === 0) {
             return res.status(400).json({ message: 'Datos incompletos' });
         }
+        if (!tieneBloque(req.user, bloqueId)) return denegarBloque(res);
 
         const user = await User.findByIdAndUpdate(
             req.user._id,
