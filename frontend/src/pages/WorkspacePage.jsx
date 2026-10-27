@@ -6471,10 +6471,11 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             <p className="perfil-email">{user?.email}</p>
             {turnoActivo && bloque && (
                 <div className="perfil-turno-card" style={{ borderColor: bloque.color + '40', background: bloque.bg }}>
-                    <span style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TURNO ACTIVO</span>
-                    <p style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>{turnoActivo.puesto}</p>
-                    <p style={{ color: '#888', fontSize: 13 }}>{bloque.nombre} {bloque.codigo}</p>
-                    <p style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
+                    {/* Colores de tema claro: ver .perfil-turno-* en el CSS */}
+                    <span className="perfil-turno-label" style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TURNO ACTIVO</span>
+                    <p className="perfil-turno-puesto" style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>{turnoActivo.puesto}</p>
+                    <p className="perfil-turno-bloque" style={{ color: '#888', fontSize: 13 }}>{bloque.nombre} {bloque.codigo}</p>
+                    <p className="perfil-turno-horario" style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
                         {turnoActivo.turnoActual === 'diurno' ? '06:00 – 18:00' : '18:00 – 06:00'}
                     </p>
                 </div>

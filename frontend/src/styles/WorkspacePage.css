@@ -5525,6 +5525,26 @@
     color: #333;
 }
 
+/* ── Perfil en tema claro ── */
+[data-theme="light"] .perfil-email,
+[data-theme="light"] .perfil-bio-label {
+    color: #000;
+}
+[data-theme="light"] .perfil-bio-btn {
+    color: #1a73e8;
+}
+/* Tarjeta de turno activo: estilos en línea en el JSX, por eso !important */
+[data-theme="light"] .perfil-turno-label {
+    color: rgb(0, 226, 82) !important;
+}
+[data-theme="light"] .perfil-turno-puesto,
+[data-theme="light"] .perfil-turno-horario {
+    color: #000 !important;
+}
+[data-theme="light"] .perfil-turno-bloque {
+    color: #333 !important;
+}
+
 /* ── Caja de comentarios ── */
 .coment-intro {
     margin: 0 0 16px;
