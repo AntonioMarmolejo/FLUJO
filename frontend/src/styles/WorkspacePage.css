@@ -5303,14 +5303,10 @@
 [data-theme="light"] .mov-conductor-ci {
     color: #374151;
 }
-[data-theme="light"] .mov-destino-r2 {
-    color: #6b7280;
-}
-[data-theme="light"] .mov-coll-conductor {
-    color: #6b7280;
-}
+[data-theme="light"] .mov-destino-r2,
+[data-theme="light"] .mov-coll-conductor,
 [data-theme="light"] .mov-actividad {
-    color: #6b7280;
+    color: #333;
 }
 [data-theme="light"] .mov-chevron-btn {
     color: #333;
@@ -5537,6 +5533,7 @@
 }
 [data-theme="light"] .modal-field input {
     background: #ccc;
+    color: #000;
 }
 /* :not(...) para no tapar el color de INGRESA / SALE ni el botón habilitado */
 [data-theme="light"] .modal-tipo-btn:not(.active-ingreso):not(.active-salida) {
@@ -5544,6 +5541,9 @@
 }
 [data-theme="light"] .modal-btn:not(.active) {
     background: #ccc;
+}
+[data-theme="light"] .modal-btn {
+    border: 1px solid #000;
 }
 [data-theme="light"] .reg-toolbar {
     background: #fff;
@@ -5606,6 +5606,14 @@
         padding: 1px 138px;
         background: rgba(255, 255, 255, 0.016);
     }
+}
+
+/* Acciones al deslizar una entrada del Registro, en tema claro */
+[data-theme="light"] .reg-actions {
+    background: #1a73e8;
+}
+[data-theme="light"] .reg-act-btn {
+    color: #fff;
 }
 
 /* ── Detalle de bitácora en tema claro ── */
