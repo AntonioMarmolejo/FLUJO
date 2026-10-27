@@ -5266,22 +5266,20 @@
     color: #111827;
 }
 [data-theme="light"] .bit-card-tipo {
-    color: #6b7280;
+    color: #000;
 }
-[data-theme="light"] .bit-card-hora-lbl {
-    color: #9ca3af;
-}
+[data-theme="light"] .bit-card-hora-lbl,
 [data-theme="light"] .bit-card-sep {
-    color: #9ca3af;
+    color: #000;
 }
 [data-theme="light"] .bit-card-conductor {
-    color: #374151;
+    color: #1a73e8;
 }
 [data-theme="light"] .bit-card-conductor.changed {
     color: #d97706;
 }
 [data-theme="light"] .bit-card-dest {
-    color: #6b7280;
+    color: #1a73e8;
 }
 [data-theme="light"] .bit-chevron-btn {
     color: #9ca3af;
@@ -5504,6 +5502,27 @@
         padding: 1px 138px;
         background: rgba(255, 255, 255, 0.016);
     }
+}
+
+/* ── Detalle de bitácora en tema claro ── */
+[data-theme="light"] .bit-placa,
+[data-theme="light"] .bit-tipo {
+    color: #000;
+}
+[data-theme="light"] .bit-badge-completo {
+    color: darkgreen;
+}
+[data-theme="light"] .bit-det-section-label {
+    color: #1a73e8;
+}
+[data-theme="light"] .bit-det-lbl {
+    color: #000;
+}
+[data-theme="light"] .bit-det-nav-btn {
+    color: #1a73e8;
+}
+[data-theme="light"] .bit-det-act-btn {
+    color: #333;
 }
 
 /* ── Caja de comentarios ── */
