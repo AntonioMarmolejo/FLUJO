@@ -5588,6 +5588,11 @@
     color: #333;
 }
 
+/* Tarjeta del gráfico de estadísticas en tema claro */
+[data-theme="light"] .ws-chart-card {
+    background: rgba(255, 255, 255, 0.7);
+}
+
 /* ── Perfil en tema claro ── */
 [data-theme="light"] .perfil-email,
 [data-theme="light"] .perfil-bio-label {
