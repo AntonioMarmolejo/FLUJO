@@ -1774,6 +1774,22 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', color: '#5a6070', textTransform: 'uppercase', marginBottom: 6 }}>{t}</div>
     );
 
+    // Agrega la ✕ para limpiar un campo. Es una función y no un componente
+    // para que el input no se vuelva a montar (y pierda el foco) al escribir.
+    const conLimpiar = (input, value, onClear) => (
+        <div style={{ position: 'relative' }}>
+            {input}
+            {value && (
+                <button className="field-clear-btn" type="button" title="Limpiar" onMouseDown={e => {
+                    e.preventDefault();
+                    e.currentTarget.parentElement.querySelector('input')?.focus();
+                    onClear();
+                }}>✕</button>
+            )}
+        </div>
+    );
+    const fldLimpiable = { ...fld, paddingRight: 34 };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div onClick={e => e.stopPropagation()} style={{
@@ -1819,18 +1835,24 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
                     {/* Conductor */}
                     <div style={{ position: 'relative' }}>
                         <LBL t="Conductor de retorno" />
-                        <input type="text" placeholder="Nombre del conductor..." value={conductor}
-                            onChange={e => handleConductorChange(e.target.value)}
-                            onBlur={() => setTimeout(() => setConductorSugs([]), 150)} style={fld} />
+                        {conLimpiar(
+                            <input type="text" placeholder="Nombre del conductor..." value={conductor}
+                                onChange={e => handleConductorChange(e.target.value)}
+                                onBlur={() => setTimeout(() => setConductorSugs([]), 150)} style={fldLimpiable} />,
+                            conductor, () => { setConductor(''); setConductorSugs([]); setPersonaNotFound(false); }
+                        )}
                         <PersonaSugList items={conductorSugs} />
                     </div>
 
                     {/* Cédula */}
                     <div style={{ position: 'relative' }}>
                         <LBL t="Cédula" />
-                        <input type="text" placeholder="Nro. de cédula..." value={cedula}
-                            onChange={e => handleCedulaChange(e.target.value)}
-                            onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} style={fld} />
+                        {conLimpiar(
+                            <input type="text" placeholder="Nro. de cédula..." value={cedula}
+                                onChange={e => handleCedulaChange(e.target.value)}
+                                onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} style={fldLimpiable} />,
+                            cedula, () => { setCedula(''); setCedulaSugs([]); setPersonaNotFound(false); }
+                        )}
                         <PersonaSugList items={cedulaSugs} />
                         {personaNotFound && cedula.length >= 3 && (
                             <div style={{ marginTop: 5, fontSize: 11, color: '#e0a83e' }}>
@@ -1842,20 +1864,26 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
                     {/* Actividad */}
                     <div style={{ position: 'relative' }}>
                         <LBL t="Actividad / Observación" />
-                        <input type="text" placeholder="Descripción de la actividad..." value={actividad}
-                            onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
-                            onBlur={() => setTimeout(() => setActividadSugs([]), 150)}
-                            style={fld} />
+                        {conLimpiar(
+                            <input type="text" placeholder="Descripción de la actividad..." value={actividad}
+                                onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
+                                onBlur={() => setTimeout(() => setActividadSugs([]), 150)}
+                                style={fldLimpiable} />,
+                            actividad, () => { setActividad(''); setActividadSugs([]); }
+                        )}
                         <StrSugList items={actividadSugs} onSel={s => { setActividad(s); setActividadSugs([]); }} />
                     </div>
 
                     {/* Destino */}
                     <div style={{ position: 'relative' }}>
                         <LBL t="Destino" />
-                        <input type="text" placeholder="Área o lugar..." value={destino}
-                            onChange={e => { setDestino(e.target.value); setDestinoSugs(e.target.value.length >= 1 ? recentUniq('destino', e.target.value) : []); }}
-                            onBlur={() => setTimeout(() => setDestinoSugs([]), 150)}
-                            style={fld} />
+                        {conLimpiar(
+                            <input type="text" placeholder="Área o lugar..." value={destino}
+                                onChange={e => { setDestino(e.target.value); setDestinoSugs(e.target.value.length >= 1 ? recentUniq('destino', e.target.value) : []); }}
+                                onBlur={() => setTimeout(() => setDestinoSugs([]), 150)}
+                                style={fldLimpiable} />,
+                            destino, () => { setDestino(''); setDestinoSugs([]); }
+                        )}
                         <StrSugList items={destinoSugs} onSel={s => { setDestino(s); setDestinoSugs([]); }} />
                     </div>
 
