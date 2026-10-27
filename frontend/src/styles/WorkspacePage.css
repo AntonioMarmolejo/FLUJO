@@ -4362,10 +4362,10 @@
 /* Botón volver arriba */
 .scroll-top-btn {
     position: fixed;
-    bottom: 131px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
+    bottom: 91px;
+    right: 56px;
+    width: 33px;
+    height: 33px;
     border-radius: 50%;
     background: #6c63ff;
     color: #fff;
@@ -4386,6 +4386,12 @@
 }
 .scroll-top-btn:active {
     transform: scale(0.88);
+}
+/* Computadoras: va después de la regla base para que la sobrescriba */
+@media (min-width: 1024px) {
+    .scroll-top-btn {
+        right: 174px;
+    }
 }
 
 @keyframes scrollTopIn {
