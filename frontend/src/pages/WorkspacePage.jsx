@@ -310,7 +310,11 @@ const generarNarrativa = (mov, cfg = {}) => {
     const conPlaca    = cfg.conPlaca     || 'de Placas';
     const conVehiculo = cfg.conVehiculo  || `conduciendo ${articuloVehiculo(tipoVehiculo)}`;
     const titulo      = genero === 'f' ? titMujer : titHombre;
-    const accion      = tipo === 'ingreso' ? `${conIngreso} ${ubiIngreso}` : `${conSalida} ${destino || 'destino'}`;
+    // El ingreso usa el destino escrito en el movimiento; la ubicación del
+    // puesto (EPF, PAD-C...) solo cuando el destino quedó vacío.
+    const accion      = tipo === 'ingreso'
+        ? `${conIngreso} ${destino?.trim() || ubiIngreso}`
+        : `${conSalida} ${destino?.trim() || 'destino'}`;
     const descripcion = (!actividad || /^vac[ií]o$/i.test(actividad.trim())) ? 'vacía' : actividad.trim();
     return `${hora} ${accion} ${titulo} ${conductor || '—'} ${conCedula} ${cedula || '—'} ${conEmpresa} ${empresa || '—'} ${conVehiculo} ${tipoVehiculo || 'vehículo'} ${conPlaca} ${placa} ${descripcion}`;
 };
