@@ -6749,19 +6749,43 @@ const WorkspacePage = () => {
     // búsqueda desde la lupa.
     const searchBarActive = showSearch || (tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && platSearchShow);
     const [topbarIconsHidden, setTopbarIconsHidden] = useState(false);
-    const lastScrollYRef = useRef(0);
 
     useEffect(() => {
         if (!searchBarActive) { setTopbarIconsHidden(false); return; }
-        lastScrollYRef.current = window.scrollY;
-        const UMBRAL = 10;
+        const UMBRAL = 24;          // recorrido mínimo en un mismo sentido para cambiar
+        const ZONA_SUPERIOR = 40;   // cerca del inicio la fila siempre se ve
+        const ALTURA_FILA = 80;     // lo que mide la fila de íconos (más margen)
+        const BLOQUEO_MS = 350;     // la transición de la fila dura 0.22 s
+        let ultimoY = window.scrollY;
+        let acumulado = 0;
+        let oculto = false;
+        let bloqueadoHasta = 0;
+
+        const cambiar = valor => {
+            if (oculto === valor) return;
+            oculto = valor;
+            setTopbarIconsHidden(valor);
+            // Ocultar o mostrar la fila cambia el alto de la página y el
+            // navegador corrige el scroll por su cuenta. Ese movimiento no es
+            // del usuario: si se tomara en cuenta, la fila volvería a cambiar
+            // y quedaría parpadeando.
+            bloqueadoHasta = performance.now() + BLOQUEO_MS;
+            acumulado = 0;
+        };
+
         const onScroll = () => {
             const y = window.scrollY;
-            const delta = y - lastScrollYRef.current;
-            if (y < 40) setTopbarIconsHidden(false);
-            else if (delta > UMBRAL) setTopbarIconsHidden(true);
-            else if (delta < -UMBRAL) setTopbarIconsHidden(false);
-            lastScrollYRef.current = y;
+            if (performance.now() < bloqueadoHasta) { ultimoY = y; return; }
+            const delta = y - ultimoY;
+            ultimoY = y;
+            if (y < ZONA_SUPERIOR) { cambiar(false); return; }
+            // Se suma el recorrido mientras siga en el mismo sentido; al
+            // cambiar de sentido se empieza a contar de nuevo.
+            acumulado = Math.sign(delta) === Math.sign(acumulado) ? acumulado + delta : delta;
+            // Solo se oculta con margen suficiente: si no, al quitar la fila
+            // el scroll caería dentro de la zona superior y volvería a salir.
+            if (acumulado > UMBRAL && y > ZONA_SUPERIOR + ALTURA_FILA) cambiar(true);
+            else if (acumulado < -UMBRAL) cambiar(false);
         };
         window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
