@@ -1476,7 +1476,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div
-                className="movdet-card"
+                className="movdet-card detalle-arriba-movil"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '94vw', maxWidth: 580,
@@ -5251,6 +5251,7 @@ const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div
+                className="detalle-arriba-movil"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '90vw', maxWidth: 380,
@@ -5392,6 +5393,7 @@ const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onTo
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div
+                className="detalle-arriba-movil"
                 onClick={e => e.stopPropagation()}
                 style={{
                     width: '90vw', maxWidth: 380,

@@ -2578,10 +2578,13 @@
         padding: 8px;
         align-items: flex-end;
     }
+    /* En celular las ventanas aparecen fijas a 15% del borde superior.
+       max-height 85vh (y no 92vh) para que con ese 15% de arriba no se
+       corte la parte de abajo, donde están los botones de guardar. */
     .modal-card {
-        max-height: 92vh;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
+        position: fixed;
+        top: 15%;
+        max-height: 85vh;
         padding: 20px 16px;
     }
     /* Modal de detalle bitácora → siempre centrado */
@@ -5483,6 +5486,12 @@
     background: rgba(255, 255, 255, 0.015);
 }
 @media (max-width: 639px) {
+    /* Detalle de movimiento, extensión y persona: fijos a 15% del borde
+       superior. Sus estilos están en línea en el JSX, por eso !important. */
+    .detalle-arriba-movil {
+        position: fixed !important;
+        top: 15% !important;
+    }
     .movdet-actividad-box {
         margin: 2px 2px 3px;
         padding: 4px 2px;
