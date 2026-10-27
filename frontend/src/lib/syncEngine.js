@@ -24,7 +24,9 @@ const uploadItem = async (item, attempt = 0) => {
         await db.movimientosPending.update(item.uuid, { synced: 1, serverId: data.movimiento._id });
         return { uuid: item.uuid, serverId: data.movimiento._id, movimiento: data.movimiento };
     } catch (err) {
-        if (attempt >= 3) throw err;
+        // Sin permiso (panel o bloque): reintentar enseguida no cambia nada.
+        // Queda en la cola y se sube cuando el admin devuelva el acceso.
+        if (attempt >= 3 || err.response?.status === 403) throw err;
         const delay = 2000 * Math.pow(2, attempt);
         await new Promise(r => setTimeout(r, delay));
         return uploadItem(item, attempt + 1);

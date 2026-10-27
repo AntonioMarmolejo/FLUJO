@@ -6412,7 +6412,7 @@ const PanelActivacion = ({ user, permisosPanel, isPending }) => {
 
 // ── Dashboard principal ───────────────────────────────────
 const WorkspacePage = () => {
-    const { user, logout, isAdmin, isPending, hasPermiso, permisosPanel } = useAuth();
+    const { user, logout, isAdmin, isPending, hasPermiso, permisosPanel, tieneBloque } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -7605,11 +7605,14 @@ const WorkspacePage = () => {
                                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                             </button>
-                            <button className="ws-dial-item ws-dial-add"
-                                onClick={() => { setShowModal(true); setFabOpen(false); setShowShareMenu(false); setShowExportMenu(false); }}
-                                title="Nuevo movimiento">
-                                +
-                            </button>
+                            {/* Registrar exige el panel "movimientos" y el bloque del turno aprobado */}
+                            {(isAdmin || (!isPending && hasPermiso('movimientos') && tieneBloque(turnoActivo?.bloque))) && (
+                                <button className="ws-dial-item ws-dial-add"
+                                    onClick={() => { setShowModal(true); setFabOpen(false); setShowShareMenu(false); setShowExportMenu(false); }}
+                                    title="Nuevo movimiento">
+                                    +
+                                </button>
+                            )}
                         </div>
                         <button className={`ws-dial-trigger${fabOpen ? ' open' : ''}`}
                             onClick={() => { setFabOpen(s => !s); setShowShareMenu(false); setShowExportMenu(false); }}>

@@ -5,11 +5,11 @@ import {
     getFlujoAnios, getFlujoMeses, getFlujoDias, deleteMovimientosPorFecha, buscarMovimientos, getUltimoMovimientoPlaca,
     getBloquePuestos, getBloqueAnios, getBloqueMeses, getBloqueDias, getBloqueDia,
 } from '../controllers/movimiento.controller.js';
-import { protect, requireActive, requirePuestosBloque } from '../middleware/auth.middleware.js';
+import { protect, requirePanel, requirePuestosBloque } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-router.post('/', protect, requireActive, crearMovimiento);
+router.post('/', protect, requirePanel('movimientos'), crearMovimiento);
 router.get('/', protect, getMovimientos);
 router.get('/stats', protect, getStats);
 router.get('/todos', protect, getMovimientosTodos);
@@ -26,9 +26,9 @@ router.get('/bloque/meses', protect, requirePuestosBloque, getBloqueMeses);
 router.get('/bloque/dias', protect, requirePuestosBloque, getBloqueDias);
 router.get('/bloque/dia', protect, requirePuestosBloque, getBloqueDia);
 
-router.delete('/dia', protect, requireActive, deleteMovimientosPorFecha); // antes de /:id para evitar conflicto
-router.delete('/batch', protect, requireActive, batchDeleteMovimientos); // antes de /:id para evitar conflicto
-router.delete('/:id', protect, requireActive, deleteMovimiento);
-router.put('/:id', protect, requireActive, updateMovimiento);
+router.delete('/dia', protect, requirePanel('movimientos'), deleteMovimientosPorFecha); // antes de /:id para evitar conflicto
+router.delete('/batch', protect, requirePanel('movimientos'), batchDeleteMovimientos); // antes de /:id para evitar conflicto
+router.delete('/:id', protect, requirePanel('movimientos'), deleteMovimiento);
+router.put('/:id', protect, requirePanel('movimientos'), updateMovimiento);
 
 export default router;

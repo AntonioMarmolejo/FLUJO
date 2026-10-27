@@ -1,5 +1,6 @@
 import Movimiento from '../models/Movimiento.model.js';
 import Vehiculo from '../models/Vehiculo.model.js';
+import { tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
 const getFecha = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
@@ -16,6 +17,7 @@ export const crearMovimiento = async (req, res) => {
     try {
         const { tipo, placa, marca, color, tipoVehiculo, empresa, conductor, cedula, destino, actividad, genero, guia, guias, quienAutoriza, empresaAutoriza, documento, documentoNombre, documentoTipo, puesto, bloque, hora: horaCliente, clientUUID } = req.body;
         if (!tipo || !placa || !puesto || !bloque) return res.status(400).json({ message: 'Tipo, placa, puesto y bloque son obligatorios' });
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
 
         // Idempotencia: si ya existe un mov con este UUID del cliente, devolver el existente
         if (clientUUID) {
@@ -109,8 +111,10 @@ export const getStats = async (req, res) => {
 // DELETE /api/movimientos/:id
 export const deleteMovimiento = async (req, res) => {
     try {
-        const mov = await Movimiento.findOneAndDelete({ _id: req.params.id, usuario: req.user._id });
+        const mov = await Movimiento.findOne({ _id: req.params.id, usuario: req.user._id });
         if (!mov) return res.status(404).json({ message: 'Movimiento no encontrado' });
+        if (!tieneBloque(req.user, mov.bloque)) return denegarBloque(res);
+        await mov.deleteOne();
         res.json({ message: 'Movimiento eliminado' });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
@@ -122,6 +126,8 @@ export const batchDeleteMovimientos = async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids?.length) return res.status(400).json({ message: 'Se requieren IDs' });
+        const bloques = await Movimiento.distinct('bloque', { _id: { $in: ids }, usuario: req.user._id });
+        if (!bloques.every(b => tieneBloque(req.user, b))) return denegarBloque(res);
         await Movimiento.deleteMany({ _id: { $in: ids }, usuario: req.user._id });
         res.json({ message: 'Movimientos eliminados' });
     } catch (error) {
@@ -349,6 +355,7 @@ export const deleteMovimientosPorFecha = async (req, res) => {
     try {
         const { puesto, bloque, fecha } = req.body;
         if (!puesto || !bloque || !fecha) return res.status(400).json({ message: 'puesto, bloque y fecha son obligatorios' });
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
         const result = await Movimiento.deleteMany({ usuario: req.user._id, puesto, bloque, fecha });
         res.json({ message: 'Flujo eliminado', eliminados: result.deletedCount });
     } catch (error) {
@@ -428,6 +435,9 @@ export const updateMovimiento = async (req, res) => {
         if ('documentoTipo'    in b) update.documentoTipo    = b.documentoTipo    || '';
         if ('hora'             in b && b.hora) update.hora   = b.hora;
         if ('clientUUID'       in b) update.clientUUID = b.clientUUID || null;
+        const actual = await Movimiento.findOne({ _id: req.params.id, usuario: req.user._id }).select('bloque');
+        if (!actual) return res.status(404).json({ message: 'Movimiento no encontrado' });
+        if (!tieneBloque(req.user, actual.bloque)) return denegarBloque(res);
         const mov = await Movimiento.findOneAndUpdate(
             { _id: req.params.id, usuario: req.user._id },
             update,

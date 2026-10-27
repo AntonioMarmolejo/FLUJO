@@ -41,8 +41,8 @@ export const BLOQUES_DATA = {
             'Rondín',
         ],
     },
-    '13': {
-        nombre: 'Bloque 13',
+    '15': {
+        nombre: 'Bloque 15',
         codigo: 'ITAYA',
         color: '#60a5fa',
         bg: 'rgba(96,165,250,0.15)',
