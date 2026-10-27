@@ -216,6 +216,14 @@ const getTurnoFecha = (turnoActual) => {
 };
 
 const formatMov = m => [m.marca, m.color, m.conductor].filter(Boolean).join(' · ') || 'Sin datos';
+
+// Búsqueda de la lupa del inicio (Movimientos, Registro y Bitácora): placa,
+// conductor, empresa, destino, actividad/observación y las guías (número y
+// materiales). `sq` ya viene en minúsculas.
+const movCoincideBusqueda = (m, sq) => !!m && [
+    m.placa, m.conductor, m.empresa, m.destino, m.actividad, m.guia,
+    ...(m.guias || []).flatMap(g => [g.numero, g.items, g.empresa]),
+].some(v => (v || '').toLowerCase().includes(sq));
 const movToText = m =>
     `Placa: ${m.placa}\nTipo: ${m.tipo}\nConductor: ${m.conductor || '—'}\nCédula: ${m.cedula || '—'}\nEmpresa: ${m.empresa || '—'}\nDestino: ${m.destino || '—'}${m.actividad ? '\nActividad: ' + m.actividad : ''}\nHora: ${m.hora} — ${m.fecha}`;
 
@@ -3076,10 +3084,8 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
         else { navigator.clipboard?.writeText(text); }
     };
 
-    const sq = search.toLowerCase();
-    const filtrados = sq
-        ? movs.filter(m => m.placa.toLowerCase().includes(sq) || (m.conductor || '').toLowerCase().includes(sq))
-        : movs;
+    const sq = search.trim().toLowerCase();
+    const filtrados = sq ? movs.filter(m => movCoincideBusqueda(m, sq)) : movs;
     const movsOrdered = sortDesc ? [...filtrados].reverse() : [...filtrados];
 
     const isPetro = m => m.empresa?.toLowerCase().includes('petroecuador');
@@ -3190,7 +3196,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                             <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                             <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                         </svg>
-                        <input className="ws-search-input" type="text" placeholder="Buscar por placa o conductor..."
+                        <input className="ws-search-input" type="text" placeholder="Buscar por placa, conductor, empresa, destino o actividad..."
                             value={search} onChange={e => setSearch(e.target.value)} />
                         {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
                     </div>
@@ -6850,12 +6856,8 @@ const WorkspacePage = () => {
     );
 
     const movsFiltrados = useMemo(() => {
-        const sq = searchQuery.toLowerCase();
-        return sq
-            ? movimientos.filter(m =>
-                m.placa.toLowerCase().includes(sq) ||
-                (m.conductor || '').toLowerCase().includes(sq))
-            : movimientos;
+        const sq = searchQuery.trim().toLowerCase();
+        return sq ? movimientos.filter(m => movCoincideBusqueda(m, sq)) : movimientos;
     }, [movimientos, searchQuery]);
 
     const sortedMovs = useMemo(() => {
@@ -6944,13 +6946,12 @@ const WorkspacePage = () => {
     }, [movimientos]);
 
     const bitacoraFiltrada = useMemo(() => {
-        if (!searchQuery) return bitacora;
-        const sq = searchQuery.toLowerCase();
+        const sq = searchQuery.trim().toLowerCase();
+        if (!sq) return bitacora;
+        // Un registro de bitácora une la salida y el ingreso: coincide si
+        // cualquiera de los dos movimientos coincide.
         return bitacora.filter(b =>
-            b.placa?.toLowerCase().includes(sq) ||
-            (b.conductor || '').toLowerCase().includes(sq) ||
-            (b.empresa || '').toLowerCase().includes(sq)
-        );
+            movCoincideBusqueda(b.salida, sq) || movCoincideBusqueda(b.ingreso, sq));
     }, [bitacora, searchQuery]);
 
     const bitPlacaCounts = useMemo(() => {
@@ -7416,7 +7417,7 @@ const WorkspacePage = () => {
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                     <input className="ws-search-input" type="text"
-                        placeholder="Buscar por placa o conductor..."
+                        placeholder="Buscar por placa, conductor, empresa, destino o actividad..."
                         value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
                     {searchQuery && (
                         <button className="ws-search-clear" onClick={() => setSearchQuery('')}>✕</button>
