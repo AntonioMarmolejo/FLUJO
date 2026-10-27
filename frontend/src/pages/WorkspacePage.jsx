@@ -1548,9 +1548,8 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                 )}
 
                 {/* ── Caja actividad ── */}
-                <div style={{
-                    margin: '18px 24px 20px 24px',
-                    padding: '14px 16px',
+                {/* Margen, relleno y tamaño de letra cambian en celular: ver .movdet-actividad-box en el CSS */}
+                <div className="movdet-actividad-box" style={{
                     background: 'rgba(255,255,255,0.035)',
                     border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: 12,
@@ -1559,7 +1558,7 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                         Actividad / Obs.
                     </div>
                     <div className="movdet-actividad" style={{
-                        marginTop: 10, fontSize: 14.5, lineHeight: '26px', color: '#e4e4e7',
+                        lineHeight: '26px', color: '#e4e4e7',
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                         backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.25) 0.8px, transparent 0.8px)',
                         backgroundSize: '6px 26px', backgroundRepeat: 'repeat', backgroundPosition: '0 30px',
@@ -1583,10 +1582,9 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
 
                 {/* ── Navegación anterior / siguiente ── */}
                 {(hasPrev || hasNext || counter) && (
-                    <div style={{
+                    <div className="movdet-nav" style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '14px 24px', borderTop: '1px solid rgba(255,255,255,0.07)',
-                        background: 'rgba(255,255,255,0.015)',
+                        borderTop: '1px solid rgba(255,255,255,0.07)',
                     }}>
                         <button
                             onClick={onPrev} disabled={!hasPrev}
