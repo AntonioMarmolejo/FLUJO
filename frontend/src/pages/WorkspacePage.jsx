@@ -239,6 +239,123 @@ const PendienteBadge = ({ error, onDescartar }) => (
     </span>
 );
 
+// ── Botón de subir con gesto ─────────────────────────────
+// Toque corto: sube al inicio. Mantener presionado (o empezar a arrastrar):
+// muestra flechas alrededor y, sin soltar, se arrastra hacia la opción
+// deseada (cambiar de pestaña, ir abajo...). Funciona con dedo y mouse.
+const GESTO_ANGULO = { right: 0, upright: 45, up: 90, upleft: 135, left: 180, down: -90 };
+const GESTO_FLECHA = { right: '→', upright: '↗', up: '↑', upleft: '↖', left: '←', down: '↓' };
+const GESTO_RADIO = 74;
+const GESTO_OFFSET = {
+    right: [GESTO_RADIO, 0], left: [-GESTO_RADIO, 0],
+    up: [0, -GESTO_RADIO], down: [0, GESTO_RADIO * 0.8],
+    upright: [GESTO_RADIO * 0.72, -GESTO_RADIO * 0.72], upleft: [-GESTO_RADIO * 0.72, -GESTO_RADIO * 0.72],
+};
+
+// Opción hacia la que apunta el arrastre: la de ángulo más cercano, si el
+// arrastre es lo bastante largo y no se aleja más de 60° de ninguna.
+const elegirOpcionGesto = (dx, dy, opciones) => {
+    if (Math.hypot(dx, dy) < 28) return null;
+    const angulo = Math.atan2(-dy, dx) * 180 / Math.PI;
+    let mejor = null;
+    let menor = Infinity;
+    for (const o of opciones) {
+        let d = Math.abs(angulo - GESTO_ANGULO[o.dir]) % 360;
+        if (d > 180) d = 360 - d;
+        if (d < menor) { menor = d; mejor = o; }
+    }
+    return menor <= 60 ? mejor : null;
+};
+
+const ScrollTopButton = ({ opciones, onTap }) => {
+    const [menu, setMenu] = useState(null); // { cx, cy } centro del botón
+    const [activa, setActiva] = useState(null);
+    const gesto = useRef(null);
+
+    const abrirMenu = () => {
+        const g = gesto.current;
+        if (!g || g.abierto) return;
+        g.abierto = true;
+        clearTimeout(g.timer);
+        navigator.vibrate?.(12);
+        setMenu({ cx: g.cx, cy: g.cy });
+    };
+
+    const onPointerDown = e => {
+        if (e.button !== 0) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        gesto.current = {
+            x0: e.clientX, y0: e.clientY,
+            cx: r.left + r.width / 2, cy: r.top + r.height / 2,
+            abierto: false, timer: setTimeout(abrirMenu, 280),
+        };
+    };
+
+    const onPointerMove = e => {
+        const g = gesto.current;
+        if (!g) return;
+        const dx = e.clientX - g.x0;
+        const dy = e.clientY - g.y0;
+        if (!g.abierto && Math.hypot(dx, dy) > 12) abrirMenu();
+        if (g.abierto) setActiva(elegirOpcionGesto(dx, dy, opciones)?.dir || null);
+    };
+
+    const terminar = (e, cancelado) => {
+        const g = gesto.current;
+        if (!g) return;
+        clearTimeout(g.timer);
+        gesto.current = null;
+        if (g.abierto) {
+            const op = cancelado ? null : elegirOpcionGesto(e.clientX - g.x0, e.clientY - g.y0, opciones);
+            setMenu(null);
+            setActiva(null);
+            op?.action();
+        } else if (!cancelado) {
+            onTap();
+        }
+    };
+
+    // Las opciones se mantienen dentro de la pantalla aunque el botón esté cerca del borde
+    const posicion = dir => {
+        const [ox, oy] = GESTO_OFFSET[dir];
+        return {
+            left: Math.min(Math.max(menu.cx + ox, 56), window.innerWidth - 56),
+            top: Math.min(Math.max(menu.cy + oy, 28), window.innerHeight - 28),
+        };
+    };
+
+    return (
+        <>
+            <button
+                className={`scroll-top-btn${menu ? ' scroll-top-btn-gesto' : ''}`}
+                title="Volver arriba · mantén presionado y arrastra para más opciones"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={e => terminar(e, false)}
+                onPointerCancel={e => terminar(e, true)}
+                onClick={e => { if (e.detail === 0) onTap(); /* teclado */ }}
+                onContextMenu={e => e.preventDefault()}
+            >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
+            {menu && (
+                <div className="scroll-gesto-capa">
+                    {opciones.map(o => (
+                        <span key={o.dir} style={posicion(o.dir)}
+                            className={`scroll-gesto-op${activa === o.dir ? ' activa' : ''}`}>
+                            <span className="scroll-gesto-flecha">{GESTO_FLECHA[o.dir]}</span>
+                            {o.label}
+                        </span>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+};
+
 const LAST_TURNO_KEY = 'flujo_last_turno';
 
 // Ubicación por defecto de cada puesto (usada en narrativas y en el destino de ingresos)
@@ -7308,6 +7425,26 @@ const WorkspacePage = () => {
         setDetailMovIdx(idx);
     };
 
+    // Opciones del gesto del botón de subir. En el inicio, las pestañas
+    // quedan a la izquierda o derecha según su orden (Movimientos | Bitácora |
+    // Registro): la más cercana en horizontal y la siguiente en diagonal.
+    const ORDEN_VISTAS = ['movimientos', 'bitacora', 'registro'];
+    const NOMBRE_VISTA = { movimientos: 'Movimientos', bitacora: 'Bitácora', registro: 'Registro' };
+    const opcionesScrollGesto = (() => {
+        const opciones = [
+            { dir: 'up', label: 'Arriba', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+            { dir: 'down', label: 'Abajo', action: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }) },
+        ];
+        if (tabActiva !== 'inicio') return opciones;
+        const ir = vista => () => { setVistaInicio(vista); window.scrollTo({ top: 0 }); };
+        const i = ORDEN_VISTAS.indexOf(vistaInicio);
+        const izquierda = ORDEN_VISTAS.slice(0, i).reverse();
+        const derecha = ORDEN_VISTAS.slice(i + 1);
+        [['left', izquierda[0]], ['upleft', izquierda[1]], ['right', derecha[0]], ['upright', derecha[1]]]
+            .forEach(([dir, vista]) => { if (vista) opciones.push({ dir, label: NOMBRE_VISTA[vista], action: ir(vista) }); });
+        return opciones;
+    })();
+
     const goToReg = id => { setVistaInicio('registro'); setHighlightRegId(id); };
     const goToMov = id => { setVistaInicio('movimientos'); setHighlightMovId(id); };
     const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)), onGoToReg: goToReg };
@@ -8025,15 +8162,10 @@ const WorkspacePage = () => {
 
             {/* Botón volver arriba */}
             {showScrollTop && !showModal && !editMov && !detailMov && !registroDetailMov && !showRegistroConfig && bitDetailIdx === null && !editHoraMov && !editIngresoBit && (
-                <button
-                    className="scroll-top-btn"
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    title="Volver arriba"
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </button>
+                <ScrollTopButton
+                    opciones={opcionesScrollGesto}
+                    onTap={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                />
             )}
 
             {/* Bottom nav */}
