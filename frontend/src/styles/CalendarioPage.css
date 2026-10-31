@@ -1,0 +1,1315 @@
+/* ══════════════════════════════════════════════════════════
+   CALENDARIO (pages/CalendarioPage.jsx)
+   Cada tema define las variables --cal-*; la raíz lleva la clase del tema
+   elegido. Los modales usan siempre la paleta oscura (.cal-paleta-fija).
+   Los colores de cada turno los elige el usuario y llegan en línea como
+   --t-bg / --t-texto / --t-borde.
+══════════════════════════════════════════════════════════ */
+.cal-tema-oscuro,
+.cal-paleta-fija {
+    --cal-bg: #0a0a0a;
+    --cal-card: #111111;
+    --cal-card-elev: #1a1a1a;
+    --cal-border: #2a2a2a;
+    --cal-border-light: #333;
+    --cal-text: #ffffff;
+    --cal-mute: #8a8a8a;
+    --cal-dim: #4a4a4a;
+    --cal-violet: #7c5ef5;
+    --cal-violet-rgb: 124, 94, 245;
+    --cal-red: #e24b4a;
+    --cal-red-dim: rgba(226, 75, 74, 0.14);
+    --cal-day-empty: rgba(255, 255, 255, 0.9);
+    --cal-day-text: #444;
+    --cal-nav-bg: rgba(255, 255, 255, 0.05);
+}
+.cal-tema-claro {
+    --cal-bg: #eef1f6;
+    --cal-card: #ffffff;
+    --cal-card-elev: #f5f7fb;
+    --cal-border: #d4d9e5;
+    --cal-border-light: #bcc4d4;
+    --cal-text: #111827;
+    --cal-mute: #6b7280;
+    --cal-dim: #9ca3af;
+    --cal-violet: #6d28d9;
+    --cal-violet-rgb: 109, 40, 217;
+    --cal-red: #dc2626;
+    --cal-red-dim: rgba(220, 38, 38, 0.1);
+    --cal-day-empty: #ffffff;
+    --cal-day-text: #374151;
+    --cal-nav-bg: rgba(0, 0, 0, 0.06);
+}
+.cal-tema-marino {
+    --cal-bg: #0b1a2e;
+    --cal-card: #102240;
+    --cal-card-elev: #163054;
+    --cal-border: #1e3a5f;
+    --cal-border-light: #2a4f7c;
+    --cal-text: #e0eeff;
+    --cal-mute: #6a90bc;
+    --cal-dim: #2a4a70;
+    --cal-violet: #4f8ef5;
+    --cal-violet-rgb: 79, 142, 245;
+    --cal-red: #f56565;
+    --cal-red-dim: rgba(245, 101, 101, 0.14);
+    --cal-day-empty: rgba(210, 232, 255, 0.88);
+    --cal-day-text: #1a2a40;
+    --cal-nav-bg: rgba(255, 255, 255, 0.06);
+}
+.cal-tema-bosque {
+    --cal-bg: #091410;
+    --cal-card: #0e1f18;
+    --cal-card-elev: #142a20;
+    --cal-border: #1c3a28;
+    --cal-border-light: #264d34;
+    --cal-text: #d8f0e2;
+    --cal-mute: #5e9970;
+    --cal-dim: #274535;
+    --cal-violet: #3ab56a;
+    --cal-violet-rgb: 58, 181, 106;
+    --cal-red: #f56565;
+    --cal-red-dim: rgba(245, 101, 101, 0.14);
+    --cal-day-empty: rgba(208, 245, 220, 0.88);
+    --cal-day-text: #1a2e1d;
+    --cal-nav-bg: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Raíz, barra de desplazamiento y animaciones ── */
+.cal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--cal-bg);
+    color: var(--cal-text);
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+}
+.cal-scroll { scrollbar-width: thin; scrollbar-color: rgba(124, 94, 245, 0.35) transparent; }
+.cal-scroll::-webkit-scrollbar { width: 4px; }
+.cal-scroll::-webkit-scrollbar-thumb { background: rgba(124, 94, 245, 0.35); border-radius: 4px; }
+@keyframes cal-slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes cal-pop {
+    from { transform: scale(0.5) translateY(16px); opacity: 0; }
+    to   { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+/* ── Encabezado ── */
+.cal-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--cal-bg);
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-header-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--cal-nav-bg);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-header-btn.activo {
+    background: rgba(var(--cal-violet-rgb), 0.133);
+    border-color: var(--cal-violet);
+}
+.cal-header-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--cal-text);
+}
+.cal-header-acciones {
+    display: flex;
+    gap: 6px;
+}
+
+/* ── Selector de tema: cada botón muestra el fondo y acento de su tema ── */
+.cal-temas {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    background: var(--cal-card);
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-temas-label {
+    margin: 0 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--cal-mute);
+}
+.cal-temas-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.cal-tema-btn-oscuro { --prev-bg: #0a0a0a; --prev-acento: #7c5ef5; }
+.cal-tema-btn-claro  { --prev-bg: #eef1f6; --prev-acento: #6d28d9; }
+.cal-tema-btn-marino { --prev-bg: #0b1a2e; --prev-acento: #4f8ef5; }
+.cal-tema-btn-bosque { --prev-bg: #091410; --prev-acento: #3ab56a; }
+.cal-tema-btn {
+    height: 56px;
+    border-radius: 12px;
+    background: var(--prev-bg);
+    border: 2px solid var(--cal-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border 120ms ease;
+}
+.cal-tema-btn.activo {
+    border-color: var(--prev-acento);
+    box-shadow: 0 0 0 1px var(--prev-acento);
+}
+.cal-tema-punto {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--prev-acento);
+}
+.cal-tema-nombre {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: #888;
+}
+.cal-tema-btn.activo .cal-tema-nombre {
+    color: var(--prev-acento);
+}
+
+/* ── Selector de grupo ── */
+.cal-grupo {
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-grupo-btn {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: rgba(124, 94, 245, 0.1);
+    border: 1px solid rgba(124, 94, 245, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.cal-grupo-actual {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cal-grupo-nombre {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cal-text);
+}
+.cal-grupos {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: calc(100% - 4px);
+    z-index: 20;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--cal-card-elev);
+    border: 1px solid var(--cal-border);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.cal-grupos-item {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: transparent;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-grupos-item.activo {
+    background: rgba(124, 94, 245, 0.1);
+}
+.cal-grupos-elegir {
+    flex: 1;
+    height: 48px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+}
+.cal-grupos-nombre {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cal-text);
+}
+.cal-grupos-item.activo .cal-grupos-nombre {
+    color: var(--cal-violet);
+}
+.cal-grupos-editar {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-grupos-nuevo {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.cal-grupos-nuevo-label {
+    font-size: 13px;
+    color: var(--cal-mute);
+}
+
+/* ── Sin grupos / cargando ── */
+.cal-sin-grupos {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 32px;
+}
+.cal-sin-grupos-texto {
+    margin: 0;
+    font-size: 14px;
+    text-align: center;
+    color: var(--cal-mute);
+}
+.cal-btn-crear {
+    height: 44px;
+    padding: 0 28px;
+    border-radius: 12px;
+    background: var(--cal-violet);
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.cal-cargando {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-cargando-texto {
+    font-size: 13px;
+    color: var(--cal-mute);
+}
+
+/* ── Pestañas MES / AÑO / RESUMEN ── */
+.cal-tabs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-tab {
+    flex: 1;
+    height: 34px;
+    border-radius: 9px;
+    background: transparent;
+    border: 1px solid var(--cal-border);
+    color: var(--cal-mute);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+.cal-tab.activo {
+    background: var(--cal-violet);
+    border-color: transparent;
+    color: #fff;
+}
+.cal-contenido {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 0;
+}
+/* Espacio para el botón PINTAR o la barra de pintura, que flotan abajo */
+.cal-contenido.con-pie { padding-bottom: 90px; }
+.cal-contenido.pintando { padding-bottom: 170px; }
+
+/* Botones de navegación (mes, año, período) */
+.cal-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--cal-nav-bg);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-compartir {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: rgba(124, 94, 245, 0.12);
+    border: 1px solid rgba(124, 94, 245, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-compartir.cal-compartir-chico {
+    width: 34px;
+    height: 34px;
+}
+
+/* ── Vista de mes ── */
+.cal-mes {
+    padding: 0 16px;
+    background: var(--cal-bg);
+}
+.cal-mes-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 12px;
+}
+.cal-mes-titulo {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--cal-text);
+}
+.cal-mes-acciones {
+    display: flex;
+    gap: 6px;
+}
+.cal-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    margin-bottom: 2px;
+}
+.cal-semana-dia {
+    padding: 4px 0;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cal-dim);
+}
+.cal-mes-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+.cal-dia-vacio {
+    min-height: 54px;
+}
+/* Día del calendario */
+.cal-dia {
+    position: relative;
+    min-height: 54px;
+    border-radius: 2px;
+    background: var(--cal-day-empty);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+    transform: scale(1);
+    transition: transform 60ms ease;
+}
+.cal-dia.pintable {
+    cursor: pointer;
+}
+/* Al pintar, el día se encoge un poco mientras se presiona */
+.cal-dia.pintable:active {
+    transform: scale(0.92);
+}
+.cal-dia.con-turno {
+    background: var(--t-bg);
+    border-color: var(--t-borde);
+}
+.cal-dia.hoy {
+    border-color: var(--cal-violet);
+}
+.cal-dia-punto {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--cal-violet);
+}
+.cal-dia.con-turno .cal-dia-punto {
+    background: var(--t-texto);
+}
+.cal-dia-num {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--cal-day-text);
+}
+.cal-dia.hoy .cal-dia-num {
+    font-weight: 800;
+    color: var(--cal-violet);
+}
+.cal-dia.con-turno .cal-dia-num {
+    color: var(--t-texto);
+}
+.cal-dia-turno {
+    margin-top: 10px;
+    font-size: 7.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    color: var(--t-texto);
+    opacity: 0.85;
+}
+/* Leyenda de turnos debajo del mes */
+.cal-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+}
+.cal-leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--cal-border);
+}
+.cal-leyenda-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--t-bg);
+}
+.cal-leyenda-nombre {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--cal-mute);
+}
+.cal-leyenda-hora {
+    font-size: 9.5px;
+    color: var(--cal-dim);
+}
+
+/* ── Vista de año ── */
+.cal-anio {
+    padding: 12px 16px 120px;
+}
+.cal-anio-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.cal-anio-centro {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cal-anio-actual {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--cal-text);
+}
+.cal-anio-captura {
+    background: var(--cal-bg);
+}
+.cal-anio-titulo {
+    padding: 6px 0 14px;
+    text-align: center;
+}
+.cal-anio-grupo {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--cal-violet);
+}
+.cal-anio-num {
+    margin-top: 2px;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--cal-text);
+}
+.cal-anio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.cal-mini {
+    padding: 10px 8px;
+    border-radius: 12px;
+    background: var(--cal-card);
+    border: 1px solid var(--cal-border);
+}
+.cal-mini-titulo {
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-align: center;
+    color: var(--cal-text);
+}
+.cal-mini-semana,
+.cal-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1.5px;
+}
+.cal-mini-semana {
+    margin-bottom: 3px;
+}
+.cal-mini-semana-dia {
+    font-size: 6.5px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--cal-dim);
+}
+.cal-mini-vacio {
+    aspect-ratio: 1;
+}
+.cal-mini-dia {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: var(--cal-day-empty);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-mini-dia.con-turno {
+    background: var(--t-bg);
+    border-color: var(--t-borde);
+}
+.cal-mini-num {
+    font-size: 6px;
+    font-weight: 600;
+    color: var(--cal-day-text);
+}
+.cal-mini-dia.con-turno .cal-mini-num {
+    color: var(--t-texto);
+}
+.cal-anio-stats {
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--cal-card);
+    border: 1px solid var(--cal-border);
+}
+.cal-anio-stats-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-anio-stats-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--cal-mute);
+}
+.cal-anio-fila {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-anio-fila-nombre {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cal-text);
+}
+.cal-anio-fila-dias {
+    margin-right: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cal-mute);
+}
+.cal-anio-fila-horas {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--t-texto);
+}
+
+/* ── Chip de turno (abreviatura con los colores del turno) ── */
+.cal-turno-chip {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--t-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-turno-chip.cal-turno-chip-grande {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+}
+.cal-turno-chip.cal-turno-chip-chico {
+    width: 28px;
+    height: 28px;
+    margin-right: 10px;
+    border-radius: 7px;
+}
+.cal-turno-chip-txt {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--t-texto);
+}
+.cal-turno-chip-grande .cal-turno-chip-txt { font-size: 10px; }
+.cal-turno-chip-chico .cal-turno-chip-txt { font-size: 8.5px; }
+.cal-turno-nombre {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cal-text);
+}
+.cal-turno-hora {
+    font-size: 10px;
+    color: var(--cal-mute);
+}
+
+/* ── Resumen (StatsView) ── */
+.cal-stats {
+    padding: 0 16px 120px;
+}
+.cal-periodo {
+    display: flex;
+    margin: 14px 0 16px;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--cal-border);
+}
+.cal-periodo-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 9px;
+    background: transparent;
+    border: none;
+    color: var(--cal-mute);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+.cal-periodo-btn.activo {
+    background: var(--cal-violet);
+    color: #fff;
+}
+.cal-periodo-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.cal-periodo-label {
+    min-width: 160px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--cal-text);
+}
+.cal-tabla {
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--cal-card);
+    border: 1px solid var(--cal-border);
+}
+.cal-tabla-fila {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-tabla-fila.cal-tabla-head {
+    align-items: normal;
+    padding: 10px 14px;
+}
+.cal-tabla-th {
+    font-size: 10px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--cal-mute);
+}
+.cal-tabla-th.cal-tabla-th-primera {
+    text-align: left;
+    letter-spacing: 0.5px;
+}
+.cal-tabla-turno {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cal-tabla-dias,
+.cal-tabla-horas {
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.cal-tabla-dias {
+    font-size: 14px;
+    color: var(--cal-text);
+}
+.cal-tabla-horas {
+    font-size: 13px;
+    color: var(--t-texto);
+}
+.cal-tabla-dias.cero,
+.cal-tabla-horas.cero {
+    color: var(--cal-dim);
+}
+.cal-tabla-fila.cal-tabla-total {
+    border-bottom: 0;
+    background: rgba(124, 94, 245, 0.08);
+}
+.cal-tabla-total-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cal-mute);
+}
+.cal-tabla-total-num {
+    font-size: 14px;
+    font-weight: 800;
+    text-align: right;
+    color: var(--cal-violet);
+}
+
+/* ── Botón PINTAR y barra de pintura ── */
+.cal-pintar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 10px 16px 28px;
+    background: linear-gradient(0deg, var(--cal-bg) 60%, transparent);
+}
+.cal-pintar-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 13px;
+    background: var(--cal-violet);
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(124, 94, 245, 0.45);
+}
+.cal-barra {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 12px 16px 28px;
+    background: var(--cal-card-elev);
+    border-top: 1px solid var(--cal-border-light);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
+    animation: cal-slide-up 260ms cubic-bezier(0.34, 1.1, 0.64, 1) both;
+}
+.cal-barra-turnos {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 2px;
+    overflow-x: auto;
+}
+/* Los botones aparecen escalonados: el retraso de cada uno va en línea */
+.cal-borrar,
+.cal-pincel,
+.cal-gestionar {
+    flex-shrink: 0;
+    height: 44px;
+    border-radius: 10px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 120ms ease;
+    animation: cal-pop 220ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.cal-borrar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 12px;
+    background: var(--cal-red-dim);
+    border: 1.5px solid rgba(226, 75, 74, 0.35);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+}
+.cal-borrar.elegido {
+    background: var(--cal-red);
+    border-color: var(--cal-red);
+}
+.cal-pincel {
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--cal-border);
+    color: var(--cal-mute);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: none;
+}
+.cal-pincel.elegido {
+    background: var(--t-bg);
+    border-color: var(--t-borde);
+    color: var(--t-texto);
+    box-shadow: 0 4px 14px var(--t-sombra);
+}
+.cal-gestionar {
+    width: 44px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-salir {
+    width: 100%;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--cal-red);
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    animation: cal-pop 200ms cubic-bezier(0.34, 1.2, 0.64, 1) 60ms both;
+}
+
+/* ══ Modales (siempre con la paleta oscura) ══════════════════ */
+.cal-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.cal-modal.cal-modal-superior {
+    z-index: 110;
+}
+.cal-modal-fondo {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+.cal-modal-fondo.cal-modal-fondo-oscuro {
+    background: rgba(0, 0, 0, 0.75);
+}
+.cal-modal-caja {
+    position: relative;
+    width: 100%;
+    max-width: min(92vw, 400px);
+    padding: 20px;
+    border-radius: 18px;
+    background: var(--cal-card-elev);
+    border: 1px solid var(--cal-border-light);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.cal-modal-caja.cal-modal-caja-form {
+    max-width: min(92vw, 420px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+.cal-modal-caja.cal-modal-caja-lista {
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+.cal-modal-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.cal-modal-titulo-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cal-modal-titulo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cal-text);
+}
+.cal-cerrar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--cal-mute);
+}
+.cal-label.cal-label-sin-margen {
+    margin-bottom: 0;
+}
+.cal-label.cal-label-separado {
+    margin-top: 14px;
+}
+.cal-input {
+    width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--cal-border);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+.cal-input.cal-input-form {
+    height: 42px;
+}
+.cal-input.cal-input-separado {
+    margin-bottom: 12px;
+}
+.cal-input.cal-input-separado-16 {
+    margin-bottom: 16px;
+}
+.cal-botones {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+.cal-botones.cal-botones-form {
+    margin-top: 20px;
+}
+.cal-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+.cal-btn-sec {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--cal-border);
+    color: var(--cal-text);
+    font-weight: 600;
+}
+.cal-btn-primario {
+    flex: 1.4;
+    background: var(--cal-violet);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 6px 18px rgba(124, 94, 245, 0.4);
+}
+.cal-btn-primario.cal-btn-sin-sombra {
+    box-shadow: none;
+}
+.cal-btn-primario.deshabilitado {
+    opacity: 0.5;
+}
+/* Eliminar grupo / turno y su confirmación */
+.cal-eliminar {
+    width: 100%;
+    height: 38px;
+    margin-top: 10px;
+    border-radius: 10px;
+    background: var(--cal-red-dim);
+    border: 1px solid rgba(226, 75, 74, 0.3);
+    color: var(--cal-red);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.cal-confirmar {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--cal-red-dim);
+    border: 1px solid rgba(226, 75, 74, 0.4);
+}
+.cal-confirmar-texto {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cal-red);
+}
+.cal-confirmar-botones {
+    display: flex;
+    gap: 6px;
+}
+.cal-btn-mini {
+    flex: 1;
+    height: 34px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.cal-btn-mini-no {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--cal-border);
+    color: var(--cal-text);
+    font-weight: 600;
+}
+.cal-btn-mini-si {
+    background: var(--cal-red);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+}
+
+/* ── Formulario de turno ── */
+.cal-form-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.cal-volver {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-form-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cal-text);
+}
+/* Vista previa con los colores elegidos */
+.cal-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--t-bg);
+}
+.cal-preview-chip {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-preview-corto {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--t-texto);
+}
+.cal-preview-nombre {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--t-texto);
+}
+.cal-preview-hora {
+    font-size: 12px;
+    color: var(--t-texto);
+    opacity: 0.75;
+}
+.cal-form-fila {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.cal-form-col {
+    flex: 1;
+}
+/* Paleta de colores */
+.cal-paleta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+.cal-color {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border 80ms ease;
+}
+.cal-color.elegido {
+    border: 2.5px solid #fff;
+}
+.cal-color-mas {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 2px dashed var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-color-mas-signo {
+    font-size: 16px;
+    color: var(--cal-mute);
+}
+.cal-color-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ── Lista de tipos de turno ── */
+.cal-turnos-lista {
+    flex: 1;
+    overflow-y: auto;
+}
+.cal-turno-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--cal-border);
+}
+.cal-turno-info {
+    flex: 1;
+    min-width: 0;
+}
+.cal-turno-nombre.cal-turno-nombre-corto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cal-orden {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.cal-orden-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-orden-btn:disabled {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: #222;
+    cursor: default;
+    opacity: 0.3;
+}
+.cal-editar {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--cal-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.cal-crear-turno {
+    width: 100%;
+    height: 46px;
+    margin-top: 14px;
+    border-radius: 12px;
+    background: var(--cal-violet);
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 18px rgba(124, 94, 245, 0.4);
+}

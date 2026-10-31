@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import '../styles/CalendarioPage.css';
 
 // ── Paleta por defecto (tema oscuro) ─────────────────────
 const C = {
@@ -42,12 +43,6 @@ const THEMES = {
 };
 
 const THEME_LABELS = { oscuro: 'Oscuro', claro: 'Claro', marino: 'Marino', bosque: 'Bosque' };
-const THEME_PREVIEWS = {
-    oscuro:  { bg: '#0a0a0a', accent: '#7c5ef5' },
-    claro:   { bg: '#eef1f6', accent: '#6d28d9' },
-    marino:  { bg: '#0b1a2e', accent: '#4f8ef5' },
-    bosque:  { bg: '#091410', accent: '#3ab56a' },
-};
 
 // ── Turnos por defecto ───────────────────────────────────
 const DEFAULT_SHIFTS = [
@@ -68,7 +63,9 @@ const startDow   = (y,m)   => { const d=new Date(y,m,1).getDay(); return d===0?6
 const todayISO   = ()       => { const t=new Date(); return isoDate(t.getFullYear(),t.getMonth(),t.getDate()); };
 const loadShifts = ()       => { try { const s=localStorage.getItem('flujo_shifts'); return s?JSON.parse(s):DEFAULT_SHIFTS; } catch { return DEFAULT_SHIFTS; } };
 
-const NAV_BTN = { width:36,height:36,borderRadius:9,background:'rgba(255,255,255,0.05)',border:`1px solid #2a2a2a`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' };
+// Colores de un turno como variables CSS (los elige el usuario, por eso van en línea).
+// El sufijo hexadecimal agrega transparencia: aa ≈ 67 %, 88 ≈ 53 %, cc ≈ 80 %.
+const turnoVars = (s, borde = 'aa') => s ? ({ '--t-bg': s.bg, '--t-texto': s.text, '--t-borde': s.bg + borde }) : undefined;
 
 // ── Iconos ───────────────────────────────────────────────
 const Ico = {
@@ -90,44 +87,20 @@ const Ico = {
 };
 
 // ── DayCell ───────────────────────────────────────────────
-function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts, C }) {
+function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
     const shift = shiftId ? shifts.find(s => s.id === shiftId) : null;
-    const [press, setPress] = useState(false);
     return (
-        <div
-            onClick={onClick}
-            onPointerDown={() => paintMode && setPress(true)}
-            onPointerUp={() => setPress(false)}
-            onPointerLeave={() => setPress(false)}
-            style={{
-                minHeight: 54, borderRadius: 2,
-                background: shift ? shift.bg : C.dayEmpty,
-                border: `1px solid ${isToday ? C.violet : (shift ? shift.bg + 'aa' : C.border)}`,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: paintMode ? 'pointer' : 'default',
-                transform: press ? 'scale(0.92)' : 'scale(1)',
-                transition: 'transform 60ms ease',
-                userSelect: 'none', WebkitUserSelect: 'none',
-                position: 'relative',
-            }}
-        >
-            {isToday && (
-                <div style={{ position:'absolute', top:3, left:4, width:4, height:4, borderRadius:'50%', background: shift ? shift.text : C.violet }} />
-            )}
-            <span style={{ position:'absolute', top:3, right:4, fontSize:11, fontWeight: isToday?800:600, color: shift?shift.text:(isToday?C.violet:C.dayText), lineHeight:1 }}>
-                {day}
-            </span>
-            {shift && (
-                <span style={{ fontSize:7.5, color:shift.text, fontWeight:700, opacity:0.85, textAlign:'center', lineHeight:1.2, marginTop:10 }}>
-                    {shift.time || shift.short}
-                </span>
-            )}
+        <div onClick={onClick} style={turnoVars(shift)}
+            className={['cal-dia', shift && 'con-turno', isToday && 'hoy', paintMode && 'pintable'].filter(Boolean).join(' ')}>
+            {isToday && <div className="cal-dia-punto" />}
+            <span className="cal-dia-num">{day}</span>
+            {shift && <span className="cal-dia-turno">{shift.time || shift.short}</span>}
         </div>
     );
 }
 
 // ── MonthGrid ────────────────────────────────────────────
-function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shifts, C }) {
+function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shifts }) {
     const today = todayISO();
     const numDays = daysInMonth(year, month);
     const startDay = startDow(year, month);
@@ -135,16 +108,16 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
     while (cells.length % 7 !== 0) cells.push(null);
     return (
         <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0, marginBottom:2 }}>
-                {DAYS_H.map(d => <div key={d} style={{ textAlign:'center', fontSize:10, fontWeight:700, color:C.dim, padding:'4px 0' }}>{d}</div>)}
+            <div className="cal-semana">
+                {DAYS_H.map(d => <div key={d} className="cal-semana-dia">{d}</div>)}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:1 }}>
+            <div className="cal-mes-grid">
                 {cells.map((day, idx) => {
-                    if (!day) return <div key={idx} style={{ minHeight:54 }} />;
+                    if (!day) return <div key={idx} className="cal-dia-vacio" />;
                     const iso = isoDate(year, month, day);
                     return (
                         <DayCell key={idx} day={day} shiftId={dias[iso]||null}
-                            isToday={iso===today} paintMode={paintMode} shifts={shifts} C={C}
+                            isToday={iso===today} paintMode={paintMode} shifts={shifts}
                             onClick={() => paintMode && onDayTap(iso, selectedShift)}
                         />
                     );
@@ -155,27 +128,25 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
 }
 
 // ── MiniMonth ────────────────────────────────────────────
-function MiniMonth({ year, month, dias, shifts, C }) {
+function MiniMonth({ year, month, dias, shifts }) {
     const numDays = daysInMonth(year, month);
     const startDay = startDow(year, month);
     const cells = [...Array(startDay).fill(null), ...Array.from({length:numDays},(_,i)=>i+1)];
     while (cells.length % 7 !== 0) cells.push(null);
     return (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'10px 8px' }}>
-            <div style={{ fontSize:11, fontWeight:700, color:C.text, textAlign:'center', marginBottom:6, letterSpacing:0.6 }}>
-                {MONTHS_S[month].toUpperCase()}
+        <div className="cal-mini">
+            <div className="cal-mini-titulo">{MONTHS_S[month].toUpperCase()}</div>
+            <div className="cal-mini-semana">
+                {DAYS_H.map(d => <div key={d} className="cal-mini-semana-dia">{d}</div>)}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:1.5, marginBottom:3 }}>
-                {DAYS_H.map(d => <div key={d} style={{ textAlign:'center', fontSize:6.5, color:C.dim, fontWeight:700 }}>{d}</div>)}
-            </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:1.5 }}>
+            <div className="cal-mini-grid">
                 {cells.map((day, idx) => {
-                    if (!day) return <div key={idx} style={{ aspectRatio:'1' }} />;
+                    if (!day) return <div key={idx} className="cal-mini-vacio" />;
                     const iso = isoDate(year, month, day);
                     const s = dias[iso] ? shifts.find(sh => sh.id === dias[iso]) : null;
                     return (
-                        <div key={idx} style={{ aspectRatio:'1', borderRadius:3, background: s ? s.bg : C.dayEmpty, border:`1px solid ${s ? s.bg+'88' : C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                            <span style={{ fontSize:6, color: s ? s.text : C.dayText, fontWeight:600 }}>{day}</span>
+                        <div key={idx} className={`cal-mini-dia${s ? ' con-turno' : ''}`} style={turnoVars(s, '88')}>
+                            <span className="cal-mini-num">{day}</span>
                         </div>
                     );
                 })}
@@ -186,7 +157,6 @@ function MiniMonth({ year, month, dias, shifts, C }) {
 
 // ── StatsView ────────────────────────────────────────────
 function StatsView({ dias, shifts, C }) {
-    const navBtn = { ...NAV_BTN, border: `1px solid ${C.border}`, background: C.navBg };
     const now = new Date();
     const [period, setPeriod] = useState('mes');
     const [year, setYear] = useState(now.getFullYear());
@@ -211,46 +181,44 @@ function StatsView({ dias, shifts, C }) {
     const periodLabel = period==='mes' ? `${MONTHS[month]} ${year}` : `${year}`;
 
     return (
-        <div style={{ padding:'0 16px 120px' }}>
-            <div style={{ display:'flex', background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, borderRadius:12, padding:4, margin:'14px 0 16px' }}>
+        <div className="cal-stats">
+            <div className="cal-periodo">
                 {[['mes','Mes'],['año','Año']].map(([id,lbl])=>(
-                    <button key={id} onClick={()=>setPeriod(id)} style={{ flex:1, height:36, borderRadius:9, background: period===id?C.violet:'transparent', border:'none', color: period===id?'#fff':C.mute, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', transition:'background 140ms ease' }}>{lbl}</button>
+                    <button key={id} className={`cal-periodo-btn${period===id ? ' activo' : ''}`} onClick={()=>setPeriod(id)}>{lbl}</button>
                 ))}
             </div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, marginBottom:20 }}>
-                <button onClick={prevPeriod} style={navBtn}>{Ico.left(C.text)}</button>
-                <span style={{ fontSize:14, fontWeight:700, color:C.text, minWidth:160, textAlign:'center' }}>{periodLabel}</span>
-                <button onClick={nextPeriod} style={navBtn}>{Ico.right(C.text)}</button>
+            <div className="cal-periodo-nav">
+                <button className="cal-nav-btn" onClick={prevPeriod}>{Ico.left(C.text)}</button>
+                <span className="cal-periodo-label">{periodLabel}</span>
+                <button className="cal-nav-btn" onClick={nextPeriod}>{Ico.right(C.text)}</button>
             </div>
-            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 60px 70px', padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
-                    <span style={{ fontSize:10, fontWeight:700, color:C.mute, letterSpacing:0.5 }}>TURNO</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:C.mute, textAlign:'right' }}>DÍAS</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:C.mute, textAlign:'right' }}>HORAS</span>
+            <div className="cal-tabla">
+                <div className="cal-tabla-fila cal-tabla-head">
+                    <span className="cal-tabla-th cal-tabla-th-primera">TURNO</span>
+                    <span className="cal-tabla-th">DÍAS</span>
+                    <span className="cal-tabla-th">HORAS</span>
                 </div>
                 {shifts.map(s => {
                     const cnt = stats[s.id] || 0;
                     const hrs = cnt * s.hours;
                     return (
-                        <div key={s.id} style={{ display:'grid', gridTemplateColumns:'1fr 60px 70px', padding:'12px 14px', borderBottom:`1px solid ${C.border}`, alignItems:'center' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                                <div style={{ width:32, height:32, borderRadius:8, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                                    <span style={{ fontSize:9, fontWeight:700, color:s.text }}>{s.short}</span>
-                                </div>
+                        <div key={s.id} className="cal-tabla-fila" style={turnoVars(s)}>
+                            <div className="cal-tabla-turno">
+                                <div className="cal-turno-chip"><span className="cal-turno-chip-txt">{s.short}</span></div>
                                 <div>
-                                    <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{s.label}</div>
-                                    {s.time && <div style={{ fontSize:10, color:C.mute }}>{s.time}</div>}
+                                    <div className="cal-turno-nombre">{s.label}</div>
+                                    {s.time && <div className="cal-turno-hora">{s.time}</div>}
                                 </div>
                             </div>
-                            <span style={{ fontSize:14, fontWeight:700, color:cnt>0?C.text:C.dim, textAlign:'right', fontVariantNumeric:'tabular-nums' }}>{cnt}</span>
-                            <span style={{ fontSize:13, fontWeight:700, color:cnt>0?s.text:C.dim, textAlign:'right', fontVariantNumeric:'tabular-nums' }}>{hrs>0?`${hrs}h`:'—'}</span>
+                            <span className={`cal-tabla-dias${cnt>0 ? '' : ' cero'}`}>{cnt}</span>
+                            <span className={`cal-tabla-horas${cnt>0 ? '' : ' cero'}`}>{hrs>0?`${hrs}h`:'—'}</span>
                         </div>
                     );
                 })}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 60px 70px', padding:'12px 14px', background:'rgba(124,94,245,0.08)' }}>
-                    <span style={{ fontSize:12, fontWeight:700, color:C.mute }}>TOTAL</span>
-                    <span style={{ fontSize:14, fontWeight:800, color:C.violet, textAlign:'right' }}>{totalDias}</span>
-                    <span style={{ fontSize:14, fontWeight:800, color:C.violet, textAlign:'right' }}>{totalHoras}h</span>
+                <div className="cal-tabla-fila cal-tabla-total">
+                    <span className="cal-tabla-total-label">TOTAL</span>
+                    <span className="cal-tabla-total-num">{totalDias}</span>
+                    <span className="cal-tabla-total-num">{totalHoras}h</span>
                 </div>
             </div>
         </div>
@@ -263,28 +231,27 @@ function GroupModal({ open, editing, onClose, onSave, onDelete }) {
     const [confirmDel, setConfirmDel] = useState(false);
     useEffect(() => { if(open){ setName(editing?editing.nombre:''); setConfirmDel(false); } }, [open, editing]);
     if (!open) return null;
-    const inputSt = { width:'100%', height:44, padding:'0 12px', boxSizing:'border-box', background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, borderRadius:10, color:'#fff', fontSize:14, fontFamily:'inherit', outline:'none' };
     return (
-        <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-            <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(6px)' }} />
-            <div style={{ position:'relative', width:'100%', maxWidth:'min(92vw,400px)', background:C.cardElev, borderRadius:18, border:`1px solid ${C.borderLight}`, padding:20, boxShadow:'0 20px 60px rgba(0,0,0,0.6)' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>{Ico.cal(C.violet,18)}<span style={{ fontSize:16, fontWeight:700, color:C.text }}>{editing?'Editar grupo':'Nuevo grupo'}</span></div>
-                    <button onClick={onClose} style={{ width:30, height:30, borderRadius:8, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.close()}</button>
+        <div className="cal-modal cal-paleta-fija">
+            <div className="cal-modal-fondo" onClick={onClose} />
+            <div className="cal-modal-caja">
+                <div className="cal-modal-top">
+                    <div className="cal-modal-titulo-fila">{Ico.cal(C.violet,18)}<span className="cal-modal-titulo">{editing?'Editar grupo':'Nuevo grupo'}</span></div>
+                    <button className="cal-cerrar" onClick={onClose}>{Ico.close()}</button>
                 </div>
-                <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginBottom:6 }}>NOMBRE DEL GRUPO</label>
-                <input style={inputSt} value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Grupo A, Turno Norte..." autoFocus onKeyDown={e=>e.key==='Enter'&&name.trim()&&onSave(name.trim())} />
-                <div style={{ display:'flex', gap:8, marginTop:16 }}>
-                    <button onClick={onClose} style={{ flex:1, height:44, borderRadius:11, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, color:C.text, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Cancelar</button>
-                    <button onClick={()=>name.trim()&&onSave(name.trim())} style={{ flex:1.4, height:44, borderRadius:11, background:C.violet, border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 6px 18px rgba(124,94,245,0.4)' }}>{editing?'Guardar':'Crear'}</button>
+                <label className="cal-label">NOMBRE DEL GRUPO</label>
+                <input className="cal-input" value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Grupo A, Turno Norte..." autoFocus onKeyDown={e=>e.key==='Enter'&&name.trim()&&onSave(name.trim())} />
+                <div className="cal-botones">
+                    <button className="cal-btn cal-btn-sec" onClick={onClose}>Cancelar</button>
+                    <button className="cal-btn cal-btn-primario" onClick={()=>name.trim()&&onSave(name.trim())}>{editing?'Guardar':'Crear'}</button>
                 </div>
-                {editing && !confirmDel && <button onClick={()=>setConfirmDel(true)} style={{ width:'100%', height:38, marginTop:10, borderRadius:10, background:C.redDim, border:`1px solid rgba(226,75,74,0.3)`, color:C.red, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>{Ico.trash(C.red)} Eliminar grupo</button>}
+                {editing && !confirmDel && <button className="cal-eliminar" onClick={()=>setConfirmDel(true)}>{Ico.trash(C.red)} Eliminar grupo</button>}
                 {editing && confirmDel && (
-                    <div style={{ marginTop:10, padding:'10px 12px', borderRadius:10, background:C.redDim, border:`1px solid rgba(226,75,74,0.4)` }}>
-                        <p style={{ fontSize:12, color:C.red, margin:'0 0 8px', fontWeight:600 }}>¿Eliminar "{editing.nombre}" y todos sus datos?</p>
-                        <div style={{ display:'flex', gap:6 }}>
-                            <button onClick={()=>setConfirmDel(false)} style={{ flex:1, height:34, borderRadius:8, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, color:C.text, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>No</button>
-                            <button onClick={onDelete} style={{ flex:1, height:34, borderRadius:8, background:C.red, border:'none', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Sí, eliminar</button>
+                    <div className="cal-confirmar">
+                        <p className="cal-confirmar-texto">¿Eliminar "{editing.nombre}" y todos sus datos?</p>
+                        <div className="cal-confirmar-botones">
+                            <button className="cal-btn-mini cal-btn-mini-no" onClick={()=>setConfirmDel(false)}>No</button>
+                            <button className="cal-btn-mini cal-btn-mini-si" onClick={onDelete}>Sí, eliminar</button>
                         </div>
                     </div>
                 )}
@@ -304,87 +271,85 @@ function ShiftForm({ shift, onBack, onSave, onDelete }) {
     const [confirmDel, setConfirmDel] = useState(false);
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-    const ColorPalette = ({ value, palette, onChange }) => (
-        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:6 }}>
+    // Paleta de colores: función (no componente) para no recrearla en cada render.
+    // Cada muestra lleva su color en línea, porque es justamente lo que muestra.
+    const paleta = (value, palette, onChange) => (
+        <div className="cal-paleta">
             {palette.map(c => (
-                <button key={c} onClick={() => onChange(c)} style={{ width:32, height:32, borderRadius:8, background:c, border: value===c ? '2.5px solid #fff' : '2px solid transparent', cursor:'pointer', flexShrink:0, transition:'border 80ms ease' }} />
+                <button key={c} className={`cal-color${value===c ? ' elegido' : ''}`} style={{ background: c }} onClick={() => onChange(c)} />
             ))}
-            <label style={{ width:32, height:32, borderRadius:8, border:`2px dashed ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', overflow:'hidden' }}>
-                <span style={{ fontSize:16, color:C.mute }}>+</span>
-                <input type="color" value={value} onChange={e=>onChange(e.target.value)} style={{ position:'absolute', opacity:0, width:'100%', height:'100%', cursor:'pointer' }} />
+            <label className="cal-color-mas">
+                <span className="cal-color-mas-signo">+</span>
+                <input type="color" className="cal-color-input" value={value} onChange={e=>onChange(e.target.value)} />
             </label>
         </div>
     );
 
-    const inputSt = { width:'100%', height:42, padding:'0 12px', boxSizing:'border-box', background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, borderRadius:10, color:'#fff', fontSize:14, fontFamily:'inherit', outline:'none' };
-
     return (
-        <div style={{ position:'fixed', inset:0, zIndex:110, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)' }} />
-            <div style={{ position:'relative', width:'100%', maxWidth:'min(92vw,420px)', background:C.cardElev, borderRadius:18, border:`1px solid ${C.borderLight}`, padding:20, boxShadow:'0 20px 60px rgba(0,0,0,0.7)', maxHeight:'90vh', overflowY:'auto' }} className="cal-scroll">
+        <div className="cal-modal cal-modal-superior cal-paleta-fija">
+            <div className="cal-modal-fondo cal-modal-fondo-oscuro" />
+            <div className="cal-modal-caja cal-modal-caja-form cal-scroll">
                 {/* Header */}
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-                    <button onClick={onBack} style={{ width:32, height:32, borderRadius:9, background:'rgba(255,255,255,0.06)', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.left()}</button>
-                    <span style={{ fontSize:15, fontWeight:700, color:C.text }}>{isNew ? 'Nuevo turno' : 'Editar turno'}</span>
+                <div className="cal-form-top">
+                    <button className="cal-volver" onClick={onBack}>{Ico.left()}</button>
+                    <span className="cal-form-titulo">{isNew ? 'Nuevo turno' : 'Editar turno'}</span>
                 </div>
 
-                {/* Preview */}
-                <div style={{ background:form.bg, borderRadius:14, padding:'14px 16px', marginBottom:18, display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ width:48, height:48, borderRadius:12, background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <span style={{ fontSize:13, fontWeight:800, color:form.text }}>{form.short||'?'}</span>
-                    </div>
+                {/* Preview con los colores elegidos */}
+                <div className="cal-preview" style={turnoVars(form)}>
+                    <div className="cal-preview-chip"><span className="cal-preview-corto">{form.short||'?'}</span></div>
                     <div>
-                        <div style={{ fontSize:15, fontWeight:700, color:form.text }}>{form.label||'Nombre del turno'}</div>
-                        {form.time && <div style={{ fontSize:12, color:form.text, opacity:0.75 }}>{form.time}</div>}
+                        <div className="cal-preview-nombre">{form.label||'Nombre del turno'}</div>
+                        {form.time && <div className="cal-preview-hora">{form.time}</div>}
                     </div>
                 </div>
 
                 {/* Nombre */}
-                <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginBottom:6 }}>NOMBRE</label>
-                <input style={{ ...inputSt, marginBottom:12 }} value={form.label} onChange={e=>set('label',e.target.value)} placeholder="Ej: Día, Noche, Libre..." />
+                <label className="cal-label">NOMBRE</label>
+                <input className="cal-input cal-input-form cal-input-separado" value={form.label} onChange={e=>set('label',e.target.value)} placeholder="Ej: Día, Noche, Libre..." />
 
                 {/* Abreviatura */}
-                <div style={{ display:'flex', gap:10, marginBottom:12 }}>
-                    <div style={{ flex:1 }}>
-                        <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginBottom:6 }}>ABREVIATURA</label>
-                        <input style={inputSt} value={form.short} onChange={e=>set('short',e.target.value.slice(0,6))} placeholder="Día, Noc..." />
+                <div className="cal-form-fila">
+                    <div className="cal-form-col">
+                        <label className="cal-label">ABREVIATURA</label>
+                        <input className="cal-input cal-input-form" value={form.short} onChange={e=>set('short',e.target.value.slice(0,6))} placeholder="Día, Noc..." />
                     </div>
-                    <div style={{ flex:1 }}>
-                        <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginBottom:6 }}>HORAS</label>
-                        <input style={inputSt} type="number" min="0" max="24" value={form.hours} onChange={e=>set('hours',parseInt(e.target.value)||0)} />
+                    <div className="cal-form-col">
+                        <label className="cal-label">HORAS</label>
+                        <input className="cal-input cal-input-form" type="number" min="0" max="24" value={form.hours} onChange={e=>set('hours',parseInt(e.target.value)||0)} />
                     </div>
                 </div>
 
                 {/* Horario */}
-                <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginBottom:6 }}>HORARIO (opcional)</label>
-                <input style={{ ...inputSt, marginBottom:16 }} value={form.time} onChange={e=>set('time',e.target.value)} placeholder="Ej: 06:00–18:00" />
+                <label className="cal-label">HORARIO (opcional)</label>
+                <input className="cal-input cal-input-form cal-input-separado-16" value={form.time} onChange={e=>set('time',e.target.value)} placeholder="Ej: 06:00–18:00" />
 
                 {/* Color de fondo */}
-                <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block' }}>COLOR DE FONDO</label>
-                <ColorPalette value={form.bg} palette={PRESET_BG} onChange={v=>set('bg',v)} />
+                <label className="cal-label cal-label-sin-margen">COLOR DE FONDO</label>
+                {paleta(form.bg, PRESET_BG, v=>set('bg',v))}
 
                 {/* Color de texto */}
-                <label style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.6, display:'block', marginTop:14 }}>COLOR DE TEXTO</label>
-                <ColorPalette value={form.text} palette={PRESET_TX} onChange={v=>set('text',v)} />
+                <label className="cal-label cal-label-sin-margen cal-label-separado">COLOR DE TEXTO</label>
+                {paleta(form.text, PRESET_TX, v=>set('text',v))}
 
                 {/* Botones */}
-                <div style={{ display:'flex', gap:8, marginTop:20 }}>
-                    <button onClick={onBack} style={{ flex:1, height:44, borderRadius:11, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, color:C.text, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Cancelar</button>
-                    <button onClick={() => form.label.trim() && onSave(form)} style={{ flex:1.4, height:44, borderRadius:11, background:C.violet, border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', opacity: form.label.trim() ? 1 : 0.5 }}>
+                <div className="cal-botones cal-botones-form">
+                    <button className="cal-btn cal-btn-sec" onClick={onBack}>Cancelar</button>
+                    <button className={`cal-btn cal-btn-primario cal-btn-sin-sombra${form.label.trim() ? '' : ' deshabilitado'}`} onClick={() => form.label.trim() && onSave(form)}>
                         {isNew ? 'Crear' : 'Guardar'}
                     </button>
                 </div>
                 {!isNew && !confirmDel && (
-                    <button onClick={()=>setConfirmDel(true)} style={{ width:'100%', height:38, marginTop:10, borderRadius:10, background:C.redDim, border:`1px solid rgba(226,75,74,0.3)`, color:C.red, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                    <button className="cal-eliminar" onClick={()=>setConfirmDel(true)}>
                         {Ico.trash(C.red)} Eliminar turno
                     </button>
                 )}
                 {!isNew && confirmDel && (
-                    <div style={{ marginTop:10, padding:'10px 12px', borderRadius:10, background:C.redDim, border:`1px solid rgba(226,75,74,0.4)` }}>
-                        <p style={{ fontSize:12, color:C.red, margin:'0 0 8px', fontWeight:600 }}>¿Eliminar este turno? Los días pintados con él quedarán sin color.</p>
-                        <div style={{ display:'flex', gap:6 }}>
-                            <button onClick={()=>setConfirmDel(false)} style={{ flex:1, height:34, borderRadius:8, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, color:C.text, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>No</button>
-                            <button onClick={()=>onDelete(shift.id)} style={{ flex:1, height:34, borderRadius:8, background:C.red, border:'none', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Sí, eliminar</button>
+                    <div className="cal-confirmar">
+                        <p className="cal-confirmar-texto">¿Eliminar este turno? Los días pintados con él quedarán sin color.</p>
+                        <div className="cal-confirmar-botones">
+                            <button className="cal-btn-mini cal-btn-mini-no" onClick={()=>setConfirmDel(false)}>No</button>
+                            <button className="cal-btn-mini cal-btn-mini-si" onClick={()=>onDelete(shift.id)}>Sí, eliminar</button>
                         </div>
                     </div>
                 )}
@@ -412,43 +377,35 @@ function ShiftModal({ open, shifts, onClose, onSaveShift, onDeleteShift, onReord
         );
     }
 
-    const btnSm = (disabled) => ({
-        width:28, height:28, borderRadius:7, background: disabled?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.08)',
-        border:`1px solid ${disabled?'#222':C.border}`, display:'flex', alignItems:'center', justifyContent:'center',
-        cursor: disabled?'default':'pointer', opacity: disabled?0.3:1,
-    });
-
     return (
-        <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-            <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(6px)' }} />
-            <div style={{ position:'relative', width:'100%', maxWidth:'min(92vw,400px)', background:C.cardElev, borderRadius:18, border:`1px solid ${C.borderLight}`, padding:20, boxShadow:'0 20px 60px rgba(0,0,0,0.6)', maxHeight:'85vh', display:'flex', flexDirection:'column' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-                    <span style={{ fontSize:16, fontWeight:700, color:C.text }}>Tipos de turno</span>
-                    <button onClick={onClose} style={{ width:30, height:30, borderRadius:8, background:'rgba(255,255,255,0.05)', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.close()}</button>
+        <div className="cal-modal cal-paleta-fija">
+            <div className="cal-modal-fondo" onClick={onClose} />
+            <div className="cal-modal-caja cal-modal-caja-lista">
+                <div className="cal-modal-top">
+                    <span className="cal-modal-titulo">Tipos de turno</span>
+                    <button className="cal-cerrar" onClick={onClose}>{Ico.close()}</button>
                 </div>
 
-                <div style={{ overflowY:'auto', flex:1 }} className="cal-scroll">
+                <div className="cal-scroll cal-turnos-lista">
                     {shifts.map((s, i) => (
-                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
-                            <div style={{ width:40, height:40, borderRadius:10, background:s.bg, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                <span style={{ fontSize:10, fontWeight:700, color:s.text }}>{s.short}</span>
+                        <div key={s.id} className="cal-turno-fila" style={turnoVars(s)}>
+                            <div className="cal-turno-chip cal-turno-chip-grande"><span className="cal-turno-chip-txt">{s.short}</span></div>
+                            <div className="cal-turno-info">
+                                <div className="cal-turno-nombre cal-turno-nombre-corto">{s.label}</div>
+                                <div className="cal-turno-hora">{s.time||`${s.hours>0?s.hours+'h':'Sin horario'}`}</div>
                             </div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.label}</div>
-                                <div style={{ fontSize:10, color:C.mute }}>{s.time||`${s.hours>0?s.hours+'h':'Sin horario'}`}</div>
+                            <div className="cal-orden">
+                                <button className="cal-orden-btn" disabled={i===0} onClick={() => onReorder(i,-1)}>{Ico.up(i===0?'#333':'#fff')}</button>
+                                <button className="cal-orden-btn" disabled={i===shifts.length-1} onClick={() => onReorder(i,1)}>{Ico.down(i===shifts.length-1?'#333':'#fff')}</button>
                             </div>
-                            <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-                                <button onClick={() => i>0 && onReorder(i,-1)} style={btnSm(i===0)}>{Ico.up(i===0?'#333':'#fff')}</button>
-                                <button onClick={() => i<shifts.length-1 && onReorder(i,1)} style={btnSm(i===shifts.length-1)}>{Ico.down(i===shifts.length-1?'#333':'#fff')}</button>
-                            </div>
-                            <button onClick={() => { setEditingShift(s); setView('form'); }} style={{ width:34, height:34, borderRadius:9, background:'rgba(255,255,255,0.06)', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                            <button className="cal-editar" onClick={() => { setEditingShift(s); setView('form'); }}>
                                 {Ico.edit()}
                             </button>
                         </div>
                     ))}
                 </div>
 
-                <button onClick={() => { setEditingShift(null); setView('form'); }} style={{ width:'100%', height:46, marginTop:14, borderRadius:12, background:C.violet, border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8, boxShadow:'0 6px 18px rgba(124,94,245,0.4)' }}>
+                <button className="cal-crear-turno" onClick={() => { setEditingShift(null); setView('form'); }}>
                     {Ico.plus('#fff',16)} Crear turno nuevo
                 </button>
             </div>
@@ -463,8 +420,8 @@ const CalendarioPage = () => {
 
     const [themeKey, setThemeKey] = useState(() => localStorage.getItem('cal_theme') || 'oscuro');
     const [themeOpen, setThemeOpen] = useState(false);
-    const C = THEMES[themeKey] || THEMES.oscuro;
-    const navBtn = { ...NAV_BTN, border: `1px solid ${C.border}`, background: C.navBg };
+    const temaActual = THEMES[themeKey] ? themeKey : 'oscuro';
+    const C = THEMES[temaActual];
 
     const [shifts, setShifts] = useState(loadShifts);
     const [grupos, setGrupos] = useState([]);
@@ -637,32 +594,19 @@ const CalendarioPage = () => {
     };
 
     return (
-        <div style={{ width:'100%', height:'100%', background:C.bg, color:C.text, display:'flex', flexDirection:'column', fontFamily:'-apple-system,"SF Pro Text","Inter",system-ui,sans-serif', overflow:'hidden', position:'relative' }}>
-            <style>{`
-                .cal-scroll { scrollbar-width:thin; scrollbar-color:rgba(124,94,245,0.35) transparent; }
-                .cal-scroll::-webkit-scrollbar { width:4px; }
-                .cal-scroll::-webkit-scrollbar-thumb { background:rgba(124,94,245,0.35); border-radius:4px; }
-                @keyframes cal-slide-up {
-                    from { transform: translateY(100%); opacity: 0; }
-                    to   { transform: translateY(0);    opacity: 1; }
-                }
-                @keyframes cal-pop {
-                    from { transform: scale(0.5) translateY(16px); opacity: 0; }
-                    to   { transform: scale(1)   translateY(0);    opacity: 1; }
-                }
-            `}</style>
-
+        // .cal-tema-* define las variables de color del tema elegido (ver CalendarioPage.css)
+        <div className={`cal cal-tema-${temaActual}`}>
             {/* Header */}
-            <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${C.border}`, background:C.bg, flexShrink:0 }}>
-                <button onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })} style={{ width:36,height:36,borderRadius:10,background:C.navBg,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+            <div className="cal-header">
+                <button className="cal-header-btn" onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })}>
                     {Ico.back(C.text)}
                 </button>
-                <span style={{ fontSize:14, fontWeight:700, letterSpacing:3, color:C.text }}>CALENDARIO</span>
-                <div style={{ display:'flex', gap:6 }}>
-                    <button onClick={() => setThemeOpen(v => !v)} style={{ width:36,height:36,borderRadius:10,background:themeOpen?`${C.violet}22`:C.navBg,border:`1px solid ${themeOpen?C.violet:C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+                <span className="cal-header-titulo">CALENDARIO</span>
+                <div className="cal-header-acciones">
+                    <button className={`cal-header-btn${themeOpen ? ' activo' : ''}`} onClick={() => setThemeOpen(v => !v)}>
                         {Ico.palette(themeOpen ? C.violet : C.mute)}
                     </button>
-                    <button onClick={() => { setEditingGrupo(null); setGroupModal(true); }} style={{ width:36,height:36,borderRadius:10,background:C.navBg,border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer' }}>
+                    <button className="cal-header-btn" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>
                         {Ico.plus()}
                     </button>
                 </div>
@@ -670,50 +614,40 @@ const CalendarioPage = () => {
 
             {/* Selector de tema */}
             {themeOpen && (
-                <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.border}`, background:C.card, flexShrink:0 }}>
-                    <p style={{ fontSize:10, fontWeight:700, color:C.mute, letterSpacing:0.8, margin:'0 0 8px' }}>TEMA</p>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-                        {Object.entries(THEME_LABELS).map(([key, label]) => {
-                            const prev = THEME_PREVIEWS[key];
-                            const active = themeKey === key;
-                            return (
-                                <button key={key} onClick={() => changeTheme(key)} style={{
-                                    height:56, borderRadius:12, background:prev.bg,
-                                    border:`2px solid ${active ? prev.accent : C.border}`,
-                                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
-                                    cursor:'pointer', fontFamily:'inherit', transition:'border 120ms ease',
-                                    boxShadow: active ? `0 0 0 1px ${prev.accent}` : 'none',
-                                }}>
-                                    <div style={{ width:16, height:16, borderRadius:'50%', background:prev.accent }} />
-                                    <span style={{ fontSize:9, fontWeight:700, color:active?prev.accent:'#888', letterSpacing:0.4 }}>{label.toUpperCase()}</span>
-                                </button>
-                            );
-                        })}
+                <div className="cal-temas">
+                    <p className="cal-temas-label">TEMA</p>
+                    <div className="cal-temas-grid">
+                        {Object.entries(THEME_LABELS).map(([key, label]) => (
+                            <button key={key} className={`cal-tema-btn cal-tema-btn-${key}${themeKey === key ? ' activo' : ''}`} onClick={() => changeTheme(key)}>
+                                <div className="cal-tema-punto" />
+                                <span className="cal-tema-nombre">{label.toUpperCase()}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
 
             {/* Group selector */}
             {!loading && grupos.length > 0 && (
-                <div style={{ padding:'10px 16px', borderBottom:`1px solid ${C.border}`, flexShrink:0, position:'relative', zIndex:10 }}>
-                    <button onClick={() => setGroupsOpen(v=>!v)} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, height:42, padding:'0 14px', borderRadius:12, background:'rgba(124,94,245,0.10)', border:`1px solid rgba(124,94,245,0.28)`, cursor:'pointer', fontFamily:'inherit' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>{Ico.cal(C.violet,14)}<span style={{ fontSize:13, fontWeight:700, color:C.text }}>{activeGrupo?.nombre||'—'}</span></div>
+                <div className="cal-grupo">
+                    <button className="cal-grupo-btn" onClick={() => setGroupsOpen(v=>!v)}>
+                        <div className="cal-grupo-actual">{Ico.cal(C.violet,14)}<span className="cal-grupo-nombre">{activeGrupo?.nombre||'—'}</span></div>
                         {Ico.chev(C.mute)}
                     </button>
                     {groupsOpen && (
-                        <div style={{ position:'absolute', left:16, right:16, top:'calc(100% - 4px)', background:C.cardElev, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', boxShadow:'0 16px 40px rgba(0,0,0,0.5)', zIndex:20 }}>
+                        <div className="cal-grupos">
                             {grupos.map(g => (
-                                <div key={g._id} style={{ display:'flex', alignItems:'center', padding:'0 14px', borderBottom:`1px solid ${C.border}`, background:g._id===activeGrupo?._id?'rgba(124,94,245,0.10)':'transparent' }}>
-                                    <button onClick={() => switchGrupoData(g)} style={{ flex:1, height:48, background:'transparent', border:'none', textAlign:'left', cursor:'pointer', fontFamily:'inherit' }}>
-                                        <span style={{ fontSize:13, fontWeight:600, color:g._id===activeGrupo?._id?C.violet:C.text }}>{g.nombre}</span>
+                                <div key={g._id} className={`cal-grupos-item${g._id===activeGrupo?._id ? ' activo' : ''}`}>
+                                    <button className="cal-grupos-elegir" onClick={() => switchGrupoData(g)}>
+                                        <span className="cal-grupos-nombre">{g.nombre}</span>
                                     </button>
-                                    <button onClick={() => { setEditingGrupo(g); setGroupModal(true); setGroupsOpen(false); }} style={{ width:30,height:30,borderRadius:8,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0 }}>
+                                    <button className="cal-grupos-editar" onClick={() => { setEditingGrupo(g); setGroupModal(true); setGroupsOpen(false); }}>
                                         {Ico.edit()}
                                     </button>
                                 </div>
                             ))}
-                            <button onClick={() => { setEditingGrupo(null); setGroupModal(true); setGroupsOpen(false); }} style={{ width:'100%', height:44, display:'flex', alignItems:'center', gap:8, padding:'0 14px', background:'transparent', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-                                {Ico.plus(C.mute,14)}<span style={{ fontSize:13, color:C.mute }}>Nuevo grupo</span>
+                            <button className="cal-grupos-nuevo" onClick={() => { setEditingGrupo(null); setGroupModal(true); setGroupsOpen(false); }}>
+                                {Ico.plus(C.mute,14)}<span className="cal-grupos-nuevo-label">Nuevo grupo</span>
                             </button>
                         </div>
                     )}
@@ -721,42 +655,42 @@ const CalendarioPage = () => {
             )}
 
             {!loading && grupos.length === 0 && (
-                <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:32, gap:14 }}>
+                <div className="cal-sin-grupos">
                     {Ico.cal(C.dim,48)}
-                    <p style={{ color:C.mute, fontSize:14, textAlign:'center', margin:0 }}>Sin grupos de calendario.<br/>Crea uno para comenzar.</p>
-                    <button onClick={() => { setEditingGrupo(null); setGroupModal(true); }} style={{ height:44, padding:'0 28px', borderRadius:12, background:C.violet, border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Crear primer grupo</button>
+                    <p className="cal-sin-grupos-texto">Sin grupos de calendario.<br/>Crea uno para comenzar.</p>
+                    <button className="cal-btn-crear" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>Crear primer grupo</button>
                 </div>
             )}
 
-            {loading && <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:C.mute, fontSize:13 }}>Cargando…</span></div>}
+            {loading && <div className="cal-cargando"><span className="cal-cargando-texto">Cargando…</span></div>}
 
             {!loading && activeGrupo && (
                 <>
                     {/* Tab bar */}
-                    <div style={{ display:'flex', padding:'8px 16px', borderBottom:`1px solid ${C.border}`, gap:4, flexShrink:0 }}>
+                    <div className="cal-tabs">
                         {[['mes','MES'],['año','AÑO'],['resumen','RESUMEN']].map(([id,lbl])=>(
-                            <button key={id} onClick={() => { setTab(id); if(id!=='mes') setPaintMode(false); }} style={{ flex:1, height:34, borderRadius:9, background:tab===id?C.violet:'transparent', border:`1px solid ${tab===id?'transparent':C.border}`, color:tab===id?'#fff':C.mute, fontSize:11, fontWeight:700, letterSpacing:0.6, cursor:'pointer', fontFamily:'inherit', transition:'background 140ms ease' }}>{lbl}</button>
+                            <button key={id} className={`cal-tab${tab===id ? ' activo' : ''}`} onClick={() => { setTab(id); if(id!=='mes') setPaintMode(false); }}>{lbl}</button>
                         ))}
                     </div>
 
-                    <div className="cal-scroll" style={{ flex:1, overflowY:'auto', overflowX:'hidden', paddingBottom: tab==='mes' ? (paintMode ? 170 : 90) : 0 }}>
+                    <div className={`cal-scroll cal-contenido${tab==='mes' ? (paintMode ? ' pintando' : ' con-pie') : ''}`}>
                         {tab==='mes' && (
-                            <div ref={monthCaptureRef} style={{ padding:'0 16px', background:C.bg }}>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0 12px' }}>
-                                    <button onClick={prevMonth} style={navBtn}>{Ico.left(C.text)}</button>
-                                    <span style={{ fontSize:16, fontWeight:800, color:C.text, letterSpacing:0.3 }}>{MONTHS[month].toUpperCase()} {year}</span>
-                                    <div style={{ display:'flex', gap:6 }}>
-                                        <button onClick={nextMonth} style={navBtn}>{Ico.right(C.text)}</button>
-                                        <button onClick={handleShare} style={{ width:36, height:36, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
+                            <div ref={monthCaptureRef} className="cal-mes">
+                                <div className="cal-mes-nav">
+                                    <button className="cal-nav-btn" onClick={prevMonth}>{Ico.left(C.text)}</button>
+                                    <span className="cal-mes-titulo">{MONTHS[month].toUpperCase()} {year}</span>
+                                    <div className="cal-mes-acciones">
+                                        <button className="cal-nav-btn" onClick={nextMonth}>{Ico.right(C.text)}</button>
+                                        <button className="cal-compartir" onClick={handleShare}>{Ico.share()}</button>
                                     </div>
                                 </div>
-                                <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} C={C} />
-                                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:16 }}>
+                                <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} />
+                                <div className="cal-leyenda">
                                     {shifts.map(s => (
-                                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(255,255,255,0.04)', border:`1px solid ${C.border}`, borderRadius:8, padding:'4px 8px' }}>
-                                            <div style={{ width:10, height:10, borderRadius:3, background:s.bg }} />
-                                            <span style={{ fontSize:10.5, color:C.mute, fontWeight:600 }}>{s.label}</span>
-                                            {s.time && <span style={{ fontSize:9.5, color:C.dim }}>{s.time}</span>}
+                                        <div key={s.id} className="cal-leyenda-item" style={turnoVars(s)}>
+                                            <div className="cal-leyenda-color" />
+                                            <span className="cal-leyenda-nombre">{s.label}</span>
+                                            {s.time && <span className="cal-leyenda-hora">{s.time}</span>}
                                         </div>
                                     ))}
                                 </div>
@@ -764,39 +698,37 @@ const CalendarioPage = () => {
                         )}
 
                         {tab==='año' && (
-                            <div style={{ padding:'12px 16px 120px' }}>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-                                    <button onClick={() => setYearAnual(y=>y-1)} style={navBtn}>{Ico.left(C.text)}</button>
-                                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                                        <span style={{ fontSize:16, fontWeight:800, color:C.text }}>{yearAnual}</span>
-                                        <button onClick={handleShare} style={{ width:34, height:34, borderRadius:9, background:'rgba(124,94,245,0.12)', border:`1px solid rgba(124,94,245,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>{Ico.share()}</button>
+                            <div className="cal-anio">
+                                <div className="cal-anio-nav">
+                                    <button className="cal-nav-btn" onClick={() => setYearAnual(y=>y-1)}>{Ico.left(C.text)}</button>
+                                    <div className="cal-anio-centro">
+                                        <span className="cal-anio-actual">{yearAnual}</span>
+                                        <button className="cal-compartir cal-compartir-chico" onClick={handleShare}>{Ico.share()}</button>
                                     </div>
-                                    <button onClick={() => setYearAnual(y=>y+1)} style={navBtn}>{Ico.right(C.text)}</button>
+                                    <button className="cal-nav-btn" onClick={() => setYearAnual(y=>y+1)}>{Ico.right(C.text)}</button>
                                 </div>
-                                <div ref={yearCaptureRef} style={{ background:C.bg }}>
-                                    <div style={{ textAlign:'center', padding:'6px 0 14px' }}>
-                                        <div style={{ fontSize:11, fontWeight:700, color:C.violet, letterSpacing:1.5 }}>{activeGrupo?.nombre?.toUpperCase()}</div>
-                                        <div style={{ fontSize:22, fontWeight:800, color:C.text, marginTop:2 }}>{yearAnual}</div>
+                                <div ref={yearCaptureRef} className="cal-anio-captura">
+                                    <div className="cal-anio-titulo">
+                                        <div className="cal-anio-grupo">{activeGrupo?.nombre?.toUpperCase()}</div>
+                                        <div className="cal-anio-num">{yearAnual}</div>
                                     </div>
-                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                                    {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} C={C} />)}
+                                    <div className="cal-anio-grid">
+                                        {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} />)}
+                                    </div>
                                 </div>
-                                </div>
-                                <div style={{ marginTop:16, background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
-                                    <div style={{ padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
-                                        <span style={{ fontSize:10.5, fontWeight:700, color:C.mute, letterSpacing:0.5 }}>ESTADÍSTICA ANUAL {yearAnual}</span>
+                                <div className="cal-anio-stats">
+                                    <div className="cal-anio-stats-head">
+                                        <span className="cal-anio-stats-label">ESTADÍSTICA ANUAL {yearAnual}</span>
                                     </div>
                                     {(() => {
                                         const counts = {}; shifts.forEach(s => counts[s.id]=0);
                                         Object.entries(dias).forEach(([date,sid]) => { if(new Date(date+'T00:00:00').getFullYear()===yearAnual && counts[sid]!==undefined) counts[sid]++; });
                                         return shifts.map(s => { const cnt=counts[s.id]||0; const hrs=cnt*s.hours; return (
-                                            <div key={s.id} style={{ display:'flex', alignItems:'center', padding:'10px 14px', borderBottom:`1px solid ${C.border}` }}>
-                                                <div style={{ width:28,height:28,borderRadius:7,background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',marginRight:10,flexShrink:0 }}>
-                                                    <span style={{ fontSize:8.5,fontWeight:700,color:s.text }}>{s.short}</span>
-                                                </div>
-                                                <span style={{ fontSize:13,fontWeight:600,color:C.text,flex:1 }}>{s.label}</span>
-                                                <span style={{ fontSize:13,fontWeight:700,color:C.mute,marginRight:14 }}>{cnt} días</span>
-                                                <span style={{ fontSize:13,fontWeight:700,color:s.text }}>{hrs>0?`${hrs}h`:'—'}</span>
+                                            <div key={s.id} className="cal-anio-fila" style={turnoVars(s)}>
+                                                <div className="cal-turno-chip cal-turno-chip-chico"><span className="cal-turno-chip-txt">{s.short}</span></div>
+                                                <span className="cal-anio-fila-nombre">{s.label}</span>
+                                                <span className="cal-anio-fila-dias">{cnt} días</span>
+                                                <span className="cal-anio-fila-horas">{hrs>0?`${hrs}h`:'—'}</span>
                                             </div>
                                         ); });
                                     })()}
@@ -809,74 +741,32 @@ const CalendarioPage = () => {
 
                     {/* Botón PINTAR (cuando no está en modo pintar) */}
                     {tab==='mes' && !paintMode && (
-                        <div style={{ position:'fixed', left:0, right:0, bottom:0, padding:'10px 16px 28px', background:`linear-gradient(0deg,${C.bg} 60%,transparent)`, zIndex:40 }}>
-                            <button onClick={enterPaintMode} style={{ width:'100%', height:48, borderRadius:13, background:C.violet, border:'none', color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:0.4, boxShadow:'0 6px 20px rgba(124,94,245,0.45)' }}>
-                                PINTAR
-                            </button>
+                        <div className="cal-pintar">
+                            <button className="cal-pintar-btn" onClick={enterPaintMode}>PINTAR</button>
                         </div>
                     )}
 
                     {/* Barra de pintura — animada, fija al fondo */}
                     {tab==='mes' && paintMode && (
-                        <div style={{
-                            position:'fixed', left:0, right:0, bottom:0, zIndex:40,
-                            background:C.cardElev, borderTop:`1px solid ${C.borderLight}`,
-                            padding:'12px 16px 28px',
-                            boxShadow:'0 -8px 30px rgba(0,0,0,0.5)',
-                            animation:'cal-slide-up 260ms cubic-bezier(0.34,1.1,0.64,1) both',
-                        }}>
-                            {/* Botones de turno con animación escalonada */}
-                            <div style={{ display:'flex', gap:6, marginBottom:10, overflowX:'auto', paddingBottom:2, alignItems:'center' }}>
-                                {/* Botón borrar */}
-                                <button
-                                    onClick={() => setSelectedShift(null)}
-                                    style={{
-                                        flexShrink:0, height:44, padding:'0 12px', borderRadius:10,
-                                        background: selectedShift===null ? C.red : C.redDim,
-                                        border:`1.5px solid ${selectedShift===null ? C.red : 'rgba(226,75,74,0.35)'}`,
-                                        color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
-                                        display:'flex', alignItems:'center', gap:5, transition:'all 120ms ease',
-                                        animation:'cal-pop 220ms cubic-bezier(0.34,1.2,0.64,1) 0ms both',
-                                    }}
-                                >
+                        <div className="cal-barra">
+                            {/* Botones de turno con animación escalonada (el retraso va en línea) */}
+                            <div className="cal-barra-turnos">
+                                <button className={`cal-borrar${selectedShift===null ? ' elegido' : ''}`} onClick={() => setSelectedShift(null)}>
                                     {Ico.eraser()} Borrar
                                 </button>
-                                {/* Botones de turnos */}
-                                {shifts.map((s, i) => {
-                                    const sel = selectedShift === s.id;
-                                    return (
-                                        <button key={s.id} onClick={() => setSelectedShift(s.id)} style={{
-                                            flexShrink:0, height:44, padding:'0 14px', borderRadius:10,
-                                            background: sel ? s.bg : 'rgba(255,255,255,0.06)',
-                                            border:`2px solid ${sel ? s.bg+'cc' : C.border}`,
-                                            color: sel ? s.text : C.mute, fontSize:12, fontWeight:700,
-                                            cursor:'pointer', fontFamily:'inherit', transition:'all 120ms ease',
-                                            boxShadow: sel ? `0 4px 14px ${s.bg}88` : 'none',
-                                            animation:`cal-pop 220ms cubic-bezier(0.34,1.2,0.64,1) ${(i+1)*55}ms both`,
-                                        }}>
-                                            {s.short}
-                                        </button>
-                                    );
-                                })}
-                                {/* Botón gestionar turnos */}
-                                <button
-                                    onClick={() => setShiftModal(true)}
-                                    style={{
-                                        flexShrink:0, width:44, height:44, borderRadius:10,
-                                        background:'rgba(255,255,255,0.06)', border:`1.5px solid ${C.border}`,
-                                        display:'flex', alignItems:'center', justifyContent:'center',
-                                        cursor:'pointer', transition:'all 120ms ease',
-                                        animation:`cal-pop 220ms cubic-bezier(0.34,1.2,0.64,1) ${(shifts.length+1)*55}ms both`,
-                                    }}
-                                    title="Gestionar turnos"
-                                >
+                                {shifts.map((s, i) => (
+                                    <button key={s.id} onClick={() => setSelectedShift(s.id)}
+                                        className={`cal-pincel${selectedShift === s.id ? ' elegido' : ''}`}
+                                        style={{ ...turnoVars(s, 'cc'), '--t-sombra': s.bg + '88', animationDelay: `${(i+1)*55}ms` }}>
+                                        {s.short}
+                                    </button>
+                                ))}
+                                <button className="cal-gestionar" title="Gestionar turnos" onClick={() => setShiftModal(true)}
+                                    style={{ animationDelay: `${(shifts.length+1)*55}ms` }}>
                                     {Ico.gear()}
                                 </button>
                             </div>
-                            {/* Botón salir */}
-                            <button onClick={() => setPaintMode(false)} style={{ width:'100%', height:44, borderRadius:12, background:C.red, border:'none', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit', letterSpacing:0.3, animation:'cal-pop 200ms cubic-bezier(0.34,1.2,0.64,1) 60ms both' }}>
-                                SALIR DEL MODO EDICIÓN
-                            </button>
+                            <button className="cal-salir" onClick={() => setPaintMode(false)}>SALIR DEL MODO EDICIÓN</button>
                         </div>
                     )}
                 </>
