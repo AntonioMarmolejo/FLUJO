@@ -98,17 +98,17 @@ const tiempoRelativo = (fecha, ahora) => {
 };
 
 const Paso = ({ estado, titulo, detalle, last }) => (
-    <div className={`ce-step ce-step-${estado}`}>
-        <div className="ce-step-rail">
-            <div className="ce-step-dot">
+    <div className={`ce__step ce__step--${estado}`}>
+        <div className="ce__step-rail">
+            <div className="ce__step-dot">
                 {estado === 'done' && <IconCheck size={15} />}
-                {estado === 'current' && <span className="ce-step-dot-inner" />}
+                {estado === 'current' && <span className="ce__step-dot-inner" />}
             </div>
-            {!last && <div className="ce-step-line" />}
+            {!last && <div className="ce__step-line" />}
         </div>
-        <div className="ce-step-text">
-            <span className="ce-step-title">{titulo}</span>
-            {detalle && <span className="ce-step-detail">{detalle}</span>}
+        <div className="ce__step-text">
+            <span className="ce__step-title">{titulo}</span>
+            {detalle && <span className="ce__step-detail">{detalle}</span>}
         </div>
     </div>
 );
@@ -214,31 +214,31 @@ const CuentaEstadoPage = () => {
     const activa = !enEspera;
 
     return (
-        <div className={`ce-wrapper ${activa ? 'ce-active' : 'ce-pending'}`}>
-            <main className="ce-card">
-                <div className="ce-brand">
-                    <span className="ce-brand-logo"><IconLogo /></span>
-                    <span className="ce-brand-name">FLUJO</span>
+        <div className={`ce ${activa ? 'ce--active' : 'ce--pending'}`}>
+            <main className="ce__card">
+                <div className="ce__brand">
+                    <span className="ce__brand-logo"><IconLogo /></span>
+                    <span className="ce__brand-name">FLUJO</span>
                 </div>
 
-                <div className="ce-hero" aria-hidden="true">
+                <div className="ce__hero" aria-hidden="true">
                     <IconShield active={activa} />
-                    <span className="ce-hero-badge">
+                    <span className="ce__hero-badge">
                         {activa ? <IconCheck size={15} width={3.2} /> : <IconClock size={15} />}
                     </span>
                 </div>
 
-                <span className="ce-pill">
-                    {activa ? <IconCheck size={13} /> : <span className="ce-pill-dot" />}
+                <span className="ce__pill">
+                    {activa ? <IconCheck size={13} /> : <span className="ce__pill-dot" />}
                     {activa ? '¡Cuenta activada!' : isSuspended ? 'Cuenta suspendida' : 'Cuenta pendiente de activación'}
                 </span>
 
-                <h1 className="ce-title">
+                <h1 className="ce__title">
                     {activa ? 'Ya tienes acceso'
                         : isSuspended ? `${nombre ? `${nombre}, tu` : 'Tu'} acceso está suspendido`
                         : `¡Hola${nombre ? `, ${nombre}` : ''}! Tu cuenta ya fue creada`}
                 </h1>
-                <p className="ce-lead">
+                <p className="ce__lead">
                     {activa
                         ? 'Un administrador revisó tu cuenta y asignó tu rol, departamento y módulos. Ya puedes empezar a trabajar en FLUJO.'
                         : isSuspended
@@ -246,7 +246,7 @@ const CuentaEstadoPage = () => {
                         : 'Por seguridad, en FLUJO cada persona solo puede ver los módulos que corresponden a su cargo y área. Un administrador debe revisar tu cuenta y asignarte los permisos antes de que puedas acceder.'}
                 </p>
 
-                {!isSuspended && <section className="ce-panel ce-steps" aria-label="Progreso de activación">
+                {!isSuspended && <section className="ce__panel ce__steps" aria-label="Progreso de activación">
                     <Paso estado="done" titulo="Cuenta creada" />
                     <Paso
                         estado={activa ? 'done' : 'current'}
@@ -262,20 +262,20 @@ const CuentaEstadoPage = () => {
                 </section>}
 
                 {isPending && (
-                    <section className="ce-panel ce-meanwhile">
-                        <h2 className="ce-panel-label">Mientras tanto</h2>
-                        <div className="ce-info-row">
-                            <span className="ce-info-icon"><IconBell /></span>
+                    <section className="ce__panel ce__meanwhile">
+                        <h2 className="ce__panel-label">Mientras tanto</h2>
+                        <div className="ce__info-row">
+                            <span className="ce__info-icon"><IconBell /></span>
                             <span>Te avisaremos cuando tu cuenta esté activa</span>
                         </div>
-                        <div className="ce-info-row">
-                            <span className="ce-info-icon"><IconUser /></span>
+                        <div className="ce__info-row">
+                            <span className="ce__info-icon"><IconUser /></span>
                             <span>Si llevas más de 24 h esperando, contacta a tu supervisor</span>
                         </div>
-                        <div className="ce-info-row">
-                            <span className="ce-info-icon"><IconMail /></span>
-                            <span className="ce-info-email">
-                                <span className="ce-muted">Registrado como:</span>
+                        <div className="ce__info-row">
+                            <span className="ce__info-icon"><IconMail /></span>
+                            <span className="ce__info-email">
+                                <span className="ce__muted">Registrado como:</span>
                                 <strong>{user?.email}</strong>
                             </span>
                         </div>
@@ -283,56 +283,56 @@ const CuentaEstadoPage = () => {
                 )}
 
                 {!activa && aviso && (
-                    <div className={`ce-notice ce-notice-${aviso.tipo}`} role="status">
-                        <span className="ce-notice-icon"><IconClock size={18} /></span>
-                        <span className="ce-notice-text">{aviso.texto}</span>
-                        <span className="ce-notice-time">{tiempoRelativo(aviso.fecha, ahora)}</span>
+                    <div className={`ce__notice ce__notice--${aviso.tipo}`} role="status">
+                        <span className="ce__notice-icon"><IconClock size={18} /></span>
+                        <span className="ce__notice-text">{aviso.texto}</span>
+                        <span className="ce__notice-time">{tiempoRelativo(aviso.fecha, ahora)}</span>
                     </div>
                 )}
 
                 {activa ? (
-                    <button className="ce-btn-primary" onClick={irAlInicio}>
+                    <button className="ce__btn-primary" onClick={irAlInicio}>
                         Ir al inicio <IconArrowRight />
                     </button>
                 ) : (
                     <>
-                        <button className="ce-btn-primary" onClick={() => verificar()} disabled={checking}>
-                            {checking ? <span className="ce-spinner" /> : <IconRefresh />}
+                        <button className="ce__btn-primary" onClick={() => verificar()} disabled={checking}>
+                            {checking ? <span className="ce__spinner" /> : <IconRefresh />}
                             {checking ? 'Verificando...' : 'Verificar estado'}
                         </button>
-                        <button className="ce-btn-link" onClick={contactarAdmin}>
+                        <button className="ce__btn-link" onClick={contactarAdmin}>
                             Contactar al administrador
                         </button>
                     </>
                 )}
 
-                <div className="ce-divider" />
+                <div className="ce__divider" />
 
-                <div className="ce-footer">
+                <div className="ce__footer">
                     {isPending && (
-                        <button className="ce-btn-ghost" onClick={() => navigate('/workspace')}>
+                        <button className="ce__btn-ghost" onClick={() => navigate('/workspace')}>
                             <IconGrid /> Ver el inicio
                         </button>
                     )}
-                    <button className="ce-btn-ghost" onClick={() => setConfirmLogout(true)}>
+                    <button className="ce__btn-ghost" onClick={() => setConfirmLogout(true)}>
                         <IconLogout /> Cerrar sesión
                     </button>
                 </div>
                 {isPending && (
-                    <p className="ce-footnote">
+                    <p className="ce__footnote">
                         Podrás ver la pantalla de inicio, pero no registrar ni modificar nada hasta que tu cuenta esté activa.
                     </p>
                 )}
             </main>
 
             {confirmLogout && (
-                <div className="ce-modal-overlay" onClick={() => setConfirmLogout(false)}>
-                    <div className="ce-modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+                <div className="ce__modal-overlay" onClick={() => setConfirmLogout(false)}>
+                    <div className="ce__modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
                         <h3>¿Cerrar sesión?</h3>
                         <p>Tendrás que volver a iniciar sesión para revisar el estado de tu cuenta.</p>
-                        <div className="ce-modal-actions">
-                            <button className="ce-modal-cancel" onClick={() => setConfirmLogout(false)}>Cancelar</button>
-                            <button className="ce-modal-confirm" onClick={logout}>Cerrar sesión</button>
+                        <div className="ce__modal-actions">
+                            <button className="ce__modal-cancel" onClick={() => setConfirmLogout(false)}>Cancelar</button>
+                            <button className="ce__modal-confirm" onClick={logout}>Cerrar sesión</button>
                         </div>
                     </div>
                 </div>

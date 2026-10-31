@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    PANEL DE ADMINISTRACIÓN (pages/AdminPage.jsx)
-   Botones, insignias y tarjetas usan un "tono" (.adm-tono-*) que define
+   Botones, insignias y tarjetas usan un "tono" (.adm-tono--*) que define
    --tono y --tono-rgb; así los componentes no calculan colores.
 ══════════════════════════════════════════════════════════ */
 .adm {
@@ -19,15 +19,15 @@
     color: var(--adm-text);
     font-family: system-ui, sans-serif;
 }
-.adm-tono-purple { --tono: #7c6fef; --tono-rgb: 124, 111, 239; }
-.adm-tono-green  { --tono: #28c997; --tono-rgb: 40, 201, 151; }
-.adm-tono-red    { --tono: #e64b6b; --tono-rgb: 230, 75, 107; }
-.adm-tono-orange { --tono: #ef9f27; --tono-rgb: 239, 159, 39; }
-.adm-tono-yellow { --tono: #e6d44b; --tono-rgb: 230, 212, 75; }
-.adm-tono-muted  { --tono: #666680; --tono-rgb: 102, 102, 128; }
+.adm-tono--purple { --tono: #7c6fef; --tono-rgb: 124, 111, 239; }
+.adm-tono--green  { --tono: #28c997; --tono-rgb: 40, 201, 151; }
+.adm-tono--red    { --tono: #e64b6b; --tono-rgb: 230, 75, 107; }
+.adm-tono--orange { --tono: #ef9f27; --tono-rgb: 239, 159, 39; }
+.adm-tono--yellow { --tono: #e6d44b; --tono-rgb: 230, 212, 75; }
+.adm-tono--muted  { --tono: #666680; --tono-rgb: 102, 102, 128; }
 
 /* ── Encabezado y estructura ── */
-.adm-hdr {
+.adm__hdr {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -35,13 +35,13 @@
     background: var(--adm-surface);
     border-bottom: 1px solid var(--adm-border);
 }
-.adm-hdr-btns {
+.adm__hdr-btns {
     margin-left: auto;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
-.adm-volver {
+.adm__volver {
     width: 36px;
     height: 36px;
     flex-shrink: 0;
@@ -55,26 +55,26 @@
     align-items: center;
     justify-content: center;
 }
-.adm-titulo {
+.adm__titulo {
     font-size: 16px;
     font-weight: 700;
 }
-.adm-subtitulo {
+.adm__subtitulo {
     font-size: 12px;
     color: var(--adm-muted);
 }
-.adm-contenido {
+.adm__contenido {
     max-width: 900px;
     margin: 0 auto;
     padding: 20px;
 }
 /* Pestañas Usuarios / Comentarios */
-.adm-secciones {
+.adm__secciones {
     display: flex;
     gap: 8px;
     margin-bottom: 18px;
 }
-.adm-seccion {
+.adm__seccion {
     padding: 8px 16px;
     border-radius: 20px;
     background: var(--adm-surface2);
@@ -84,20 +84,20 @@
     font-weight: 600;
     cursor: pointer;
 }
-.adm-seccion.activa {
+.adm__seccion--activa {
     background: rgba(124, 111, 239, 0.15);
     border-color: var(--adm-purple);
     color: var(--adm-purple);
 }
 
 /* ── Tarjetas de estadísticas ── */
-.adm-stats {
+.adm__stats {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 20px;
 }
-.adm-stat {
+.adm__stat {
     flex: 1;
     min-width: 100px;
     padding: 16px 20px;
@@ -105,25 +105,25 @@
     background: var(--adm-surface2);
     border: 1px solid var(--adm-border);
 }
-.adm-stat-valor {
+.adm__stat-valor {
     font-size: 26px;
     font-weight: 700;
     color: var(--tono, var(--adm-text));
 }
-.adm-stat-label {
+.adm__stat-label {
     margin-top: 2px;
     font-size: 12px;
     color: var(--adm-muted);
 }
 
 /* ── Filtros, avisos y listas ── */
-.adm-filtros {
+.adm__filtros {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 16px;
 }
-.adm-filtro {
+.adm__filtro {
     padding: 9px 14px;
     border-radius: 8px;
     background: var(--adm-surface2);
@@ -132,14 +132,14 @@
     font-size: 14px;
     outline: none;
 }
-.adm-filtro-buscar {
+.adm__filtro--buscar {
     flex: 1;
     min-width: 200px;
 }
-.adm-select {
+.adm__select {
     cursor: pointer;
 }
-.adm-alerta {
+.adm__alerta {
     margin-bottom: 12px;
     padding: 12px 16px;
     border-radius: 10px;
@@ -148,23 +148,23 @@
     color: var(--adm-red);
     font-size: 13px;
 }
-.adm-vacio {
+.adm__vacio {
     padding: 40px;
     text-align: center;
     color: var(--adm-muted);
 }
-.adm-error-texto {
+.adm__error-texto {
     padding: 20px;
     color: var(--adm-red);
 }
-.adm-lista {
+.adm__lista {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
 /* ── Tarjeta de usuario ── */
-.adm-card {
+.adm__card {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -173,14 +173,14 @@
     background: var(--adm-surface);
     border: 1px solid var(--adm-border);
 }
-.adm-card.inactivo {
+.adm__card--inactivo {
     opacity: 0.55;
 }
-.adm-card-info {
+.adm__card-info {
     flex: 1;
     min-width: 0;
 }
-.adm-iniciales {
+.adm__iniciales {
     width: 40px;
     height: 40px;
     flex-shrink: 0;
@@ -194,36 +194,36 @@
     align-items: center;
     justify-content: center;
 }
-.adm-fila-titulo {
+.adm__fila-titulo {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
 }
-.adm-nombre {
+.adm__nombre {
     font-size: 14px;
     font-weight: 600;
 }
-.adm-email {
+.adm__email {
     margin-top: 2px;
     font-size: 12px;
     color: var(--adm-muted);
 }
-.adm-dato {
+.adm__dato {
     margin-top: 1px;
     font-size: 11px;
     color: var(--adm-muted);
 }
-.adm-dato.adm-dato-paneles {
+.adm__dato--paneles {
     margin-top: 3px;
 }
-.adm-bloques {
+.adm__bloques {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
     margin-top: 5px;
 }
-.adm-actions {
+.adm__actions {
     display: flex;
     flex-shrink: 0;
     flex-wrap: wrap;
@@ -232,7 +232,7 @@
 }
 
 /* Insignia de rol / estado */
-.adm-insignia {
+.adm__insignia {
     padding: 2px 10px;
     border-radius: 20px;
     background: rgba(var(--tono-rgb), 0.15);
@@ -242,27 +242,27 @@
     font-weight: 700;
 }
 /* Etiquetas pequeñas (bloques, "nuevo", "tú", "inactivo", tipo de comentario) */
-.adm-etiqueta {
+.adm__etiqueta {
     padding: 1px 7px;
     border-radius: 10px;
     background: rgba(var(--tono-rgb), 0.15);
     color: var(--tono);
     font-size: 11px;
 }
-.adm-etiqueta-ancha {
+.adm__etiqueta--ancha {
     padding: 1px 8px;
 }
-.adm-etiqueta-borde {
+.adm__etiqueta--borde {
     border: 1px solid rgba(var(--tono-rgb), 0.267);
 }
-.adm-etiqueta-tu {
+.adm__etiqueta--tu {
     background: var(--adm-surface2);
     border: 1px solid var(--adm-border);
     color: var(--adm-muted);
 }
 
 /* ── Botón (con tono) ── */
-.adm-btn {
+.adm__btn {
     padding: 8px 14px;
     border-radius: 8px;
     background: rgba(var(--tono-rgb), 0.133);
@@ -272,52 +272,52 @@
     font-weight: 600;
     cursor: pointer;
 }
-.adm-btn:disabled {
+.adm__btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
 }
 
 /* ── Comentarios ── */
-.adm-filtro-comentarios {
+.adm__filtro-comentarios {
     max-width: 260px;
     margin-bottom: 16px;
 }
-.adm-comentario {
+.adm__comentario {
     padding: 14px 16px;
     border-radius: 12px;
     background: var(--adm-surface);
     border: 1px solid var(--adm-border);
 }
-.adm-comentario.nuevo {
+.adm__comentario--nuevo {
     border-color: rgba(124, 111, 239, 0.4);
 }
-.adm-estrellas {
+.adm__estrellas {
     font-size: 13px;
     letter-spacing: 1px;
     color: var(--adm-yellow);
 }
-.adm-estrellas-vacias {
+.adm__estrellas-vacias {
     color: var(--adm-muted);
 }
-.adm-fecha {
+.adm__fecha {
     margin-left: auto;
     font-size: 11px;
     color: var(--adm-muted);
 }
-.adm-mensaje {
+.adm__mensaje {
     margin: 10px 0 12px;
     font-size: 14px;
     line-height: 1.55;
     white-space: pre-wrap;
     word-break: break-word;
 }
-.adm-acciones-fila {
+.adm__acciones-fila {
     display: flex;
     gap: 8px;
 }
 
 /* ── Modal y formularios ── */
-.adm-modal {
+.adm__modal {
     position: fixed;
     inset: 0;
     z-index: 9999;
@@ -327,7 +327,7 @@
     padding: 16px;
     background: rgba(0, 0, 0, 0.7);
 }
-.adm-modal-caja {
+.adm__modal-caja {
     width: 100%;
     max-width: 420px;
     padding: 24px;
@@ -335,17 +335,17 @@
     background: var(--adm-surface);
     border: 1px solid var(--adm-border);
 }
-.adm-modal-top {
+.adm__modal-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
 }
-.adm-modal-titulo {
+.adm__modal-titulo {
     font-size: 16px;
     font-weight: 700;
 }
-.adm-modal-cerrar {
+.adm__modal-cerrar {
     background: none;
     border: none;
     color: var(--adm-muted);
@@ -353,38 +353,38 @@
     line-height: 1;
     cursor: pointer;
 }
-.adm-modal-texto {
+.adm__modal-texto {
     margin-bottom: 20px;
     font-size: 14px;
     line-height: 1.6;
     color: var(--adm-muted);
 }
-.adm-modal-texto strong {
+.adm__modal-texto strong {
     color: var(--adm-text);
 }
-.adm-modal-texto.adm-modal-texto-junto {
+.adm__modal-texto--junto {
     margin: 0 0 1em;
     line-height: normal;
 }
-.adm-modal-botones {
+.adm__modal-botones {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
 }
-.adm-modal-error {
+.adm__modal-error {
     margin-bottom: 12px;
     font-size: 13px;
     color: var(--adm-red);
 }
-.adm-campo {
+.adm__campo {
     margin-bottom: 14px;
 }
-.adm-campo-label {
+.adm__campo-label {
     margin-bottom: 6px;
     font-size: 12px;
     color: var(--adm-muted);
 }
-.adm-input {
+.adm__input {
     width: 100%;
     box-sizing: border-box;
     padding: 10px 12px;
@@ -395,21 +395,21 @@
     font-size: 14px;
     outline: none;
 }
-.adm-ayuda {
+.adm__ayuda {
     margin-bottom: 6px;
     font-size: 11.5px;
     color: var(--adm-muted);
 }
 /* Listas de casillas (paneles y bloques) */
-.adm-checks {
+.adm__checks {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
-.adm-checks-separados {
+.adm__checks--separados {
     margin-top: 4px;
 }
-.adm-check {
+.adm__check {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -417,7 +417,7 @@
     color: var(--adm-text);
     cursor: pointer;
 }
-.adm-check input {
+.adm__check input {
     width: 15px;
     height: 15px;
     accent-color: var(--adm-purple);
@@ -425,9 +425,9 @@
 
 /* ── Celular ── */
 @media (max-width: 640px) {
-    .adm-hdr      { flex-wrap: wrap; }
-    .adm-hdr-btns { margin-left: 0; width: 100%; }
-    .adm-stats    { display: grid; grid-template-columns: 1fr 1fr; }
-    .adm-card     { flex-direction: column; align-items: flex-start; }
-    .adm-actions  { width: 100%; justify-content: flex-start; }
+    .adm__hdr      { flex-wrap: wrap; }
+    .adm__hdr-btns { margin-left: 0; width: 100%; }
+    .adm__stats    { display: grid; grid-template-columns: 1fr 1fr; }
+    .adm__card     { flex-direction: column; align-items: flex-start; }
+    .adm__actions  { width: 100%; justify-content: flex-start; }
 }

@@ -1,7 +1,7 @@
 /* ── Pantalla de estado de cuenta (pendiente / activada) ─────
    Tema oscuro por defecto; el claro se aplica con data-theme="light"
    en <html>, igual que en WorkspacePage. */
-.ce-wrapper {
+.ce {
     --ce-bg: #0d0d12;
     --ce-card: #17171e;
     --ce-card-border: rgba(255, 255, 255, 0.08);
@@ -40,7 +40,7 @@
     box-sizing: border-box;
 }
 
-[data-theme="light"] .ce-wrapper {
+[data-theme="light"] .ce {
     --ce-bg: #f4f3f8;
     --ce-card: #ffffff;
     --ce-card-border: #e7e5ef;
@@ -69,9 +69,9 @@
     --ce-red: #dc2626;
 }
 
-[data-theme="light"] .ce-wrapper .ce-panel { background: var(--ce-card); }
+[data-theme="light"] .ce .ce__panel { background: var(--ce-card); }
 
-.ce-card {
+.ce__card {
     width: 100%;
     max-width: 440px;
     display: flex;
@@ -83,8 +83,8 @@
 
 /* En pantallas anchas se muestra como tarjeta centrada */
 @media (min-width: 640px) {
-    .ce-wrapper { padding: 64px 24px; }
-    .ce-card {
+    .ce { padding: 64px 24px; }
+    .ce__card {
         max-width: 584px;
         padding: 40px 40px 36px;
         background: var(--ce-card);
@@ -93,17 +93,17 @@
         box-sizing: border-box;
         box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.35);
     }
-    [data-theme="light"] .ce-wrapper .ce-panel { background: var(--ce-panel); }
+    [data-theme="light"] .ce .ce__panel { background: var(--ce-panel); }
 }
 
 /* ── Marca ── */
-.ce-brand {
+.ce__brand {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 28px;
 }
-.ce-brand-logo {
+.ce__brand-logo {
     width: 34px;
     height: 34px;
     border-radius: 9px;
@@ -113,7 +113,7 @@
     align-items: center;
     justify-content: center;
 }
-.ce-brand-name {
+.ce__brand-name {
     font-size: 17px;
     font-weight: 800;
     letter-spacing: 0.22em;
@@ -121,7 +121,7 @@
 }
 
 /* ── Escudo ── */
-.ce-hero {
+.ce__hero {
     position: relative;
     width: 156px;
     height: 156px;
@@ -133,12 +133,12 @@
     box-shadow: inset 0 0 0 12px var(--ce-amber-ring);
     margin-bottom: 20px;
 }
-.ce-active .ce-hero {
+.ce--active .ce__hero {
     background: var(--ce-green-core);
     box-shadow: inset 0 0 0 12px var(--ce-green-ring);
 }
-.ce-hero svg:first-child { margin-top: 4px; }
-.ce-hero-badge {
+.ce__hero svg:first-child { margin-top: 4px; }
+.ce__hero-badge {
     position: absolute;
     left: 50%;
     top: 50%;
@@ -153,14 +153,14 @@
     align-items: center;
     justify-content: center;
 }
-.ce-active .ce-hero-badge {
+.ce--active .ce__hero-badge {
     background: var(--ce-green);
     border-color: var(--ce-green-core);
     animation: ce-pop 0.5s 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* ── Pill de estado ── */
-.ce-pill {
+.ce__pill {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -172,18 +172,18 @@
     color: var(--ce-amber-text);
     margin-bottom: 18px;
 }
-.ce-pill-dot {
+.ce__pill-dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
     background: var(--ce-amber);
 }
-.ce-active .ce-pill {
+.ce--active .ce__pill {
     background: var(--ce-green-soft);
     color: var(--ce-green-text);
 }
 
-.ce-title {
+.ce__title {
     margin: 0 0 14px;
     font-size: clamp(23px, 6vw, 28px);
     line-height: 1.22;
@@ -193,7 +193,7 @@
     max-width: 340px;
     text-wrap: balance;
 }
-.ce-lead {
+.ce__lead {
     margin: 0 0 24px;
     font-size: 15px;
     line-height: 1.6;
@@ -202,7 +202,7 @@
 }
 
 /* ── Paneles ── */
-.ce-panel {
+.ce__panel {
     width: 100%;
     box-sizing: border-box;
     background: var(--ce-panel);
@@ -214,17 +214,17 @@
 }
 
 /* Pasos */
-.ce-step {
+.ce__step {
     display: flex;
     gap: 14px;
 }
-.ce-step-rail {
+.ce__step-rail {
     display: flex;
     flex-direction: column;
     align-items: center;
     flex-shrink: 0;
 }
-.ce-step-dot {
+.ce__step-dot {
     width: 26px;
     height: 26px;
     border-radius: 50%;
@@ -235,7 +235,7 @@
     border: 2px solid var(--ce-faint);
     color: #fff;
 }
-.ce-step-line {
+.ce__step-line {
     width: 2px;
     flex: 1;
     min-height: 16px;
@@ -243,42 +243,42 @@
     border-radius: 2px;
     background: var(--ce-faint);
 }
-.ce-step-done .ce-step-dot {
+.ce__step--done .ce__step-dot {
     background: var(--ce-green);
     border-color: var(--ce-green);
 }
-.ce-step-done .ce-step-line { background: var(--ce-green); }
-.ce-step-current .ce-step-dot {
+.ce__step--done .ce__step-line { background: var(--ce-green); }
+.ce__step--current .ce__step-dot {
     border-color: var(--ce-amber);
     background: var(--ce-amber-soft);
 }
-.ce-step-dot-inner {
+.ce__step-dot-inner {
     width: 10px;
     height: 10px;
     border-radius: 50%;
     background: var(--ce-amber);
     animation: ce-pulse 1.8s ease-in-out infinite;
 }
-.ce-step-text {
+.ce__step-text {
     display: flex;
     flex-direction: column;
     gap: 3px;
     padding: 3px 0 16px;
 }
-.ce-step:last-child .ce-step-text { padding-bottom: 0; }
-.ce-step-title {
+.ce__step:last-child .ce__step-text { padding-bottom: 0; }
+.ce__step-title {
     font-size: 15px;
     font-weight: 700;
     color: var(--ce-text);
 }
-.ce-step-todo .ce-step-title { color: var(--ce-muted); }
-.ce-step-detail {
+.ce__step--todo .ce__step-title { color: var(--ce-muted); }
+.ce__step-detail {
     font-size: 13px;
     color: var(--ce-muted);
 }
 
 /* Mientras tanto */
-.ce-panel-label {
+.ce__panel-label {
     margin: 0 0 12px;
     font-size: 12px;
     font-weight: 700;
@@ -286,7 +286,7 @@
     text-transform: uppercase;
     color: var(--ce-muted);
 }
-.ce-info-row {
+.ce__info-row {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -294,8 +294,8 @@
     line-height: 1.4;
     color: var(--ce-text);
 }
-.ce-info-row + .ce-info-row { margin-top: 12px; }
-.ce-info-icon {
+.ce__info-row + .ce__info-row { margin-top: 12px; }
+.ce__info-icon {
     width: 36px;
     height: 36px;
     border-radius: 10px;
@@ -306,19 +306,19 @@
     align-items: center;
     justify-content: center;
 }
-.ce-info-email {
+.ce__info-email {
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
-.ce-info-email strong {
+.ce__info-email strong {
     font-weight: 700;
     overflow-wrap: anywhere;
 }
-.ce-muted { color: var(--ce-muted); }
+.ce__muted { color: var(--ce-muted); }
 
 /* Aviso tras verificar */
-.ce-notice {
+.ce__notice {
     width: 100%;
     box-sizing: border-box;
     display: flex;
@@ -332,23 +332,23 @@
     text-align: left;
     animation: ce-enter 0.25s ease-out both;
 }
-[data-theme="light"] .ce-notice { background: var(--ce-card); }
-.ce-notice-icon { color: var(--ce-amber); display: flex; }
-.ce-notice-error .ce-notice-icon { color: var(--ce-red); }
-.ce-notice-text {
+[data-theme="light"] .ce__notice { background: var(--ce-card); }
+.ce__notice-icon { color: var(--ce-amber); display: flex; }
+.ce__notice--error .ce__notice-icon { color: var(--ce-red); }
+.ce__notice-text {
     flex: 1;
     font-size: 14px;
     font-weight: 600;
     color: var(--ce-text);
 }
-.ce-notice-time {
+.ce__notice-time {
     font-size: 12px;
     color: var(--ce-muted);
     white-space: nowrap;
 }
 
 /* ── Botones ── */
-.ce-btn-primary {
+.ce__btn-primary {
     width: 100%;
     height: 52px;
     border: none;
@@ -365,17 +365,17 @@
     cursor: pointer;
     transition: background 0.15s, transform 0.1s;
 }
-.ce-btn-primary:hover:not(:disabled) { background: var(--ce-purple-btn-hover); }
-.ce-btn-primary:active:not(:disabled) { transform: scale(0.985); }
-.ce-btn-primary:disabled { opacity: 0.8; cursor: default; }
-.ce-btn-primary:focus-visible,
-.ce-btn-link:focus-visible,
-.ce-btn-ghost:focus-visible {
+.ce__btn-primary:hover:not(:disabled) { background: var(--ce-purple-btn-hover); }
+.ce__btn-primary:active:not(:disabled) { transform: scale(0.985); }
+.ce__btn-primary:disabled { opacity: 0.8; cursor: default; }
+.ce__btn-primary:focus-visible,
+.ce__btn-link:focus-visible,
+.ce__btn-ghost:focus-visible {
     outline: 2px solid var(--ce-purple-link);
     outline-offset: 3px;
 }
 
-.ce-spinner {
+.ce__spinner {
     width: 18px;
     height: 18px;
     border-radius: 50%;
@@ -384,7 +384,7 @@
     animation: ce-spin 0.8s linear infinite;
 }
 
-.ce-btn-link {
+.ce__btn-link {
     margin-top: 14px;
     padding: 6px 10px;
     background: none;
@@ -395,22 +395,22 @@
     color: var(--ce-purple-link);
     cursor: pointer;
 }
-.ce-btn-link:hover { text-decoration: underline; }
+.ce__btn-link:hover { text-decoration: underline; }
 
-.ce-divider {
+.ce__divider {
     width: 100%;
     height: 1px;
     background: var(--ce-card-border);
     margin: 22px 0 14px;
 }
 
-.ce-footer {
+.ce__footer {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
     gap: 6px 18px;
 }
-.ce-btn-ghost {
+.ce__btn-ghost {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -425,9 +425,9 @@
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
-.ce-btn-ghost:hover { color: var(--ce-text); background: var(--ce-panel); }
+.ce__btn-ghost:hover { color: var(--ce-text); background: var(--ce-panel); }
 
-.ce-footnote {
+.ce__footnote {
     margin: 10px 0 0;
     font-size: 12.5px;
     line-height: 1.5;
@@ -436,7 +436,7 @@
 }
 
 /* ── Modal cerrar sesión ── */
-.ce-modal-overlay {
+.ce__modal-overlay {
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -447,7 +447,7 @@
     padding: 20px;
     animation: ce-fade 0.15s ease-out both;
 }
-.ce-modal {
+.ce__modal {
     width: 100%;
     max-width: 340px;
     background: var(--ce-card);
@@ -456,22 +456,22 @@
     padding: 22px 20px 18px;
     text-align: center;
 }
-.ce-modal h3 {
+.ce__modal h3 {
     margin: 0 0 8px;
     font-size: 17px;
     color: var(--ce-text);
 }
-.ce-modal p {
+.ce__modal p {
     margin: 0 0 18px;
     font-size: 14px;
     line-height: 1.5;
     color: var(--ce-muted);
 }
-.ce-modal-actions {
+.ce__modal-actions {
     display: flex;
     gap: 10px;
 }
-.ce-modal-actions button {
+.ce__modal-actions button {
     flex: 1;
     height: 44px;
     border-radius: 12px;
@@ -480,12 +480,12 @@
     font-weight: 700;
     cursor: pointer;
 }
-.ce-modal-cancel {
+.ce__modal-cancel {
     background: var(--ce-panel);
     border: 1px solid var(--ce-panel-border);
     color: var(--ce-text);
 }
-.ce-modal-confirm {
+.ce__modal-confirm {
     background: var(--ce-red);
     border: none;
     color: #fff;
@@ -507,5 +507,5 @@
 @keyframes ce-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .ce-card, .ce-notice, .ce-active .ce-hero-badge, .ce-step-dot-inner, .ce-modal-overlay { animation: none; }
+    .ce__card, .ce__notice, .ce--active .ce__hero-badge, .ce__step-dot-inner, .ce__modal-overlay { animation: none; }
 }

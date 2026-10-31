@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import '../styles/AdminPage.css';
 
-// Cada rol / estado tiene un "tono" (ver .adm-tono-* en AdminPage.css)
+// Cada rol / estado tiene un "tono" (ver .adm-tono--* en AdminPage.css)
 const ROLE_META = {
     admin:      { label: 'Admin',      tono: 'purple' },
     supervisor: { label: 'Supervisor', tono: 'orange' },
@@ -45,32 +45,32 @@ const fmt = (d) => {
 const Initials = ({ name, role }) => {
     const meta = ROLE_META[role] || ROLE_META.operador;
     const ini = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    return <div className={`adm-iniciales adm-tono-${meta.tono}`}>{ini}</div>;
+    return <div className={`adm__iniciales adm-tono--${meta.tono}`}>{ini}</div>;
 };
 
 const RoleBadge = ({ role }) => {
     const meta = ROLE_META[role] || ROLE_META.operador;
-    return <span className={`adm-insignia adm-tono-${meta.tono}`}>{meta.label}</span>;
+    return <span className={`adm__insignia adm-tono--${meta.tono}`}>{meta.label}</span>;
 };
 
 const StatusBadge = ({ status }) => {
     const meta = STATUS_META[status] || STATUS_META.pending;
-    return <span className={`adm-insignia adm-tono-${meta.tono}`}>{meta.label}</span>;
+    return <span className={`adm__insignia adm-tono--${meta.tono}`}>{meta.label}</span>;
 };
 
 const StatCard = ({ label, value, tono }) => (
-    <div className={`adm-stat${tono ? ` adm-tono-${tono}` : ''}`}>
-        <div className="adm-stat-valor">{value}</div>
-        <div className="adm-stat-label">{label}</div>
+    <div className={`adm__stat${tono ? ` adm-tono--${tono}` : ''}`}>
+        <div className="adm__stat-valor">{value}</div>
+        <div className="adm__stat-label">{label}</div>
     </div>
 );
 
 const Modal = ({ title, onClose, children }) => (
-    <div className="adm-modal" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="adm-modal-caja">
-            <div className="adm-modal-top">
-                <span className="adm-modal-titulo">{title}</span>
-                <button className="adm-modal-cerrar" onClick={onClose}>×</button>
+    <div className="adm__modal" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="adm__modal-caja">
+            <div className="adm__modal-top">
+                <span className="adm__modal-titulo">{title}</span>
+                <button className="adm__modal-cerrar" onClick={onClose}>×</button>
             </div>
             {children}
         </div>
@@ -78,21 +78,21 @@ const Modal = ({ title, onClose, children }) => (
 );
 
 const Field = ({ label, children }) => (
-    <div className="adm-campo">
-        <div className="adm-campo-label">{label}</div>
+    <div className="adm__campo">
+        <div className="adm__campo-label">{label}</div>
         {children}
     </div>
 );
 
-const Input = (props) => <input {...props} className="adm-input" />;
+const Input = (props) => <input {...props} className="adm__input" />;
 
 const Select = ({ value, onChange, children }) => (
-    <select className="adm-input adm-select" value={value} onChange={onChange}>{children}</select>
+    <select className="adm__input adm__select" value={value} onChange={onChange}>{children}</select>
 );
 
 // tono: purple (por defecto), muted, green, orange, red
 const Btn = ({ onClick, children, tono = 'purple', disabled }) => (
-    <button className={`adm-btn adm-tono-${tono}`} onClick={onClick} disabled={disabled}>{children}</button>
+    <button className={`adm__btn adm-tono--${tono}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
 const TIPO_COMENTARIO = {
@@ -148,19 +148,19 @@ const ComentariosAdmin = ({ onSinLeer }) => {
     const visibles = comentarios.filter(c =>
         filtro === 'todos' || (filtro === 'sin-leer' ? !c.leido : c.tipo === filtro));
 
-    if (loading) return <div className="adm-vacio">Cargando comentarios…</div>;
-    if (error) return <div className="adm-error-texto">{error}</div>;
+    if (loading) return <div className="adm__vacio">Cargando comentarios…</div>;
+    if (error) return <div className="adm__error-texto">{error}</div>;
 
     return (
         <>
-            <div className="adm-stats">
+            <div className="adm__stats">
                 <StatCard label="Comentarios" value={comentarios.length} />
                 <StatCard label="Sin leer" value={comentarios.filter(c => !c.leido).length} tono="orange" />
                 <StatCard label="Calificación promedio" value={promedio === '—' ? promedio : `${promedio} ★`} tono="yellow" />
                 <StatCard label="Errores reportados" value={comentarios.filter(c => c.tipo === 'error').length} tono="red" />
             </div>
 
-            <div className="adm-filtro-comentarios">
+            <div className="adm__filtro-comentarios">
                 <Select value={filtro} onChange={e => setFiltro(e.target.value)}>
                     <option value="todos">Todos los comentarios</option>
                     <option value="sin-leer">Sin leer</option>
@@ -171,29 +171,29 @@ const ComentariosAdmin = ({ onSinLeer }) => {
             </div>
 
             {visibles.length === 0 ? (
-                <div className="adm-vacio">
+                <div className="adm__vacio">
                     {comentarios.length === 0 ? 'Todavía nadie ha enviado comentarios' : 'Sin comentarios con este filtro'}
                 </div>
             ) : (
-                <div className="adm-lista">
+                <div className="adm__lista">
                     {visibles.map(c => {
                         const t = TIPO_COMENTARIO[c.tipo] || TIPO_COMENTARIO.opinion;
                         return (
-                            <div key={c._id} className={`adm-comentario${c.leido ? '' : ' nuevo'}`}>
-                                <div className="adm-fila-titulo">
-                                    <span className="adm-nombre">{c.usuario?.name || 'Usuario eliminado'}</span>
-                                    <span className={`adm-etiqueta adm-etiqueta-ancha adm-tono-${t.tono}`}>{t.label}</span>
+                            <div key={c._id} className={`adm__comentario${c.leido ? '' : ' adm__comentario--nuevo'}`}>
+                                <div className="adm__fila-titulo">
+                                    <span className="adm__nombre">{c.usuario?.name || 'Usuario eliminado'}</span>
+                                    <span className={`adm__etiqueta adm__etiqueta--ancha adm-tono--${t.tono}`}>{t.label}</span>
                                     {c.calificacion && (
-                                        <span className="adm-estrellas">
-                                            {'★'.repeat(c.calificacion)}<span className="adm-estrellas-vacias">{'★'.repeat(5 - c.calificacion)}</span>
+                                        <span className="adm__estrellas">
+                                            {'★'.repeat(c.calificacion)}<span className="adm__estrellas-vacias">{'★'.repeat(5 - c.calificacion)}</span>
                                         </span>
                                     )}
-                                    {!c.leido && <span className="adm-etiqueta adm-etiqueta-ancha adm-tono-orange">nuevo</span>}
-                                    <span className="adm-fecha">{fmt(c.createdAt)}</span>
+                                    {!c.leido && <span className="adm__etiqueta adm__etiqueta--ancha adm-tono--orange">nuevo</span>}
+                                    <span className="adm__fecha">{fmt(c.createdAt)}</span>
                                 </div>
-                                {c.usuario?.email && <div className="adm-email">{c.usuario.email}</div>}
-                                <p className="adm-mensaje">{c.mensaje}</p>
-                                <div className="adm-acciones-fila">
+                                {c.usuario?.email && <div className="adm__email">{c.usuario.email}</div>}
+                                <p className="adm__mensaje">{c.mensaje}</p>
+                                <div className="adm__acciones-fila">
                                     <Btn onClick={() => marcar(c)} tono={c.leido ? 'muted' : 'green'}>
                                         {c.leido ? 'Marcar como no leído' : '✓ Marcar como leído'}
                                     </Btn>
@@ -207,10 +207,10 @@ const ComentariosAdmin = ({ onSinLeer }) => {
 
             {aEliminar && (
                 <Modal title="Eliminar comentario" onClose={() => setAEliminar(null)}>
-                    <p className="adm-modal-texto adm-modal-texto-junto">
+                    <p className="adm__modal-texto adm__modal-texto--junto">
                         Se eliminará el comentario de {aEliminar.usuario?.name || 'este usuario'}. Esta acción no se puede deshacer.
                     </p>
-                    <div className="adm-modal-botones">
+                    <div className="adm__modal-botones">
                         <Btn onClick={() => setAEliminar(null)} tono="muted">Cancelar</Btn>
                         <Btn onClick={eliminar} tono="red">Eliminar</Btn>
                     </div>
@@ -364,13 +364,13 @@ export default function AdminPage() {
         <div className="adm">
 
             {/* Header */}
-            <div className="adm-hdr">
-                <button className="adm-volver" onClick={() => navigate('/workspace')}>←</button>
+            <div className="adm__hdr">
+                <button className="adm__volver" onClick={() => navigate('/workspace')}>←</button>
                 <div>
-                    <div className="adm-titulo">Panel de Administración</div>
-                    <div className="adm-subtitulo">Gestión de usuarios del sistema</div>
+                    <div className="adm__titulo">Panel de Administración</div>
+                    <div className="adm__subtitulo">Gestión de usuarios del sistema</div>
                 </div>
-                <div className="adm-hdr-btns">
+                <div className="adm__hdr-btns">
                     <Btn onClick={load} tono="muted">
                         ↻ Actualizar
                     </Btn>
@@ -380,12 +380,12 @@ export default function AdminPage() {
                 </div>
             </div>
 
-            <div className="adm-contenido">
+            <div className="adm__contenido">
 
                 {/* Secciones */}
-                <div className="adm-secciones">
+                <div className="adm__secciones">
                     {[['usuarios', 'Usuarios'], ['comentarios', `Comentarios${comentariosSinLeer ? ` (${comentariosSinLeer})` : ''}`]].map(([id, label]) => (
-                        <button key={id} className={`adm-seccion${seccion === id ? ' activa' : ''}`} onClick={() => setSeccion(id)}>{label}</button>
+                        <button key={id} className={`adm__seccion${seccion === id ? ' adm__seccion--activa' : ''}`} onClick={() => setSeccion(id)}>{label}</button>
                     ))}
                 </div>
 
@@ -393,7 +393,7 @@ export default function AdminPage() {
 
                 {/* Stats */}
                 {stats && (
-                    <div className="adm-stats">
+                    <div className="adm__stats">
                         <StatCard label="Total usuarios" value={stats.total} />
                         <StatCard label="Pendientes" value={stats.pendientes} tono="orange" />
                         <StatCard label="Admins" value={stats.admins} tono="purple" />
@@ -405,20 +405,20 @@ export default function AdminPage() {
                 )}
 
                 {/* Filtros */}
-                <div className="adm-filtros">
+                <div className="adm__filtros">
                     <input
-                        className="adm-filtro adm-filtro-buscar"
+                        className="adm__filtro adm__filtro--buscar"
                         placeholder="Buscar por nombre o correo…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
-                    <select className="adm-filtro adm-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                    <select className="adm__filtro adm__select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                         <option value="todos">Todos los estados</option>
                         <option value="pending">Pendientes</option>
                         <option value="active">Activos</option>
                         <option value="suspended">Suspendidos</option>
                     </select>
-                    <select className="adm-filtro adm-select" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+                    <select className="adm__filtro adm__select" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
                         <option value="todos">Todos los roles</option>
                         <option value="admin">Admin</option>
                         <option value="supervisor">Supervisor</option>
@@ -428,54 +428,54 @@ export default function AdminPage() {
 
                 {/* Lista */}
                 {loadError && (
-                    <div className="adm-alerta">{loadError}</div>
+                    <div className="adm__alerta">{loadError}</div>
                 )}
                 {loading ? (
-                    <div className="adm-vacio">Cargando…</div>
+                    <div className="adm__vacio">Cargando…</div>
                 ) : filtered.length === 0 ? (
-                    <div className="adm-vacio">No se encontraron usuarios</div>
+                    <div className="adm__vacio">No se encontraron usuarios</div>
                 ) : (
-                    <div className="adm-lista">
+                    <div className="adm__lista">
                         {filtered.map(u => (
-                            <div key={u.id} className={`adm-card${u.activo ? '' : ' inactivo'}`}>
+                            <div key={u.id} className={`adm__card${u.activo ? '' : ' adm__card--inactivo'}`}>
                                 <Initials name={u.name} role={u.role} />
-                                <div className="adm-card-info">
-                                    <div className="adm-fila-titulo">
-                                        <span className="adm-nombre">{u.name}</span>
+                                <div className="adm__card-info">
+                                    <div className="adm__fila-titulo">
+                                        <span className="adm__nombre">{u.name}</span>
                                         <RoleBadge role={u.role} />
                                         <StatusBadge status={u.status} />
                                         {u.id === me?.id && (
-                                            <span className="adm-etiqueta adm-etiqueta-tu">tú</span>
+                                            <span className="adm__etiqueta adm__etiqueta--tu">tú</span>
                                         )}
                                         {!u.activo && (
-                                            <span className="adm-etiqueta adm-etiqueta-borde adm-tono-red">inactivo</span>
+                                            <span className="adm__etiqueta adm__etiqueta--borde adm-tono--red">inactivo</span>
                                         )}
                                     </div>
-                                    <div className="adm-email">{u.email}</div>
-                                    <div className="adm-dato">
+                                    <div className="adm__email">{u.email}</div>
+                                    <div className="adm__dato">
                                         Último acceso: {fmt(u.lastLogin)}
                                     </div>
                                     {u.permisosPanel?.length > 0 && (
-                                        <div className="adm-dato adm-dato-paneles">
+                                        <div className="adm__dato adm__dato--paneles">
                                             Paneles: {u.permisosPanel.join(', ')}
                                         </div>
                                     )}
                                     {u.role !== 'admin' && (
-                                        <div className="adm-bloques">
+                                        <div className="adm__bloques">
                                             {u.bloquesAprobados?.map(b => (
-                                                <span key={b} className="adm-etiqueta adm-tono-green">
+                                                <span key={b} className="adm__etiqueta adm-tono--green">
                                                     {nombreBloque(b)}
                                                 </span>
                                             ))}
                                             {bloquesSolicitados(u).map(b => (
-                                                <span key={b} className="adm-etiqueta adm-tono-orange">
+                                                <span key={b} className="adm__etiqueta adm-tono--orange">
                                                     Solicita {nombreBloque(b)}
                                                 </span>
                                             ))}
                                         </div>
                                     )}
                                 </div>
-                                <div className="adm-actions">
+                                <div className="adm__actions">
                                     {u.status === 'pending' && u.id !== me?.id && (
                                         <Btn onClick={() => handleAprobar(u)} tono="green">
                                             ✓ Aprobar
@@ -522,8 +522,8 @@ export default function AdminPage() {
                             <option value="admin">Administrador</option>
                         </Select>
                     </Field>
-                    {error && <div className="adm-modal-error">{error}</div>}
-                    <div className="adm-modal-botones">
+                    {error && <div className="adm__modal-error">{error}</div>}
+                    <div className="adm__modal-botones">
                         <Btn onClick={() => setModalCreate(false)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handleCreate} disabled={saving}>{saving ? 'Creando…' : 'Crear usuario'}</Btn>
                     </div>
@@ -551,11 +551,11 @@ export default function AdminPage() {
                         </Select>
                     </Field>
                     <Field label="Paneles habilitados">
-                        <div className="adm-checks adm-checks-separados">
+                        <div className="adm__checks adm__checks--separados">
                             {PANELS_DISPONIBLES.map(p => {
                                 const checked = editForm.permisosPanel.includes(p.id);
                                 return (
-                                    <label key={p.id} className="adm-check">
+                                    <label key={p.id} className="adm__check">
                                         <input
                                             type="checkbox"
                                             checked={checked}
@@ -574,14 +574,14 @@ export default function AdminPage() {
                     </Field>
                     {editForm.role !== 'admin' && (
                         <Field label="Bloques aprobados">
-                            <div className="adm-ayuda">
+                            <div className="adm__ayuda">
                                 Solo verá la información (firmas, nominativos, puestos) y podrá abrir turno en los bloques marcados.
                             </div>
-                            <div className="adm-checks">
+                            <div className="adm__checks">
                                 {[...new Set([...Object.keys(BLOQUES_DATA), ...(modalEdit.bloques || []), ...editForm.bloquesAprobados])].map(b => {
                                     const checked = editForm.bloquesAprobados.includes(b);
                                     return (
-                                        <label key={b} className="adm-check">
+                                        <label key={b} className="adm__check">
                                             <input
                                                 type="checkbox"
                                                 checked={checked}
@@ -594,7 +594,7 @@ export default function AdminPage() {
                                             />
                                             {nombreBloque(b)}
                                             {(modalEdit.bloques || []).includes(b) && !checked && (
-                                                <span className="adm-etiqueta adm-tono-orange">
+                                                <span className="adm__etiqueta adm-tono--orange">
                                                     solicitado
                                                 </span>
                                             )}
@@ -604,8 +604,8 @@ export default function AdminPage() {
                             </div>
                         </Field>
                     )}
-                    {error && <div className="adm-modal-error">{error}</div>}
-                    <div className="adm-modal-botones">
+                    {error && <div className="adm__modal-error">{error}</div>}
+                    <div className="adm__modal-botones">
                         <Btn onClick={() => setModalEdit(null)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handleEdit} disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</Btn>
                     </div>
@@ -621,8 +621,8 @@ export default function AdminPage() {
                     <Field label="Confirmar contraseña">
                         <Input type="password" value={passForm.confirm} onChange={e => setPassForm(f => ({ ...f, confirm: e.target.value }))} placeholder="Repite la contraseña" />
                     </Field>
-                    {error && <div className="adm-modal-error">{error}</div>}
-                    <div className="adm-modal-botones">
+                    {error && <div className="adm__modal-error">{error}</div>}
+                    <div className="adm__modal-botones">
                         <Btn onClick={() => setModalPass(null)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handlePassword} disabled={saving} tono="orange">{saving ? 'Guardando…' : 'Actualizar contraseña'}</Btn>
                     </div>
@@ -632,11 +632,11 @@ export default function AdminPage() {
             {/* Modal: Confirmar eliminación */}
             {modalDel && (
                 <Modal title="Eliminar usuario" onClose={() => setModalDel(null)}>
-                    <p className="adm-modal-texto">
+                    <p className="adm__modal-texto">
                         ¿Estás seguro de que quieres eliminar a <strong>{modalDel.name}</strong>?<br />
                         Esta acción no se puede deshacer.
                     </p>
-                    <div className="adm-modal-botones">
+                    <div className="adm__modal-botones">
                         <Btn onClick={() => setModalDel(null)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handleDelete} disabled={saving} tono="red">{saving ? 'Eliminando…' : 'Eliminar'}</Btn>
                     </div>
