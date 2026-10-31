@@ -1,0 +1,79 @@
+/* ══════════════════════════════════════════════════════════
+   COLORES DEL TEMA
+   Los componentes usan estas variables en lugar de colores fijos, para que
+   el cambio día / noche se resuelva aquí y no regla por regla.
+   :root es el modo noche (por defecto); [data-theme="light"] lo redefine.
+══════════════════════════════════════════════════════════ */
+:root {
+    /* Fondos, de más oscuro a más claro */
+    --fondo-app: #0d0d0d;        /* fondo general de la aplicación */
+    --fondo-hundido: #111111;    /* zonas por debajo del fondo (listas, registro) */
+    --fondo-1: #141414;          /* tarjetas */
+    --fondo-2: #161616;
+    --fondo-3: #1a1a1a;
+    --fondo-4: #1e1e1e;          /* tarjetas destacadas, contadores, botones */
+    --fondo-input: #252525;      /* campos de formulario */
+    --fondo-hover: #2a2a2a;      /* hover / elementos activos */
+
+    /* Texto, de más fuerte a más suave */
+    --texto: #ffffff;
+    --texto-2: #e2e8f0;
+    --texto-3: #cccccc;
+    --texto-4: #aaaaaa;
+    --texto-tenue: #888888;
+    --texto-apagado: #666666;
+    --texto-muy-apagado: #555555;
+
+    /* Bordes, de más sutil a más marcado */
+    --borde-1: #1e1e1e;
+    --borde-2: #222222;
+    --borde-3: #2a2a2a;
+    --borde-4: #2e2e2e;
+    --borde-5: #333333;
+    --borde-6: #3a3a3a;
+    --borde-7: #444444;
+
+    /* Colores con significado */
+    --acento: #818cf8;           /* morado principal: activos, enlaces, foco */
+    --acento-suave: #a5b4fc;
+    --peligro: #f87171;
+    --exito: #4ade80;
+    --aviso: #f59e0b;
+
+    /* Íconos de la barra superior */
+    --topbar-icon: #ffffff;
+}
+
+[data-theme="light"] {
+    /* Grupo 1: fondos y textos (van juntos para que el texto siempre
+       contraste con su fondo) */
+    --fondo-app: #edf0f7;
+    --fondo-hundido: #f8faff;
+    --fondo-1: #ffffff;
+    --fondo-2: #ffffff;
+    --fondo-3: #f8faff;
+    --fondo-4: #ffffff;
+    --fondo-input: #f3f6fc;
+    --fondo-hover: #edf0f7;
+
+    --texto: #111827;
+    --texto-2: #1f2937;
+    --texto-3: #374151;
+    --texto-4: #4b5563;
+    --texto-tenue: #6b7280;
+    --texto-apagado: #6b7280;
+    --texto-muy-apagado: #9ca3af;
+
+    /* Grupo 2: bordes */
+    --borde-1: #e5eaf4;
+    --borde-2: #e5eaf4;
+    --borde-3: #dde4ef;
+    --borde-4: #dde4ef;
+    --borde-5: #d1d9e6;
+    --borde-6: #c3cede;
+    --borde-7: #b0bbd4;
+
+    /* Grupo 3 (acentos): pendiente, por ahora usa los valores del modo noche */
+
+    --topbar-icon: #374151;
+}
