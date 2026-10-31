@@ -1,0 +1,1784 @@
+/* ══════════════════════════════════════════════════════════
+   FLUJO DE PERSONAL (pages/FlujoPersonalPage.jsx)
+   La paleta de la página vive en variables sobre .fp; son los mismos
+   valores del objeto COLORS del JSX (que se sigue usando para los íconos).
+══════════════════════════════════════════════════════════ */
+.fp {
+    --fp-bg: #111111;
+    --fp-card: #1a1a1a;
+    --fp-card-elev: #1f1f1f;
+    --fp-border: #2a2a2a;
+    --fp-border-light: #333;
+    --fp-text: #ffffff;
+    --fp-text-mute: #8a8a8a;
+    --fp-text-dim: #5e5e5e;
+    --fp-violet: #7c5ef5;
+    --fp-violet-dim: rgba(124, 94, 245, 0.14);
+    --fp-green: #4ade80;
+    --fp-green-dim: rgba(74, 222, 128, 0.14);
+    --fp-yellow: #ef9f27;
+    --fp-yellow-dim: rgba(239, 159, 39, 0.12);
+    --fp-red: #e24b4a;
+    --fp-red-dim: rgba(226, 75, 74, 0.14);
+    --fp-blue: #3b82f6;
+    --fp-blue-dim: rgba(59, 130, 246, 0.14);
+    --fp-cyan: #22d3ee;
+    --fp-cyan-dim: rgba(34, 211, 238, 0.14);
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--fp-bg);
+    color: var(--fp-text);
+    font-family: -apple-system, "SF Pro Text", "Inter", system-ui, sans-serif;
+}
+.fp-num {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Estructura ── */
+.fp-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 100px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 94, 245, 0.35) transparent;
+}
+.fp-scroll::-webkit-scrollbar { width: 5px; }
+.fp-scroll::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); border-radius: 4px; }
+.fp-scroll::-webkit-scrollbar-thumb { background: rgba(124, 94, 245, 0.35); border-radius: 4px; }
+.fp-scroll::-webkit-scrollbar-thumb:hover { background: rgba(124, 94, 245, 0.65); }
+/* Centra el contenido igual que WorkspacePage en escritorio */
+.fp-contenido {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+/* Buscador y contadores: se muestran con el botón de controles */
+.fp-controles {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.fp-controles.abiertos {
+    max-height: 80px;
+}
+.fp-listas {
+    padding: 0 16px;
+}
+.fp-vacio {
+    padding: 40px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--fp-text-mute);
+}
+
+/* ── Encabezado ── */
+.fp-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--fp-bg);
+    border-bottom: 1px solid var(--fp-border);
+}
+.fp-header-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--fp-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.fp-header-controles {
+    transition: background 160ms ease, border-color 160ms ease;
+}
+.fp-header-controles.activo {
+    background: rgba(124, 94, 245, 0.15);
+    border-color: rgba(124, 94, 245, 0.4);
+}
+.fp-header-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--fp-text);
+}
+
+/* ── Buscador y contadores ── */
+.fp-busqueda {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px 6px;
+}
+.fp-contador {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 11px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.fp-contador-activos {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.28);
+}
+.fp-contador-libres {
+    margin-right: auto;
+    background: rgba(124, 94, 245, 0.1);
+    border: 1px solid rgba(124, 94, 245, 0.28);
+}
+.fp-contador-punto {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.fp-contador-activos .fp-contador-punto {
+    background: var(--fp-green);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+}
+.fp-contador-libres .fp-contador-punto {
+    background: var(--fp-violet);
+    box-shadow: 0 0 8px rgba(124, 94, 245, 0.7);
+}
+.fp-contador-num {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.fp-contador-activos .fp-contador-num { color: var(--fp-green); }
+.fp-contador-libres .fp-contador-num { color: var(--fp-violet); }
+.fp-contador-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.fp-contador-activos .fp-contador-label { color: rgba(74, 222, 128, 0.75); }
+.fp-contador-libres .fp-contador-label { color: rgba(124, 94, 245, 0.75); }
+
+.fp-buscar {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--fp-border);
+    cursor: pointer;
+    transition: width 220ms cubic-bezier(0.2, 0.9, 0.3, 1), border-color 160ms ease, flex 220ms ease;
+}
+.fp-buscar.expandido {
+    flex: 1;
+    width: 100%;
+    cursor: text;
+}
+.fp-buscar.foco {
+    border-color: rgba(124, 94, 245, 0.5);
+}
+.fp-buscar-lupa {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-buscar-input {
+    flex: 1;
+    min-width: 0;
+    padding-right: 12px;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--fp-text);
+    font-size: 13px;
+    font-family: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+}
+.fp-buscar.expandido .fp-buscar-input {
+    opacity: 1;
+    pointer-events: auto;
+}
+.fp-importar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    background: var(--fp-green);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* ── Encabezado de sección ("En turno activo", "Próximos a salir"…) ── */
+.fp-seccion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 0 10px;
+}
+/* --punto-color llega en línea: depende de la sección */
+.fp-seccion-punto {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--punto-color);
+    box-shadow: 0 0 8px var(--punto-color);
+}
+.fp-seccion-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    color: var(--fp-text-mute);
+}
+.fp-seccion-label.alerta {
+    color: var(--fp-yellow);
+}
+.fp-seccion-conteo {
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--fp-border);
+    font-size: 10px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--fp-text-dim);
+}
+.fp-seccion-linea {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--fp-border), transparent);
+}
+
+/* ── Insignias, ciclo, barra de progreso y botones de acción ── */
+.fp-ciclo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--fp-border);
+    color: var(--fp-text);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    font-family: inherit;
+    cursor: pointer;
+}
+.fp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    font-variant-numeric: tabular-nums;
+}
+.fp-badge-dia {
+    background: var(--fp-green-dim);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    color: var(--fp-green);
+}
+.fp-badge-restante {
+    background: var(--fp-yellow-dim);
+    border: 1px solid rgba(239, 159, 39, 0.35);
+    color: var(--fp-yellow);
+}
+.fp-badge-punto {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--fp-green);
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+}
+.fp-progreso {
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+.fp-progreso-barra {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 400ms ease;
+}
+/* Los colores de cada botón llegan por props como variables */
+.fp-accion {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    background: var(--accion-fondo);
+    border: 1px solid var(--accion-borde);
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 140ms ease, transform 140ms ease;
+}
+.fp-accion:hover {
+    background: var(--accion-hover);
+    transform: translateY(-1px);
+}
+
+/* ── Modal (contenedor común) ── */
+.fp-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+}
+.fp-modal.abierto {
+    opacity: 1;
+    pointer-events: auto;
+}
+.fp-modal-fondo {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+}
+.fp-modal-caja {
+    position: relative;
+    width: 100%;
+    max-width: min(92vw, 460px);
+    max-height: 88vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.fp-modal.abierto .fp-modal-caja {
+    transform: translateY(0);
+}
+
+/* ── Barra inferior, botón flotante y aviso ── */
+.fp-nav {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    z-index: 30;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    padding-top: 8px;
+    padding-bottom: 12px;
+    background: #111111;
+    border-top: 1px solid var(--fp-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+}
+.fp-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--fp-text-mute);
+}
+.fp-nav-btn.activo {
+    color: var(--fp-violet);
+}
+.fp-nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.fp-nav-btn.activo .fp-nav-label {
+    font-weight: 700;
+}
+.fp-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    z-index: 40;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--fp-violet);
+    border: 3px solid var(--fp-bg);
+    box-shadow: 0 6px 20px rgba(124, 94, 245, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+.fp-fab:hover {
+    box-shadow: 0 10px 28px rgba(124, 94, 245, 0.6), 0 0 0 6px rgba(124, 94, 245, 0.12);
+    transform: translateY(-2px);
+}
+.fp-toast {
+    position: fixed;
+    left: 50%;
+    top: 110px;
+    z-index: 80;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(124, 94, 245, 0.95);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 30px rgba(124, 94, 245, 0.45);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -20px);
+    transition: transform 220ms ease, opacity 220ms ease;
+}
+.fp-toast.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+/* ── Colores por turno (etiqueta del turno y filas del trío) ── */
+.fp-turno-dia {
+    --turno-rgb: 74, 222, 128;
+    --turno-color: #4ade80;
+    --turno-dim: rgba(74, 222, 128, 0.14);
+    --turno-suave: rgba(74, 222, 128, 0.1);
+    --turno-borde: rgba(74, 222, 128, 0.267);
+    --turno-borde-suave: rgba(74, 222, 128, 0.133);
+}
+.fp-turno-noche {
+    --turno-rgb: 59, 130, 246;
+    --turno-color: #3b82f6;
+    --turno-dim: rgba(59, 130, 246, 0.14);
+    --turno-suave: rgba(59, 130, 246, 0.1);
+    --turno-borde: rgba(59, 130, 246, 0.267);
+    --turno-borde-suave: rgba(59, 130, 246, 0.133);
+}
+.fp-turno-descanso,
+.fp-turno-trio {
+    --turno-rgb: 124, 94, 245;
+    --turno-color: #7c5ef5;
+    --turno-dim: rgba(124, 94, 245, 0.14);
+    --turno-suave: rgba(124, 94, 245, 0.1);
+    --turno-borde: rgba(124, 94, 245, 0.267);
+    --turno-borde-suave: rgba(124, 94, 245, 0.133);
+}
+
+/* ── Tarjeta de funcionario (individual y trío) ── */
+.fp-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 10px;
+    padding: 14px;
+    border-radius: 14px;
+    background: var(--fp-card);
+    border: 1px solid var(--fp-border);
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+.fp-card:hover {
+    border-color: var(--fp-border-light);
+}
+/* Próximo a salir: borde y franja ámbar */
+.fp-card.proximo {
+    border-color: rgba(239, 159, 39, 0.55);
+}
+.fp-card.proximo:hover {
+    border-color: var(--fp-yellow);
+}
+.fp-card-franja {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--fp-yellow), rgba(239, 159, 39, 0.4));
+}
+.fp-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.fp-card-top-trio {
+    gap: 0;
+    margin-bottom: 10px;
+}
+.fp-card-rol-fila {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+.fp-card-rol {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--fp-violet);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fp-turno-chip {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    color: var(--turno-color);
+    background: var(--turno-dim);
+    border: 1px solid var(--turno-borde);
+}
+.fp-turno-chip.fp-turno-trio {
+    letter-spacing: 0.5px;
+}
+.fp-card-fechas {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.fp-card-fechas-trio {
+    gap: 8px;
+}
+.fp-card-rango {
+    margin-right: 10px;
+    font-size: 9.5px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--fp-text-mute);
+}
+.fp-card-fechas-trio .fp-card-rango {
+    margin-right: 0;
+}
+.fp-card-nombre {
+    margin-bottom: 10px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+    color: var(--fp-text);
+}
+.fp-card-pie,
+.fp-trio-botones {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--fp-border);
+}
+.fp-card-pie {
+    justify-content: space-between;
+    gap: 10px;
+}
+.fp-card-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.fp-card-back-avatar {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(124, 94, 245, 0.15);
+    border: 1px solid rgba(124, 94, 245, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--fp-violet);
+}
+.fp-card-back-info {
+    flex: 1;
+    min-width: 0;
+}
+.fp-card-back-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--fp-text-dim);
+}
+.fp-card-back-nombre {
+    font-size: 12px;
+    font-weight: 500;
+    color: #d4d4d4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fp-card-botones {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Botones pequeños de la tarjeta (libre, intercambios, rotar) */
+.fp-mini-btn {
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.fp-mini-cuadrado {
+    width: 28px;
+}
+.fp-mini-libre {
+    gap: 4px;
+    padding: 0 8px;
+    background: var(--fp-violet-dim);
+    border: 1px solid rgba(124, 94, 245, 0.4);
+    color: var(--fp-violet);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.fp-mini-amarillo {
+    background: var(--fp-yellow-dim);
+    border: 1px solid rgba(239, 159, 39, 0.4);
+    color: var(--fp-yellow);
+}
+.fp-mini-neutro {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--fp-border);
+    color: var(--fp-text-mute);
+}
+.fp-mini-turno {
+    gap: 3px;
+    padding: 0 7px;
+    font-size: 9px;
+    font-weight: 800;
+}
+/* Pasar de día a noche (azul) o de noche a día (verde) */
+.fp-mini-turno.a-noche {
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: var(--fp-blue);
+}
+.fp-mini-turno.a-dia {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    color: var(--fp-green);
+}
+
+/* ── Trío: tres personas y sus botones de cambio rápido ── */
+.fp-trio {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+.fp-trio-fila {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: var(--turno-suave);
+    border: 1px solid var(--turno-borde-suave);
+}
+.fp-trio-turno {
+    width: 66px;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--turno-color);
+}
+.fp-trio-nombre {
+    flex: 1;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--fp-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fp-trio-botones {
+    gap: 6px;
+}
+.fp-trio-btn {
+    flex: 1;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+}
+.fp-trio-btn-noche {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: #3b82f6;
+}
+.fp-trio-btn-dia {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    color: #4ade80;
+}
+
+/* ══ Modales ══════════════════════════════════════════════ */
+/* Panel común de los modales */
+.fp-panel {
+    padding: 20px;
+    border-radius: 18px;
+    background: var(--fp-card-elev);
+    border: 1px solid var(--fp-border-light);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.fp-panel-icono {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-panel-icono-peligro {
+    background: var(--fp-red-dim);
+    border: 1px solid rgba(226, 75, 74, 0.3);
+}
+.fp-panel-titulo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fp-text);
+}
+.fp-panel-titulo-grande {
+    margin-bottom: 6px;
+    font-size: 18px;
+}
+.fp-panel-sub {
+    margin: 4px 0 14px;
+    font-size: 12px;
+    color: var(--fp-text-mute);
+}
+.fp-panel-texto {
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--fp-text-mute);
+}
+/* Funcionario afectado (eliminar) */
+.fp-panel-persona {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--fp-border);
+}
+.fp-panel-persona-rol {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--fp-violet);
+}
+.fp-panel-persona-nombre {
+    margin-top: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fp-text);
+}
+
+/* Botones de los modales */
+.fp-botones {
+    display: flex;
+    gap: 8px;
+}
+.fp-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.fp-btn-ancho {
+    width: 100%;
+    margin-top: 4px;
+}
+.fp-btn-sec {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--fp-border);
+    color: var(--fp-text);
+    font-weight: 600;
+}
+.fp-btn-peligro {
+    background: var(--fp-red);
+    border: 1px solid transparent;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(226, 75, 74, 0.35);
+}
+.fp-btn-primario {
+    background: var(--fp-violet);
+    border: 1px solid transparent;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(124, 94, 245, 0.4);
+}
+
+/* Opciones para elegir (ciclo de turno) */
+.fp-opcion {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--fp-border);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 160ms ease;
+}
+.fp-opcion.elegida {
+    background: rgba(124, 94, 245, 0.1);
+    border-color: var(--fp-violet);
+}
+.fp-opcion-info {
+    flex: 1;
+}
+.fp-opcion-titulo {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--fp-text);
+}
+.fp-opcion-desc {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--fp-text-mute);
+}
+.fp-opcion-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--fp-violet);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Botón cuadrado con ícono (compartir, cerrar) */
+.fp-icono-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--fp-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 160ms, border-color 160ms;
+}
+
+/* Lista de activos / libres */
+.fp-lista-activos {
+    --acento: #4ade80;
+    --acento-rgb: 74, 222, 128;
+}
+.fp-lista-libres {
+    --acento: #7c5ef5;
+    --acento-rgb: 124, 94, 245;
+}
+.fp-lista {
+    --acento-dim: rgba(var(--acento-rgb), 0.14);
+    max-height: 520px;
+    display: flex;
+    flex-direction: column;
+}
+.fp-lista-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.fp-lista-icono {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    background: var(--acento-dim);
+    border: 1px solid rgba(var(--acento-rgb), 0.333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-lista-icono-punto {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--acento);
+    box-shadow: 0 0 10px var(--acento);
+}
+.fp-lista-titulos {
+    flex: 1;
+}
+.fp-lista-sub {
+    font-size: 11.5px;
+    color: var(--fp-text-mute);
+}
+.fp-lista-total {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--acento-dim);
+    border: 1px solid rgba(var(--acento-rgb), 0.25);
+    color: var(--acento);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.fp-lista .fp-icono-btn.copiado {
+    background: rgba(var(--acento-rgb), 0.133);
+    border-color: rgba(var(--acento-rgb), 0.333);
+}
+.fp-lista-scroll {
+    flex: 1;
+    overflow-y: auto;
+    margin-right: -4px;
+    padding-right: 4px;
+    padding-bottom: 0;
+}
+.fp-lista-items {
+    overflow: hidden;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--fp-border);
+}
+.fp-lista-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-top: 1px solid var(--fp-border);
+}
+.fp-lista-item:first-child {
+    border-top: 0;
+}
+.fp-lista-avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(var(--acento-rgb), 0.133);
+    border: 1px solid rgba(var(--acento-rgb), 0.333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--acento);
+}
+.fp-lista-persona {
+    flex: 1;
+    min-width: 0;
+}
+.fp-lista-nombre {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fp-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fp-lista-rol {
+    margin-top: 1px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--fp-violet);
+}
+.fp-lista-meta {
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--acento-dim);
+    border: 1px solid rgba(var(--acento-rgb), 0.188);
+    color: var(--acento);
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Encabezado de modal con ícono, título y botón cerrar */
+.fp-modal-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.fp-modal-top-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.fp-modal-top-icono {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-modal-top-icono-amarillo {
+    background: var(--fp-yellow-dim);
+    border: 1px solid rgba(239, 159, 39, 0.3);
+}
+.fp-modal-pregunta {
+    margin-bottom: 12px;
+    font-size: 11.5px;
+    color: var(--fp-text-mute);
+}
+.fp-botones-separados {
+    margin-top: 12px;
+}
+.fp-botones-juntos {
+    margin-top: 4px;
+}
+/* Botón de confirmar, más ancho que el de cancelar */
+.fp-btn.fp-btn-principal {
+    flex: 1.4;
+}
+.fp-btn.fp-btn-chico {
+    height: 42px;
+    font-size: 13.5px;
+}
+
+/* Opciones con círculo de selección (cambio e intercambio de turno) */
+.fp-radio-opcion {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--fp-border);
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+.fp-radio-opcion.elegida {
+    background: rgba(124, 94, 245, 0.1);
+    border-color: var(--fp-violet);
+}
+/* Intercambio: la opción elegida toma el color de su turno */
+.fp-radio-opcion.fp-turno-dia.elegida,
+.fp-radio-opcion.fp-turno-noche.elegida {
+    background: rgba(var(--turno-rgb), 0.094);
+    border-color: rgba(var(--turno-rgb), 0.4);
+}
+.fp-radio {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 1.5px solid var(--fp-border-light);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 140ms ease;
+}
+.fp-radio-opcion.elegida .fp-radio {
+    border-color: var(--fp-violet);
+    background: var(--fp-violet);
+}
+.fp-radio-opcion.fp-turno-dia.elegida .fp-radio,
+.fp-radio-opcion.fp-turno-noche.elegida .fp-radio {
+    border-color: var(--turno-color);
+    background: var(--turno-color);
+}
+.fp-radio-titulo {
+    margin-bottom: 3px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--fp-text);
+}
+.fp-radio-desc {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--fp-text-mute);
+}
+.fp-radio-desc-corta {
+    line-height: normal;
+}
+
+/* ── Importar funcionarios ── */
+.fp-panel.fp-panel-compacto {
+    padding: 18px;
+}
+.fp-icono-btn.fp-icono-btn-chico {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+.fp-imp-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.fp-imp-top-icono {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: var(--fp-green-dim);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-imp-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--fp-text);
+}
+.fp-imp-sub {
+    font-size: 10.5px;
+    color: var(--fp-text-mute);
+}
+.fp-imp-label {
+    margin-bottom: 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--fp-text-mute);
+}
+.fp-imp-columnas {
+    margin-bottom: 10px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--fp-border);
+}
+.fp-imp-columna {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--fp-border);
+}
+.fp-imp-columna:first-child {
+    border-top: 0;
+}
+.fp-imp-col-nombre {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(124, 94, 245, 0.12);
+    border: 1px solid rgba(124, 94, 245, 0.22);
+    color: var(--fp-violet);
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.fp-imp-col-ejemplo {
+    flex: 1;
+    text-align: right;
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: #bdbdbd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fp-imp-nota {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: rgba(239, 159, 39, 0.05);
+    border: 1px solid rgba(239, 159, 39, 0.2);
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--fp-text-mute);
+}
+.fp-imp-nota b {
+    color: #fff;
+}
+.fp-imp-preview {
+    margin-bottom: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: rgba(74, 222, 128, 0.05);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+.fp-imp-preview-titulo {
+    margin-bottom: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--fp-green);
+}
+.fp-imp-preview-fila {
+    padding: 2px 0;
+    font-size: 11px;
+    color: #d4d4d4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.fp-imp-preview-mas {
+    margin-top: 3px;
+    font-size: 10px;
+    color: var(--fp-text-dim);
+}
+.fp-imp-cambiar {
+    margin-top: 8px;
+    padding: 0;
+    background: none;
+    border: 0;
+    font-family: inherit;
+    font-size: 10.5px;
+    color: var(--fp-text-mute);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.fp-imp-elegir,
+.fp-imp-plantilla {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--fp-text-mute);
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fp-imp-elegir {
+    height: 52px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border: 1px dashed var(--fp-border-light);
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+}
+.fp-imp-plantilla {
+    height: 34px;
+    margin-bottom: 12px;
+    border-radius: 9px;
+    border: 1px dashed var(--fp-border);
+    gap: 6px;
+    font-size: 11px;
+}
+.fp-imp-error {
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--fp-red);
+}
+/* Botón importar: tenue hasta que hay archivo, verde lleno después */
+.fp-imp-confirmar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: var(--fp-green);
+    box-shadow: none;
+    transition: background 200ms ease, box-shadow 200ms ease;
+}
+.fp-imp-confirmar.listo {
+    background: var(--fp-green);
+    border-color: transparent;
+    color: #0a2010;
+    box-shadow: 0 6px 18px rgba(74, 222, 128, 0.35);
+}
+
+/* ── Detalle del funcionario (individual y trío) ── */
+/* Color de acento: ámbar si está próximo a salir, morado en trío, verde en el resto */
+.fp-acento-verde {
+    --acento: #4ade80;
+    --acento-rgb: 74, 222, 128;
+}
+.fp-acento-violeta {
+    --acento: #7c5ef5;
+    --acento-rgb: 124, 94, 245;
+}
+.fp-acento-amarillo {
+    --acento: #ef9f27;
+    --acento-rgb: 239, 159, 39;
+}
+.fp-det {
+    overflow: hidden;
+    border-radius: 20px;
+    background: var(--fp-card-elev);
+    border: 1px solid var(--fp-border-light);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+.fp-det-banda {
+    height: 4px;
+    background: linear-gradient(90deg, var(--acento), rgba(var(--acento-rgb), 0.333));
+}
+.fp-det-cuerpo {
+    padding: 18px 20px 0;
+}
+.fp-det-cuerpo-trio {
+    padding-bottom: 12px;
+}
+.fp-det-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.fp-det-header-trio {
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.fp-det-avatar {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 15px;
+    background: rgba(var(--acento-rgb), 0.102);
+    border: 1.5px solid rgba(var(--acento-rgb), 0.333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--acento);
+}
+.fp-det-avatar.fp-det-avatar-trio {
+    background: var(--fp-violet-dim);
+    border-color: rgba(124, 94, 245, 0.333);
+    font-size: 22px;
+    font-weight: normal;
+    letter-spacing: normal;
+}
+.fp-det-identidad {
+    flex: 1;
+    min-width: 0;
+}
+.fp-det-rol-fila {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.fp-det-rol {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--fp-violet);
+}
+.fp-det-rol-solo {
+    margin-bottom: 3px;
+}
+.fp-turno-chip.fp-det-chip {
+    letter-spacing: normal;
+}
+.fp-det-nombre {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.3px;
+    color: var(--fp-text);
+}
+.fp-det-nombre-trio {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fp-text);
+}
+.fp-icono-btn.fp-det-cerrar {
+    flex-shrink: 0;
+}
+/* Avance del ciclo */
+.fp-det-progreso {
+    margin-bottom: 16px;
+}
+.fp-det-cuerpo-trio .fp-det-progreso {
+    margin-bottom: 14px;
+}
+.fp-det-progreso-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.fp-det-porcentaje {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--fp-text-dim);
+}
+.fp-det-barra {
+    width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+}
+.fp-det-barra-relleno {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--acento), rgba(var(--acento-rgb), 0.733));
+    transition: width 400ms ease;
+}
+/* Personas del trío */
+.fp-det-trio {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 14px;
+}
+.fp-det-trio-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--turno-suave);
+    border: 1px solid var(--turno-borde-suave);
+}
+.fp-det-trio-icono {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    background: var(--turno-borde-suave);
+    border: 1px solid var(--turno-borde);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.fp-det-trio-turno {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--turno-color);
+}
+.fp-det-trio-nombre {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fp-text);
+}
+/* Filas de datos */
+.fp-det-info {
+    margin-bottom: 4px;
+}
+.fp-det-info-trio {
+    padding-top: 2px;
+    border-top: 1px solid var(--fp-border);
+}
+.fp-det-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--fp-border);
+}
+.fp-det-fila-trio {
+    padding: 9px 0;
+}
+.fp-det-fila-back {
+    padding: 12px 0;
+    border-bottom: 0;
+}
+.fp-det-fila-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--fp-text-dim);
+}
+.fp-det-fila-valor {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    color: var(--fp-text);
+}
+.fp-det-ciclo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--fp-border);
+    color: var(--fp-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.fp-det-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.fp-det-back-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(124, 94, 245, 0.15);
+    border: 1px solid rgba(124, 94, 245, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--fp-violet);
+}
+/* Botón cambiar turno / rotar */
+.fp-det-rotar-caja {
+    padding: 0 20px 12px;
+}
+.fp-det-rotar {
+    width: 100%;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--fp-border);
+    color: var(--fp-text-mute);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.fp-det-rotar.proximo {
+    background: var(--fp-yellow-dim);
+    border-color: rgba(239, 159, 39, 0.4);
+    color: var(--fp-yellow);
+}
+/* Botones de abajo: Editar, Copiar, Compartir, Eliminar */
+.fp-det-acciones {
+    display: grid;
+    border-top: 1px solid var(--fp-border);
+}
+.fp-det-acciones-3 { grid-template-columns: repeat(3, 1fr); }
+.fp-det-acciones-4 { grid-template-columns: repeat(4, 1fr); }
+.fp-det-accion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 14px 6px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--fp-border);
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 140ms ease;
+}
+.fp-det-accion:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+.fp-det-accion-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.fp-tono-azul { color: var(--fp-blue); }
+.fp-tono-verde { color: var(--fp-green); }
+.fp-tono-violeta { color: var(--fp-violet); }
+.fp-tono-rojo { color: var(--fp-red); }
+
+/* ── Agregar / editar funcionario ── */
+.fp-modal-top-amplio {
+    margin-bottom: 16px;
+}
+.fp-modal-top-icono-violeta {
+    background: var(--fp-violet-dim);
+    border: 1px solid rgba(124, 94, 245, 0.3);
+}
+/* Selector "2 personas / 3 personas" */
+.fp-modo {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding: 4px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+}
+.fp-modo-btn {
+    flex: 1;
+    height: 32px;
+    border-radius: 7px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--fp-text-mute);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+.fp-modo-btn.activo {
+    background: var(--fp-violet);
+    color: #fff;
+}
+/* Campos del formulario */
+.fp-campo {
+    margin-bottom: 12px;
+}
+.fp-campo-ultimo {
+    margin-bottom: 14px;
+}
+.fp-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: var(--fp-text-mute);
+}
+.fp-input {
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #2a2a2a;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    color-scheme: dark;
+}
+.fp-select {
+    cursor: pointer;
+}
+.fp-form-fila {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.fp-form-col {
+    flex: 1;
+}
+/* Días en turno, con la marca AUTO dentro del campo */
+.fp-dias {
+    position: relative;
+}
+.fp-input.fp-dias-input {
+    padding-right: 36px;
+}
+.fp-dias-auto {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--fp-text-dim);
+    pointer-events: none;
+}
+/* Botones de turno (día / noche / descanso) */
+.fp-turnos {
+    display: flex;
+    gap: 6px;
+}
+.fp-turno-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #2a2a2a;
+    color: #8a8a8a;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+.fp-turno-btn.elegido {
+    background: rgba(var(--turno-rgb), 0.133);
+    border-color: rgba(var(--turno-rgb), 0.4);
+    color: var(--turno-color);
+}
+/* Trío: un recuadro por persona con el color de su turno */
+.fp-trio-campo {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--turno-rgb), 0.06);
+    border: 1px solid rgba(var(--turno-rgb), 0.2);
+}
+.fp-trio-campo.fp-turno-descanso {
+    margin-bottom: 12px;
+}
+.fp-trio-campo-titulo {
+    margin-bottom: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--turno-color);
+}
+.fp-form-error {
+    margin-bottom: 8px;
+    font-size: 12px;
+    text-align: center;
+    color: var(--fp-red);
+}
