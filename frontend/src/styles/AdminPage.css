@@ -1,0 +1,433 @@
+/* ══════════════════════════════════════════════════════════
+   PANEL DE ADMINISTRACIÓN (pages/AdminPage.jsx)
+   Botones, insignias y tarjetas usan un "tono" (.adm-tono-*) que define
+   --tono y --tono-rgb; así los componentes no calculan colores.
+══════════════════════════════════════════════════════════ */
+.adm {
+    --adm-bg: #0a0a14;
+    --adm-surface: #12121e;
+    --adm-surface2: #1a1a28;
+    --adm-border: rgba(255, 255, 255, 0.08);
+    --adm-text: #f0f0f5;
+    --adm-muted: #666680;
+    --adm-purple: #7c6fef;
+    --adm-red: #e64b6b;
+    --adm-yellow: #e6d44b;
+
+    min-height: 100vh;
+    background: var(--adm-bg);
+    color: var(--adm-text);
+    font-family: system-ui, sans-serif;
+}
+.adm-tono-purple { --tono: #7c6fef; --tono-rgb: 124, 111, 239; }
+.adm-tono-green  { --tono: #28c997; --tono-rgb: 40, 201, 151; }
+.adm-tono-red    { --tono: #e64b6b; --tono-rgb: 230, 75, 107; }
+.adm-tono-orange { --tono: #ef9f27; --tono-rgb: 239, 159, 39; }
+.adm-tono-yellow { --tono: #e6d44b; --tono-rgb: 230, 212, 75; }
+.adm-tono-muted  { --tono: #666680; --tono-rgb: 102, 102, 128; }
+
+/* ── Encabezado y estructura ── */
+.adm-hdr {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--adm-surface);
+    border-bottom: 1px solid var(--adm-border);
+}
+.adm-hdr-btns {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.adm-volver {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+    color: var(--adm-muted);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.adm-titulo {
+    font-size: 16px;
+    font-weight: 700;
+}
+.adm-subtitulo {
+    font-size: 12px;
+    color: var(--adm-muted);
+}
+.adm-contenido {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+/* Pestañas Usuarios / Comentarios */
+.adm-secciones {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+.adm-seccion {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+    color: var(--adm-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.adm-seccion.activa {
+    background: rgba(124, 111, 239, 0.15);
+    border-color: var(--adm-purple);
+    color: var(--adm-purple);
+}
+
+/* ── Tarjetas de estadísticas ── */
+.adm-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.adm-stat {
+    flex: 1;
+    min-width: 100px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+}
+.adm-stat-valor {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--tono, var(--adm-text));
+}
+.adm-stat-label {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--adm-muted);
+}
+
+/* ── Filtros, avisos y listas ── */
+.adm-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.adm-filtro {
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+    color: var(--adm-text);
+    font-size: 14px;
+    outline: none;
+}
+.adm-filtro-buscar {
+    flex: 1;
+    min-width: 200px;
+}
+.adm-select {
+    cursor: pointer;
+}
+.adm-alerta {
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(230, 75, 107, 0.15);
+    border: 1px solid rgba(230, 75, 107, 0.267);
+    color: var(--adm-red);
+    font-size: 13px;
+}
+.adm-vacio {
+    padding: 40px;
+    text-align: center;
+    color: var(--adm-muted);
+}
+.adm-error-texto {
+    padding: 20px;
+    color: var(--adm-red);
+}
+.adm-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Tarjeta de usuario ── */
+.adm-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--adm-surface);
+    border: 1px solid var(--adm-border);
+}
+.adm-card.inactivo {
+    opacity: 0.55;
+}
+.adm-card-info {
+    flex: 1;
+    min-width: 0;
+}
+.adm-iniciales {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(var(--tono-rgb), 0.15);
+    border: 1px solid rgba(var(--tono-rgb), 0.267);
+    color: var(--tono);
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.adm-fila-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.adm-nombre {
+    font-size: 14px;
+    font-weight: 600;
+}
+.adm-email {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--adm-muted);
+}
+.adm-dato {
+    margin-top: 1px;
+    font-size: 11px;
+    color: var(--adm-muted);
+}
+.adm-dato.adm-dato-paneles {
+    margin-top: 3px;
+}
+.adm-bloques {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+}
+.adm-actions {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+/* Insignia de rol / estado */
+.adm-insignia {
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: rgba(var(--tono-rgb), 0.15);
+    border: 1px solid rgba(var(--tono-rgb), 0.267);
+    color: var(--tono);
+    font-size: 11px;
+    font-weight: 700;
+}
+/* Etiquetas pequeñas (bloques, "nuevo", "tú", "inactivo", tipo de comentario) */
+.adm-etiqueta {
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: rgba(var(--tono-rgb), 0.15);
+    color: var(--tono);
+    font-size: 11px;
+}
+.adm-etiqueta-ancha {
+    padding: 1px 8px;
+}
+.adm-etiqueta-borde {
+    border: 1px solid rgba(var(--tono-rgb), 0.267);
+}
+.adm-etiqueta-tu {
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+    color: var(--adm-muted);
+}
+
+/* ── Botón (con tono) ── */
+.adm-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: rgba(var(--tono-rgb), 0.133);
+    border: 1px solid rgba(var(--tono-rgb), 0.333);
+    color: var(--tono);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.adm-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ── Comentarios ── */
+.adm-filtro-comentarios {
+    max-width: 260px;
+    margin-bottom: 16px;
+}
+.adm-comentario {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--adm-surface);
+    border: 1px solid var(--adm-border);
+}
+.adm-comentario.nuevo {
+    border-color: rgba(124, 111, 239, 0.4);
+}
+.adm-estrellas {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--adm-yellow);
+}
+.adm-estrellas-vacias {
+    color: var(--adm-muted);
+}
+.adm-fecha {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--adm-muted);
+}
+.adm-mensaje {
+    margin: 10px 0 12px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.adm-acciones-fila {
+    display: flex;
+    gap: 8px;
+}
+
+/* ── Modal y formularios ── */
+.adm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.7);
+}
+.adm-modal-caja {
+    width: 100%;
+    max-width: 420px;
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--adm-surface);
+    border: 1px solid var(--adm-border);
+}
+.adm-modal-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.adm-modal-titulo {
+    font-size: 16px;
+    font-weight: 700;
+}
+.adm-modal-cerrar {
+    background: none;
+    border: none;
+    color: var(--adm-muted);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+.adm-modal-texto {
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--adm-muted);
+}
+.adm-modal-texto strong {
+    color: var(--adm-text);
+}
+.adm-modal-texto.adm-modal-texto-junto {
+    margin: 0 0 1em;
+    line-height: normal;
+}
+.adm-modal-botones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.adm-modal-error {
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--adm-red);
+}
+.adm-campo {
+    margin-bottom: 14px;
+}
+.adm-campo-label {
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--adm-muted);
+}
+.adm-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--adm-surface2);
+    border: 1px solid var(--adm-border);
+    color: var(--adm-text);
+    font-size: 14px;
+    outline: none;
+}
+.adm-ayuda {
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    color: var(--adm-muted);
+}
+/* Listas de casillas (paneles y bloques) */
+.adm-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.adm-checks-separados {
+    margin-top: 4px;
+}
+.adm-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--adm-text);
+    cursor: pointer;
+}
+.adm-check input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--adm-purple);
+}
+
+/* ── Celular ── */
+@media (max-width: 640px) {
+    .adm-hdr      { flex-wrap: wrap; }
+    .adm-hdr-btns { margin-left: 0; width: 100%; }
+    .adm-stats    { display: grid; grid-template-columns: 1fr 1fr; }
+    .adm-card     { flex-direction: column; align-items: flex-start; }
+    .adm-actions  { width: 100%; justify-content: flex-start; }
+}

@@ -3,36 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
+import '../styles/AdminPage.css';
 
-const C = {
-    bg: '#0a0a14',
-    surface: '#12121e',
-    surface2: '#1a1a28',
-    border: 'rgba(255,255,255,0.08)',
-    text: '#f0f0f5',
-    muted: '#666680',
-    purple: '#7c6fef',
-    purpleDim: 'rgba(124,111,239,0.15)',
-    green: '#28c997',
-    greenDim: 'rgba(40,201,151,0.15)',
-    red: '#e64b6b',
-    redDim: 'rgba(230,75,107,0.15)',
-    orange: '#ef9f27',
-    orangeDim: 'rgba(239,159,39,0.15)',
-    yellow: '#e6d44b',
-    yellowDim: 'rgba(230,212,75,0.15)',
-};
-
+// Cada rol / estado tiene un "tono" (ver .adm-tono-* en AdminPage.css)
 const ROLE_META = {
-    admin:      { label: 'Admin',      color: C.purple,  dim: C.purpleDim },
-    supervisor: { label: 'Supervisor', color: C.orange,  dim: C.orangeDim },
-    operador:   { label: 'Operador',   color: C.green,   dim: C.greenDim  },
+    admin:      { label: 'Admin',      tono: 'purple' },
+    supervisor: { label: 'Supervisor', tono: 'orange' },
+    operador:   { label: 'Operador',   tono: 'green' },
 };
 
 const STATUS_META = {
-    pending:   { label: 'Pendiente',  color: C.orange, dim: C.orangeDim },
-    active:    { label: 'Activo',     color: C.green,  dim: C.greenDim  },
-    suspended: { label: 'Suspendido', color: C.red,    dim: C.redDim    },
+    pending:   { label: 'Pendiente',  tono: 'orange' },
+    active:    { label: 'Activo',     tono: 'green' },
+    suspended: { label: 'Suspendido', tono: 'red' },
 };
 
 const PANELS_DISPONIBLES = [
@@ -54,21 +37,6 @@ const nombreBloque = (id) => {
 // Bloques que el usuario eligió y el admin todavía no aprobó
 const bloquesSolicitados = (u) => (u.bloques || []).filter(b => !(u.bloquesAprobados || []).includes(b));
 
-const adm_css = `
-  .adm-hdr       { display:flex; align-items:center; gap:12px; }
-  .adm-hdr-btns  { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
-  .adm-stats     { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
-  .adm-card      { display:flex; align-items:center; gap:12px; }
-  .adm-actions   { display:flex; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
-  @media (max-width:640px) {
-    .adm-hdr      { flex-wrap:wrap; }
-    .adm-hdr-btns { margin-left:0; width:100%; }
-    .adm-stats    { display:grid; grid-template-columns:1fr 1fr; }
-    .adm-card     { flex-direction:column; align-items:flex-start; }
-    .adm-actions  { width:100%; justify-content:flex-start; }
-  }
-`;
-
 const fmt = (d) => {
     if (!d) return 'Nunca';
     return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -77,60 +45,32 @@ const fmt = (d) => {
 const Initials = ({ name, role }) => {
     const meta = ROLE_META[role] || ROLE_META.operador;
     const ini = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    return (
-        <div style={{
-            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            background: meta.dim, border: `1px solid ${meta.color}44`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: meta.color, fontWeight: 700, fontSize: 14,
-        }}>{ini}</div>
-    );
+    return <div className={`adm-iniciales adm-tono-${meta.tono}`}>{ini}</div>;
 };
 
 const RoleBadge = ({ role }) => {
     const meta = ROLE_META[role] || ROLE_META.operador;
-    return (
-        <span style={{
-            background: meta.dim, color: meta.color,
-            border: `1px solid ${meta.color}44`,
-            padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-        }}>{meta.label}</span>
-    );
+    return <span className={`adm-insignia adm-tono-${meta.tono}`}>{meta.label}</span>;
 };
 
 const StatusBadge = ({ status }) => {
     const meta = STATUS_META[status] || STATUS_META.pending;
-    return (
-        <span style={{
-            background: meta.dim, color: meta.color,
-            border: `1px solid ${meta.color}44`,
-            padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-        }}>{meta.label}</span>
-    );
+    return <span className={`adm-insignia adm-tono-${meta.tono}`}>{meta.label}</span>;
 };
 
-const StatCard = ({ label, value, color }) => (
-    <div style={{
-        background: C.surface2, border: `1px solid ${C.border}`,
-        borderRadius: 12, padding: '16px 20px', flex: 1, minWidth: 100,
-    }}>
-        <div style={{ fontSize: 26, fontWeight: 700, color: color || C.text }}>{value}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{label}</div>
+const StatCard = ({ label, value, tono }) => (
+    <div className={`adm-stat${tono ? ` adm-tono-${tono}` : ''}`}>
+        <div className="adm-stat-valor">{value}</div>
+        <div className="adm-stat-label">{label}</div>
     </div>
 );
 
 const Modal = ({ title, onClose, children }) => (
-    <div style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16,
-    }} onClick={e => e.target === e.currentTarget && onClose()}>
-        <div style={{
-            background: C.surface, border: `1px solid ${C.border}`,
-            borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
-        }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <span style={{ fontWeight: 700, fontSize: 16 }}>{title}</span>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+    <div className="adm-modal" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="adm-modal-caja">
+            <div className="adm-modal-top">
+                <span className="adm-modal-titulo">{title}</span>
+                <button className="adm-modal-cerrar" onClick={onClose}>×</button>
             </div>
             {children}
         </div>
@@ -138,40 +78,27 @@ const Modal = ({ title, onClose, children }) => (
 );
 
 const Field = ({ label, children }) => (
-    <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
+    <div className="adm-campo">
+        <div className="adm-campo-label">{label}</div>
         {children}
     </div>
 );
 
-const Input = (props) => (
-    <input {...props} style={{
-        width: '100%', background: C.surface2, border: `1px solid ${C.border}`,
-        borderRadius: 8, padding: '10px 12px', color: C.text, fontSize: 14,
-        outline: 'none', boxSizing: 'border-box', ...props.style,
-    }} />
-);
+const Input = (props) => <input {...props} className="adm-input" />;
 
 const Select = ({ value, onChange, children }) => (
-    <select value={value} onChange={onChange} style={{
-        width: '100%', background: C.surface2, border: `1px solid ${C.border}`,
-        borderRadius: 8, padding: '10px 12px', color: C.text, fontSize: 14,
-        outline: 'none', cursor: 'pointer',
-    }}>{children}</select>
+    <select className="adm-input adm-select" value={value} onChange={onChange}>{children}</select>
 );
 
-const Btn = ({ onClick, children, color = C.purple, disabled, style: s }) => (
-    <button onClick={onClick} disabled={disabled} style={{
-        background: color + '22', border: `1px solid ${color}55`,
-        color, borderRadius: 8, padding: '8px 14px', cursor: disabled ? 'not-allowed' : 'pointer',
-        fontSize: 13, fontWeight: 600, opacity: disabled ? 0.5 : 1, ...s,
-    }}>{children}</button>
+// tono: purple (por defecto), muted, green, orange, red
+const Btn = ({ onClick, children, tono = 'purple', disabled }) => (
+    <button className={`adm-btn adm-tono-${tono}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
 const TIPO_COMENTARIO = {
-    opinion:    { label: 'Opinión',    color: C.purple },
-    sugerencia: { label: 'Sugerencia', color: C.green },
-    error:      { label: 'Error',      color: C.red },
+    opinion:    { label: 'Opinión',    tono: 'purple' },
+    sugerencia: { label: 'Sugerencia', tono: 'green' },
+    error:      { label: 'Error',      tono: 'red' },
 };
 
 // Comentarios que los usuarios envían desde "Enviar comentarios" en el menú
@@ -221,19 +148,19 @@ const ComentariosAdmin = ({ onSinLeer }) => {
     const visibles = comentarios.filter(c =>
         filtro === 'todos' || (filtro === 'sin-leer' ? !c.leido : c.tipo === filtro));
 
-    if (loading) return <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>Cargando comentarios…</div>;
-    if (error) return <div style={{ color: C.red, padding: 20 }}>{error}</div>;
+    if (loading) return <div className="adm-vacio">Cargando comentarios…</div>;
+    if (error) return <div className="adm-error-texto">{error}</div>;
 
     return (
         <>
             <div className="adm-stats">
                 <StatCard label="Comentarios" value={comentarios.length} />
-                <StatCard label="Sin leer" value={comentarios.filter(c => !c.leido).length} color={C.orange} />
-                <StatCard label="Calificación promedio" value={promedio === '—' ? promedio : `${promedio} ★`} color={C.yellow} />
-                <StatCard label="Errores reportados" value={comentarios.filter(c => c.tipo === 'error').length} color={C.red} />
+                <StatCard label="Sin leer" value={comentarios.filter(c => !c.leido).length} tono="orange" />
+                <StatCard label="Calificación promedio" value={promedio === '—' ? promedio : `${promedio} ★`} tono="yellow" />
+                <StatCard label="Errores reportados" value={comentarios.filter(c => c.tipo === 'error').length} tono="red" />
             </div>
 
-            <div style={{ marginBottom: 16, maxWidth: 260 }}>
+            <div className="adm-filtro-comentarios">
                 <Select value={filtro} onChange={e => setFiltro(e.target.value)}>
                     <option value="todos">Todos los comentarios</option>
                     <option value="sin-leer">Sin leer</option>
@@ -244,36 +171,33 @@ const ComentariosAdmin = ({ onSinLeer }) => {
             </div>
 
             {visibles.length === 0 ? (
-                <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>
+                <div className="adm-vacio">
                     {comentarios.length === 0 ? 'Todavía nadie ha enviado comentarios' : 'Sin comentarios con este filtro'}
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="adm-lista">
                     {visibles.map(c => {
                         const t = TIPO_COMENTARIO[c.tipo] || TIPO_COMENTARIO.opinion;
                         return (
-                            <div key={c._id} style={{
-                                background: C.surface, borderRadius: 12, padding: '14px 16px',
-                                border: `1px solid ${c.leido ? C.border : C.purple + '66'}`,
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                    <span style={{ fontWeight: 600, fontSize: 14 }}>{c.usuario?.name || 'Usuario eliminado'}</span>
-                                    <span style={{ fontSize: 11, color: t.color, background: t.color + '22', padding: '1px 8px', borderRadius: 10 }}>{t.label}</span>
+                            <div key={c._id} className={`adm-comentario${c.leido ? '' : ' nuevo'}`}>
+                                <div className="adm-fila-titulo">
+                                    <span className="adm-nombre">{c.usuario?.name || 'Usuario eliminado'}</span>
+                                    <span className={`adm-etiqueta adm-etiqueta-ancha adm-tono-${t.tono}`}>{t.label}</span>
                                     {c.calificacion && (
-                                        <span style={{ fontSize: 13, color: C.yellow, letterSpacing: 1 }}>
-                                            {'★'.repeat(c.calificacion)}<span style={{ color: C.muted }}>{'★'.repeat(5 - c.calificacion)}</span>
+                                        <span className="adm-estrellas">
+                                            {'★'.repeat(c.calificacion)}<span className="adm-estrellas-vacias">{'★'.repeat(5 - c.calificacion)}</span>
                                         </span>
                                     )}
-                                    {!c.leido && <span style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 8px', borderRadius: 10 }}>nuevo</span>}
-                                    <span style={{ marginLeft: 'auto', fontSize: 11, color: C.muted }}>{fmt(c.createdAt)}</span>
+                                    {!c.leido && <span className="adm-etiqueta adm-etiqueta-ancha adm-tono-orange">nuevo</span>}
+                                    <span className="adm-fecha">{fmt(c.createdAt)}</span>
                                 </div>
-                                {c.usuario?.email && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{c.usuario.email}</div>}
-                                <p style={{ margin: '10px 0 12px', fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.mensaje}</p>
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <Btn onClick={() => marcar(c)} color={c.leido ? C.muted : C.green}>
+                                {c.usuario?.email && <div className="adm-email">{c.usuario.email}</div>}
+                                <p className="adm-mensaje">{c.mensaje}</p>
+                                <div className="adm-acciones-fila">
+                                    <Btn onClick={() => marcar(c)} tono={c.leido ? 'muted' : 'green'}>
                                         {c.leido ? 'Marcar como no leído' : '✓ Marcar como leído'}
                                     </Btn>
-                                    <Btn onClick={() => setAEliminar(c)} color={C.red}>Eliminar</Btn>
+                                    <Btn onClick={() => setAEliminar(c)} tono="red">Eliminar</Btn>
                                 </div>
                             </div>
                         );
@@ -283,12 +207,12 @@ const ComentariosAdmin = ({ onSinLeer }) => {
 
             {aEliminar && (
                 <Modal title="Eliminar comentario" onClose={() => setAEliminar(null)}>
-                    <p style={{ fontSize: 14, color: C.muted, marginTop: 0 }}>
+                    <p className="adm-modal-texto adm-modal-texto-junto">
                         Se eliminará el comentario de {aEliminar.usuario?.name || 'este usuario'}. Esta acción no se puede deshacer.
                     </p>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <Btn onClick={() => setAEliminar(null)} color={C.muted}>Cancelar</Btn>
-                        <Btn onClick={eliminar} color={C.red}>Eliminar</Btn>
+                    <div className="adm-modal-botones">
+                        <Btn onClick={() => setAEliminar(null)} tono="muted">Cancelar</Btn>
+                        <Btn onClick={eliminar} tono="red">Eliminar</Btn>
                     </div>
                 </Modal>
             )}
@@ -437,26 +361,17 @@ export default function AdminPage() {
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: 'system-ui, sans-serif' }}>
-            <style>{adm_css}</style>
+        <div className="adm">
 
             {/* Header */}
-            <div className="adm-hdr" style={{
-                background: C.surface, borderBottom: `1px solid ${C.border}`,
-                padding: '16px 20px',
-            }}>
-                <button onClick={() => navigate('/workspace')} style={{
-                    background: C.surface2, border: `1px solid ${C.border}`,
-                    color: C.muted, borderRadius: 8, width: 36, height: 36,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', fontSize: 18, flexShrink: 0,
-                }}>←</button>
+            <div className="adm-hdr">
+                <button className="adm-volver" onClick={() => navigate('/workspace')}>←</button>
                 <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>Panel de Administración</div>
-                    <div style={{ fontSize: 12, color: C.muted }}>Gestión de usuarios del sistema</div>
+                    <div className="adm-titulo">Panel de Administración</div>
+                    <div className="adm-subtitulo">Gestión de usuarios del sistema</div>
                 </div>
                 <div className="adm-hdr-btns">
-                    <Btn onClick={load} color={C.muted} style={{ fontSize: 13 }}>
+                    <Btn onClick={load} tono="muted">
                         ↻ Actualizar
                     </Btn>
                     <Btn onClick={() => { setForm({ name: '', email: '', password: '', role: 'operador' }); setError(''); setModalCreate(true); }}>
@@ -465,17 +380,12 @@ export default function AdminPage() {
                 </div>
             </div>
 
-            <div style={{ padding: '20px', maxWidth: 900, margin: '0 auto' }}>
+            <div className="adm-contenido">
 
                 {/* Secciones */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                <div className="adm-secciones">
                     {[['usuarios', 'Usuarios'], ['comentarios', `Comentarios${comentariosSinLeer ? ` (${comentariosSinLeer})` : ''}`]].map(([id, label]) => (
-                        <button key={id} onClick={() => setSeccion(id)} style={{
-                            padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                            border: `1px solid ${seccion === id ? C.purple : C.border}`,
-                            background: seccion === id ? C.purpleDim : C.surface2,
-                            color: seccion === id ? C.purple : C.muted,
-                        }}>{label}</button>
+                        <button key={id} className={`adm-seccion${seccion === id ? ' activa' : ''}`} onClick={() => setSeccion(id)}>{label}</button>
                     ))}
                 </div>
 
@@ -485,42 +395,30 @@ export default function AdminPage() {
                 {stats && (
                     <div className="adm-stats">
                         <StatCard label="Total usuarios" value={stats.total} />
-                        <StatCard label="Pendientes" value={stats.pendientes} color={C.orange} />
-                        <StatCard label="Admins" value={stats.admins} color={C.purple} />
-                        <StatCard label="Supervisores" value={stats.supervisors} color={C.orange} />
-                        <StatCard label="Operadores" value={stats.operadores} color={C.green} />
-                        <StatCard label="Inactivos" value={stats.inactivos} color={C.red} />
-                        <StatCard label="Activos (30 días)" value={stats.activosUltimos30} color={C.yellow} />
+                        <StatCard label="Pendientes" value={stats.pendientes} tono="orange" />
+                        <StatCard label="Admins" value={stats.admins} tono="purple" />
+                        <StatCard label="Supervisores" value={stats.supervisors} tono="orange" />
+                        <StatCard label="Operadores" value={stats.operadores} tono="green" />
+                        <StatCard label="Inactivos" value={stats.inactivos} tono="red" />
+                        <StatCard label="Activos (30 días)" value={stats.activosUltimos30} tono="yellow" />
                     </div>
                 )}
 
                 {/* Filtros */}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div className="adm-filtros">
                     <input
+                        className="adm-filtro adm-filtro-buscar"
                         placeholder="Buscar por nombre o correo…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={{
-                            flex: 1, minWidth: 200,
-                            background: C.surface2, border: `1px solid ${C.border}`,
-                            borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14, outline: 'none',
-                        }}
                     />
-                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
-                        background: C.surface2, border: `1px solid ${C.border}`,
-                        borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14,
-                        outline: 'none', cursor: 'pointer',
-                    }}>
+                    <select className="adm-filtro adm-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                         <option value="todos">Todos los estados</option>
                         <option value="pending">Pendientes</option>
                         <option value="active">Activos</option>
                         <option value="suspended">Suspendidos</option>
                     </select>
-                    <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{
-                        background: C.surface2, border: `1px solid ${C.border}`,
-                        borderRadius: 8, padding: '9px 14px', color: C.text, fontSize: 14,
-                        outline: 'none', cursor: 'pointer',
-                    }}>
+                    <select className="adm-filtro adm-select" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
                         <option value="todos">Todos los roles</option>
                         <option value="admin">Admin</option>
                         <option value="supervisor">Supervisor</option>
@@ -530,55 +428,47 @@ export default function AdminPage() {
 
                 {/* Lista */}
                 {loadError && (
-                    <div style={{
-                        background: C.redDim, border: `1px solid ${C.red}44`,
-                        borderRadius: 10, padding: '12px 16px', marginBottom: 12,
-                        color: C.red, fontSize: 13,
-                    }}>{loadError}</div>
+                    <div className="adm-alerta">{loadError}</div>
                 )}
                 {loading ? (
-                    <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>Cargando…</div>
+                    <div className="adm-vacio">Cargando…</div>
                 ) : filtered.length === 0 ? (
-                    <div style={{ textAlign: 'center', color: C.muted, padding: 40 }}>No se encontraron usuarios</div>
+                    <div className="adm-vacio">No se encontraron usuarios</div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="adm-lista">
                         {filtered.map(u => (
-                            <div key={u.id} className="adm-card" style={{
-                                background: C.surface, border: `1px solid ${C.border}`,
-                                borderRadius: 12, padding: '14px 16px',
-                                opacity: u.activo ? 1 : 0.55,
-                            }}>
+                            <div key={u.id} className={`adm-card${u.activo ? '' : ' inactivo'}`}>
                                 <Initials name={u.name} role={u.role} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                        <span style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</span>
+                                <div className="adm-card-info">
+                                    <div className="adm-fila-titulo">
+                                        <span className="adm-nombre">{u.name}</span>
                                         <RoleBadge role={u.role} />
                                         <StatusBadge status={u.status} />
                                         {u.id === me?.id && (
-                                            <span style={{ fontSize: 11, color: C.muted, background: C.surface2, padding: '1px 7px', borderRadius: 10, border: `1px solid ${C.border}` }}>tú</span>
+                                            <span className="adm-etiqueta adm-etiqueta-tu">tú</span>
                                         )}
                                         {!u.activo && (
-                                            <span style={{ fontSize: 11, color: C.red, background: C.redDim, padding: '1px 7px', borderRadius: 10, border: `1px solid ${C.red}44` }}>inactivo</span>
+                                            <span className="adm-etiqueta adm-etiqueta-borde adm-tono-red">inactivo</span>
                                         )}
                                     </div>
-                                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{u.email}</div>
-                                    <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
+                                    <div className="adm-email">{u.email}</div>
+                                    <div className="adm-dato">
                                         Último acceso: {fmt(u.lastLogin)}
                                     </div>
                                     {u.permisosPanel?.length > 0 && (
-                                        <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>
+                                        <div className="adm-dato adm-dato-paneles">
                                             Paneles: {u.permisosPanel.join(', ')}
                                         </div>
                                     )}
                                     {u.role !== 'admin' && (
-                                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 5 }}>
+                                        <div className="adm-bloques">
                                             {u.bloquesAprobados?.map(b => (
-                                                <span key={b} style={{ fontSize: 11, color: C.green, background: C.greenDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                <span key={b} className="adm-etiqueta adm-tono-green">
                                                     {nombreBloque(b)}
                                                 </span>
                                             ))}
                                             {bloquesSolicitados(u).map(b => (
-                                                <span key={b} style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                <span key={b} className="adm-etiqueta adm-tono-orange">
                                                     Solicita {nombreBloque(b)}
                                                 </span>
                                             ))}
@@ -587,21 +477,21 @@ export default function AdminPage() {
                                 </div>
                                 <div className="adm-actions">
                                     {u.status === 'pending' && u.id !== me?.id && (
-                                        <Btn onClick={() => handleAprobar(u)} color={C.green}>
+                                        <Btn onClick={() => handleAprobar(u)} tono="green">
                                             ✓ Aprobar
                                         </Btn>
                                     )}
                                     <Btn onClick={() => { setEditForm({ name: u.name, role: u.role, activo: u.activo, status: u.status || 'pending', permisosPanel: u.permisosPanel || [], bloquesAprobados: u.bloquesAprobados || [] }); setError(''); setModalEdit(u); }}>
                                         Editar
                                     </Btn>
-                                    <Btn onClick={() => { setPassForm({ password: '', confirm: '' }); setError(''); setModalPass(u); }} color={C.orange}>
+                                    <Btn onClick={() => { setPassForm({ password: '', confirm: '' }); setError(''); setModalPass(u); }} tono="orange">
                                         Contraseña
                                     </Btn>
-                                    <Btn onClick={() => handleToggleActivo(u)} color={u.activo ? C.red : C.green}>
+                                    <Btn onClick={() => handleToggleActivo(u)} tono={u.activo ? 'red' : 'green'}>
                                         {u.activo ? 'Desactivar' : 'Activar'}
                                     </Btn>
                                     {u.id !== me?.id && (
-                                        <Btn onClick={() => setModalDel(u)} color={C.red}>
+                                        <Btn onClick={() => setModalDel(u)} tono="red">
                                             Eliminar
                                         </Btn>
                                     )}
@@ -632,9 +522,9 @@ export default function AdminPage() {
                             <option value="admin">Administrador</option>
                         </Select>
                     </Field>
-                    {error && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <Btn onClick={() => setModalCreate(false)} color={C.muted}>Cancelar</Btn>
+                    {error && <div className="adm-modal-error">{error}</div>}
+                    <div className="adm-modal-botones">
+                        <Btn onClick={() => setModalCreate(false)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handleCreate} disabled={saving}>{saving ? 'Creando…' : 'Crear usuario'}</Btn>
                     </div>
                 </Modal>
@@ -661,11 +551,11 @@ export default function AdminPage() {
                         </Select>
                     </Field>
                     <Field label="Paneles habilitados">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                        <div className="adm-checks adm-checks-separados">
                             {PANELS_DISPONIBLES.map(p => {
                                 const checked = editForm.permisosPanel.includes(p.id);
                                 return (
-                                    <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: C.text }}>
+                                    <label key={p.id} className="adm-check">
                                         <input
                                             type="checkbox"
                                             checked={checked}
@@ -675,7 +565,6 @@ export default function AdminPage() {
                                                     ? f.permisosPanel.filter(x => x !== p.id)
                                                     : [...f.permisosPanel, p.id],
                                             }))}
-                                            style={{ accentColor: C.purple, width: 15, height: 15 }}
                                         />
                                         {p.label}
                                     </label>
@@ -685,14 +574,14 @@ export default function AdminPage() {
                     </Field>
                     {editForm.role !== 'admin' && (
                         <Field label="Bloques aprobados">
-                            <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 6 }}>
+                            <div className="adm-ayuda">
                                 Solo verá la información (firmas, nominativos, puestos) y podrá abrir turno en los bloques marcados.
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div className="adm-checks">
                                 {[...new Set([...Object.keys(BLOQUES_DATA), ...(modalEdit.bloques || []), ...editForm.bloquesAprobados])].map(b => {
                                     const checked = editForm.bloquesAprobados.includes(b);
                                     return (
-                                        <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: C.text }}>
+                                        <label key={b} className="adm-check">
                                             <input
                                                 type="checkbox"
                                                 checked={checked}
@@ -702,11 +591,10 @@ export default function AdminPage() {
                                                         ? f.bloquesAprobados.filter(x => x !== b)
                                                         : [...f.bloquesAprobados, b],
                                                 }))}
-                                                style={{ accentColor: C.purple, width: 15, height: 15 }}
                                             />
                                             {nombreBloque(b)}
                                             {(modalEdit.bloques || []).includes(b) && !checked && (
-                                                <span style={{ fontSize: 11, color: C.orange, background: C.orangeDim, padding: '1px 7px', borderRadius: 10 }}>
+                                                <span className="adm-etiqueta adm-tono-orange">
                                                     solicitado
                                                 </span>
                                             )}
@@ -716,9 +604,9 @@ export default function AdminPage() {
                             </div>
                         </Field>
                     )}
-                    {error && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <Btn onClick={() => setModalEdit(null)} color={C.muted}>Cancelar</Btn>
+                    {error && <div className="adm-modal-error">{error}</div>}
+                    <div className="adm-modal-botones">
+                        <Btn onClick={() => setModalEdit(null)} tono="muted">Cancelar</Btn>
                         <Btn onClick={handleEdit} disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</Btn>
                     </div>
                 </Modal>
@@ -733,10 +621,10 @@ export default function AdminPage() {
                     <Field label="Confirmar contraseña">
                         <Input type="password" value={passForm.confirm} onChange={e => setPassForm(f => ({ ...f, confirm: e.target.value }))} placeholder="Repite la contraseña" />
                     </Field>
-                    {error && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{error}</div>}
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <Btn onClick={() => setModalPass(null)} color={C.muted}>Cancelar</Btn>
-                        <Btn onClick={handlePassword} disabled={saving} color={C.orange}>{saving ? 'Guardando…' : 'Actualizar contraseña'}</Btn>
+                    {error && <div className="adm-modal-error">{error}</div>}
+                    <div className="adm-modal-botones">
+                        <Btn onClick={() => setModalPass(null)} tono="muted">Cancelar</Btn>
+                        <Btn onClick={handlePassword} disabled={saving} tono="orange">{saving ? 'Guardando…' : 'Actualizar contraseña'}</Btn>
                     </div>
                 </Modal>
             )}
@@ -744,13 +632,13 @@ export default function AdminPage() {
             {/* Modal: Confirmar eliminación */}
             {modalDel && (
                 <Modal title="Eliminar usuario" onClose={() => setModalDel(null)}>
-                    <p style={{ color: C.muted, fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
-                        ¿Estás seguro de que quieres eliminar a <strong style={{ color: C.text }}>{modalDel.name}</strong>?<br />
+                    <p className="adm-modal-texto">
+                        ¿Estás seguro de que quieres eliminar a <strong>{modalDel.name}</strong>?<br />
                         Esta acción no se puede deshacer.
                     </p>
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <Btn onClick={() => setModalDel(null)} color={C.muted}>Cancelar</Btn>
-                        <Btn onClick={handleDelete} disabled={saving} color={C.red}>{saving ? 'Eliminando…' : 'Eliminar'}</Btn>
+                    <div className="adm-modal-botones">
+                        <Btn onClick={() => setModalDel(null)} tono="muted">Cancelar</Btn>
+                        <Btn onClick={handleDelete} disabled={saving} tono="red">{saving ? 'Eliminando…' : 'Eliminar'}</Btn>
                     </div>
                 </Modal>
             )}

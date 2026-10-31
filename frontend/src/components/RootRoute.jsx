@@ -5,21 +5,7 @@ import { getHomeRoute } from '../lib/homeRoute.js';
 import { vaultExists } from '../lib/vault.js';
 import LoginPage from '../pages/LoginPage';
 import LockScreen from '../pages/LockScreen';
-
-const Spinner = () => (
-    <div style={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#ffffff',
-        fontSize: '14px', gap: '12px', flexDirection: 'column',
-    }}>
-        <div style={{
-            width: '32px', height: '32px',
-            border: '3px solid #333', borderTop: '3px solid #ffffff',
-            borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-);
+import Spinner from './Spinner';
 
 // Ruta "/": primero revisa si hay un vault cifrado en este dispositivo — si lo
 // hay, muestra la pantalla de bloqueo (PIN/huella) ANTES de cualquier otra

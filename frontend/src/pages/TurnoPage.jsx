@@ -153,22 +153,19 @@ const TurnoPage = () => {
 
                 {/* Selector puesto/bloque cuando viene de workspace */}
                 {fromWorkspace && (
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="turno-cambiar">
                         {/* Puesto con dropdown */}
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setShowPuestoMenu(v => !v)}
-                                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#252525', border: '1px solid #2e2e2e', borderRadius: 10, padding: '11px 16px', color: '#ddd', fontSize: 13, cursor: 'pointer' }}
-                            >
-                                <span><span style={{ color: '#666', marginRight: 8 }}>Puesto:</span><strong style={{ color: '#fff' }}>{puestoActual}</strong></span>
-                                <span style={{ fontSize: 11, color: '#818cf8' }}>¿Cambiaste de puesto? ▾</span>
+                        <div className="turno-puesto">
+                            <button className="turno-puesto-btn" onClick={() => setShowPuestoMenu(v => !v)}>
+                                <span><span className="turno-cambiar-label">Puesto:</span><strong className="turno-puesto-actual">{puestoActual}</strong></span>
+                                <span className="turno-cambiar-aviso">¿Cambiaste de puesto? ▾</span>
                             </button>
                             {showPuestoMenu && (
-                                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#1e1e1e', border: '1px solid #2e2e2e', borderRadius: 10, overflow: 'hidden', zIndex: 10 }}>
+                                <div className="turno-puesto-menu">
                                     {bloque.puestos.map(p => (
                                         <div key={p}
+                                            className={`turno-puesto-opcion${p === puestoActual ? ' actual' : ''}`}
                                             onClick={() => { setPuestoActual(p); setShowPuestoMenu(false); }}
-                                            style={{ padding: '12px 16px', fontSize: 14, color: p === puestoActual ? '#818cf8' : '#ccc', background: p === puestoActual ? 'rgba(129,140,248,0.08)' : 'transparent', cursor: 'pointer', borderBottom: '1px solid #2a2a2a' }}
                                         >
                                             {p}
                                         </div>
@@ -178,12 +175,12 @@ const TurnoPage = () => {
                         </div>
                         {/* Cambiar bloque */}
                         <button
+                            className="turno-bloque-btn"
                             onClick={() => navigate('/onboarding')}
-                            style={{ background: 'transparent', border: '1px solid #2e2e2e', borderRadius: 10, padding: '10px 16px', color: '#666', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
                         >
-                            <span style={{ color: '#666', marginRight: 8 }}>Bloque:</span>
-                            <strong style={{ color: '#888' }}>{bloque.nombre} {bloque.codigo}</strong>
-                            <span style={{ float: 'right', color: '#f59e0b', fontSize: 11 }}>¿Cambiaste de bloque? →</span>
+                            <span className="turno-cambiar-label">Bloque:</span>
+                            <strong className="turno-bloque-actual">{bloque.nombre} {bloque.codigo}</strong>
+                            <span className="turno-bloque-aviso">¿Cambiaste de bloque? →</span>
                         </button>
                     </div>
                 )}
@@ -192,7 +189,7 @@ const TurnoPage = () => {
 
                 {/* Formulario */}
                 {autoFilled && (
-                    <div style={{ fontSize: 11, color: '#4ade80', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>
+                    <div className="turno-autollenado">
                         Datos del último turno cargados automáticamente
                     </div>
                 )}

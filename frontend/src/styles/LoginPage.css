@@ -252,3 +252,8 @@
     font-weight: 600;
     text-decoration: none;
 }
+
+/* Botón de Google cuando el login con Google no está configurado */
+.login-action-card.card-google-sin-configurar {
+    opacity: 0.4;
+}

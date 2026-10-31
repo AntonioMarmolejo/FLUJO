@@ -21,34 +21,16 @@ class ErrorBoundary extends Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100vh',
-                    gap: '1rem',
-                    fontFamily: 'sans-serif',
-                    textAlign: 'center',
-                    padding: '2rem',
-                }}>
-                    <h2 style={{ fontSize: '1.5rem', color: '#dc2626' }}>
+                <div className="error-pantalla">
+                    <h2 className="error-pantalla-titulo">
                         Algo salió mal
                     </h2>
-                    <p style={{ color: '#6b7280', maxWidth: '400px' }}>
+                    <p className="error-pantalla-texto">
                         Ocurrió un error inesperado. Puedes volver al inicio e intentarlo de nuevo.
                     </p>
                     <button
+                        className="error-pantalla-btn"
                         onClick={this.handleReload}
-                        style={{
-                            padding: '0.5rem 1.5rem',
-                            background: '#2563eb',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            fontSize: '1rem',
-                        }}
                     >
                         Volver al inicio
                     </button>

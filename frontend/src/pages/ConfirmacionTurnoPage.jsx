@@ -14,19 +14,6 @@ const ConfirmacionTurnoPage = () => {
     const bloque = BLOQUES_DATA[turno?.bloque];
     const esDiurno = turno?.turnoActual === 'diurno';
 
-    // Colores según turno
-    const colors = esDiurno
-        ? {
-            bg: '#fff8ec', border: '#f59e0b', text: '#92400e',
-            badge: '#fef3c7', badgeText: '#b45309', progress: '#f59e0b',
-            iconBg: '#fde68a', iconColor: '#92400e'
-        }
-        : {
-            bg: '#1e1b4b', border: '#818cf8', text: '#c7d2fe',
-            badge: '#312e81', badgeText: '#a5b4fc', progress: '#818cf8',
-            iconBg: '#3730a3', iconColor: '#c7d2fe'
-        };
-
     // Calcular hora de inicio del turno
     const horaInicio = esDiurno ? 6 : 18;
     const horaFin = esDiurno ? 18 : 6;
@@ -96,39 +83,35 @@ const ConfirmacionTurnoPage = () => {
             <div className="conf-content">
 
                 {/* Card turno activo */}
-                <div className="conf-turno-card" style={{
-                    background: colors.bg,
-                    borderColor: colors.border,
-                }}>
+                {/* .conf-diurno / .conf-nocturno definen los colores del turno */}
+                <div className={`conf-turno-card ${esDiurno ? 'conf-diurno' : 'conf-nocturno'}`}>
                     <div className="conf-turno-top">
                         <div className="conf-turno-left">
-                            <div className="conf-icon" style={{ background: colors.iconBg }}>
+                            <div className="conf-icon">
                                 {esDiurno ? (
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="4" stroke={colors.iconColor} strokeWidth="2" />
+                                        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
                                         <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                                            stroke={colors.iconColor} strokeWidth="2" strokeLinecap="round" />
+                                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                                     </svg>
                                 ) : (
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                                            stroke={colors.iconColor} strokeWidth="2"
+                                            stroke="currentColor" strokeWidth="2"
                                             strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 )}
                             </div>
                             <div>
-                                <span className="conf-badge" style={{
-                                    background: colors.badge, color: colors.badgeText,
-                                }}>
+                                <span className="conf-badge">
                                     Turno {esDiurno ? 'diurno' : 'nocturno'} activo
                                 </span>
-                                <div className="conf-timer" style={{ color: colors.text }}>
+                                <div className="conf-timer">
                                     {formatTiempo(tiempoTranscurrido)}
                                 </div>
                             </div>
                         </div>
-                        <div className="conf-fecha" style={{ color: colors.text }}>
+                        <div className="conf-fecha">
                             <span>{fechaFormateada}</span>
                             <span>{esDiurno ? '06:00' : '18:00'} – {esDiurno ? '18:00' : '06:00'}</span>
                         </div>
@@ -139,10 +122,10 @@ const ConfirmacionTurnoPage = () => {
                         <div className="conf-progress-track">
                             <div
                                 className="conf-progress-fill"
-                                style={{ width: `${progreso}%`, background: colors.progress }}
+                                style={{ width: `${progreso}%` }}
                             />
                         </div>
-                        <div className="conf-progress-labels" style={{ color: colors.text }}>
+                        <div className="conf-progress-labels">
                             <span>{esDiurno ? '06:00' : '18:00'}</span>
                             <span>{horasRestantes}h {minutosRestantes}min restantes</span>
                             <span>{esDiurno ? '18:00' : '06:00'}</span>
