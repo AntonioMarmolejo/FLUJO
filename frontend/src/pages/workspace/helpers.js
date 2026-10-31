@@ -346,3 +346,154 @@ export const PANEL_LABELS = {
     utilidades:  'Utilidades',
     puestos:     'Ver Puestos del Bloque',
 };
+
+// Bitácora: une cada salida con el ingreso siguiente de la misma placa
+export const armarBitacora = movimientos => {
+    // Ordenar cronológicamente (más antiguo primero) para que salida siempre preceda su ingreso
+    const sorted = [...movimientos].sort((a, b) => (a.hora || '').localeCompare(b.hora || '') || (a._id || '').localeCompare(b._id || ''));
+    const openSalidas = {};
+    const pairs = [];
+    for (const mov of sorted) {
+        if (mov.tipo === 'salida') {
+            if (!openSalidas[mov.placa]) openSalidas[mov.placa] = [];
+            openSalidas[mov.placa].push(mov);
+        } else if (mov.tipo === 'ingreso') {
+            if (openSalidas[mov.placa] && openSalidas[mov.placa].length > 0) {
+                const sal = openSalidas[mov.placa].shift();
+                const condSal = (sal.conductor || '').trim();
+                const condIng = (mov.conductor || '').trim();
+                pairs.push({
+                    placa: mov.placa,
+                    salida: sal,
+                    ingreso: mov,
+                    horaS: sal.hora,
+                    horaI: mov.hora,
+                    conductor: condSal.toLowerCase() === condIng.toLowerCase()
+                        ? (condSal || '—')
+                        : `${condSal || '—'} / ${condIng || '—'}`,
+                    conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
+                    marca: sal.marca || mov.marca,
+                    empresa: sal.empresa || mov.empresa,
+                    tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
+                    destino: sal.destino || mov.destino,
+                    actividad: mov.actividad || sal.actividad || '',
+                    status: 'completo',
+                });
+            } else {
+                pairs.push({
+                    placa: mov.placa, salida: null, ingreso: mov,
+                    horaS: '—', horaI: mov.hora,
+                    conductor: mov.conductor || '—', conductorChanged: false,
+                    marca: mov.marca, empresa: mov.empresa,
+                    tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
+                    actividad: mov.actividad || '',
+                    status: 'solo-ingreso',
+                });
+            }
+        }
+    }
+    for (const sals of Object.values(openSalidas)) {
+        for (const s of sals) {
+            pairs.push({
+                placa: s.placa, salida: s, ingreso: null,
+                horaS: s.hora, horaI: '—',
+                conductor: s.conductor || '—', conductorChanged: false,
+                marca: s.marca, empresa: s.empresa,
+                tipoVehiculo: s.tipoVehiculo, destino: s.destino,
+                actividad: s.actividad || '',
+                status: 'en-campo',
+            });
+        }
+    }
+    // Ordenar por el primer evento registrado (mínimo entre horaS y horaI)
+    const firstHora = p => {
+        const times = [p.horaS, p.horaI].filter(h => h && h !== '—');
+        return times.length ? times.slice().sort()[0] : '99:99';
+    };
+    return pairs.sort((a, b) => firstHora(a).localeCompare(firstHora(b)));
+};
+
+// Exporta la bitácora a Excel
+export const exportarBitacoraExcel = async bitacora => {
+    const XLSX = await import('xlsx');
+    const fecha = new Date().toISOString().split('T')[0];
+    const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino / Actividad', 'Estado'];
+    const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
+    const rows = bitacora.map((b, i) => [
+        i + 1,
+        b.placa,
+        b.tipoVehiculo || '—',
+        b.marca || '—',
+        b.empresa || '—',
+        b.horaS,
+        b.horaI,
+        b.conductor,
+        b.destino || '—',
+        estadoLabel[b.status] || b.status,
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+    ws['!cols'] = [{ wch: 4 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 13 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
+    XLSX.writeFile(wb, `bitacora_${fecha}.xlsx`);
+};
+
+// Exporta el registro (con narrativa) a Excel
+export const exportarRegistroExcel = async (movimientos, registroConfig) => {
+    if (!movimientos.length) return;
+    const XLSX = await import('xlsx');
+    const fecha = new Date().toISOString().split('T')[0];
+    const cols = ['#', 'Hora', 'Tipo', 'Placa', 'Tipo Vehículo', 'Conductor', 'Cédula', 'Empresa', 'Destino', 'Guía', 'Empresa Autoriza', 'Quién Autoriza', 'Narrativa'];
+    const rows = [...movimientos].map((m, i) => [
+        i + 1,
+        m.hora,
+        m.tipo === 'ingreso' ? 'Ingreso' : 'Salida',
+        m.placa,
+        m.tipoVehiculo || '—',
+        m.conductor || '—',
+        m.cedula || '—',
+        m.empresa || '—',
+        m.destino || '—',
+        m.guia || '—',
+        m.empresaAutoriza || registroConfig.empresaAutoriza || '—',
+        m.quienAutoriza || '—',
+        generarNarrativa(m, registroConfig),
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
+    ws['!cols'] = [{ wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 13 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 80 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Registro');
+    XLSX.writeFile(wb, `registro_${fecha}.xlsx`);
+};
+
+// Exporta el registro (con narrativa) a Word
+export const exportarRegistroWord = (movimientos, registroConfig, turnoActivo) => {
+    if (!movimientos.length) return;
+    const fecha = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const puesto = turnoActivo?.puesto || '';
+    const entradas = [...movimientos].map(m => `<p style="margin:0 0 10pt 0;font-size:12pt;">${generarNarrativa(m, registroConfig)}</p>`).join('');
+    const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Registro</title><style>body{font-family:Arial,sans-serif;margin:2cm;}h2{font-size:14pt;margin-bottom:4pt;}p.sub{font-size:11pt;color:#555;margin:0 0 16pt 0;}hr{border:none;border-top:1px solid #ccc;margin:12pt 0;}</style></head><body><h2>REGISTRO DE MOVIMIENTOS DE VEHÍCULOS</h2><p class="sub">${fecha} &nbsp;·&nbsp; ${puesto}</p><hr/>${entradas}</body></html>`;
+    const blob = new Blob(['﻿', html], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `registro_${new Date().toISOString().split('T')[0]}.doc`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+};
+
+// Comparte una lista de movimientos como texto
+export const compartirMovimientos = async movsToShare => {
+    if (!movsToShare.length) return;
+    const fechaLarga = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const text = `FLUJO DE VEHÍCULOS — ${fechaLarga}\nTotal: ${movsToShare.length} movimiento${movsToShare.length !== 1 ? 's' : ''}\n\n` +
+        movsToShare.map((m, i) =>
+            `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n` +
+            `   ${m.conductor || '—'} · ${m.empresa || '—'}\n` +
+            `   → ${m.destino || '—'}  ${m.hora}`
+        ).join('\n\n');
+    if (navigator.share) {
+        await navigator.share({ title: 'FLUJO — Movimientos', text }).catch(() => {});
+    } else {
+        navigator.clipboard?.writeText(text);
+    }
+};

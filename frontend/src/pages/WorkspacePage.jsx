@@ -1,27 +1,12 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
-import {
-    encolarMovimiento,
-    subirMovimientoPendiente,
-    cancelarMovimientoPendiente,
-    getPendingMovimientos,
-    syncPendingMovimientos,
-    syncPendingEdiciones,
-    encolarBorrado,
-    cancelarBorradoEncolado,
-    getBorradosPendientesIds,
-    syncPendingBorrados,
-    guardarTurnoLocal,
-    leerTurnoLocal,
-} from '../lib/syncEngine.js';
 import '../styles/WorkspacePage.css';
 import { PantallaExtensiones } from './workspace/Extensiones';
 import { PantallaFlujos } from './workspace/Flujos';
 import { DrawerMenu, ModalComentario } from './workspace/MenuLateral';
+import { ModalAgregar } from './workspace/NuevoMovimiento';
 import {
-    ModalAgregar,
     ModalBitacoraDetalle,
     ModalDetalle,
     ModalEditHora,
@@ -48,10 +33,16 @@ import {
     generarNarrativa,
     getRegistroConfig,
     getRegistroConfigKey,
-    getTurnoFecha,
     movCoincideBusqueda,
     movToText,
+    armarBitacora,
+    compartirMovimientos,
+    exportarBitacoraExcel,
+    exportarRegistroExcel,
+    exportarRegistroWord,
 } from './workspace/helpers';
+import { useBajoDe, useConfirmarSalida, useOcultarAlBajar, useResaltar, useTema } from './workspace/hooks';
+import { useMovimientosTurno } from './workspace/useMovimientosTurno';
 import { IconArrowLeft, IconCopy, IconMinus, IconPencil, IconShare, IconUserCircle } from './workspace/iconos';
 
 const StatsChart = lazy(() => import('../components/StatsChart.jsx'));
@@ -62,56 +53,22 @@ const WorkspacePage = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [theme, setTheme] = useState(() => localStorage.getItem('flujo-theme') || 'dark');
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('flujo-theme', theme);
-    }, [theme]);
-    const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+    const [theme, toggleTheme] = useTema();
 
-    // Pregunta antes de salir con el botón/gesto de retroceso (celulares).
-    // Sin esto, dos retrocesos seguidos sacaban al usuario de /workspace sin
-    // avisar y, por el bug ya corregido en ProtectedRoute, eso se sentía como
-    // un cierre de sesión. Truco estándar: se "atasca" un estado extra en el
-    // historial; al detectar un retroceso se vuelve a atascar (cancelándolo)
-    // y se muestra el aviso. Si el usuario confirma, se deja pasar el
-    // siguiente retroceso real — nunca se llama a logout(), la sesión y el
-    // vault quedan intactos para cuando vuelva a abrir la app.
-    const [showExitConfirm, setShowExitConfirm] = useState(false);
-    const exitingRef = useRef(false);
-
-    useEffect(() => {
-        window.history.pushState({ __exitGuard: true }, '', window.location.href);
-        const handlePopState = () => {
-            if (exitingRef.current) return;
-            window.history.pushState({ __exitGuard: true }, '', window.location.href);
-            setShowExitConfirm(true);
-        };
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, []);
-
-    const confirmarSalida = () => {
-        exitingRef.current = true;
-        setShowExitConfirm(false);
-        window.history.go(-2);
-    };
+    // Pregunta antes de salir con el botón/gesto de retroceso (celulares)
+    const [showExitConfirm, setShowExitConfirm, confirmarSalida] = useConfirmarSalida();
 
     const [tabActiva, setTabActiva] = useState('inicio');
     const [dashCollapsed, setDashCollapsed] = useState(true);
     const [movCollapsed, setMovCollapsed] = useState(false);
     const [chartCollapsed, setChartCollapsed] = useState(true);
-    const [showScrollTop, setShowScrollTop] = useState(false);
+    const showScrollTop = useBajoDe(280);
 
-    useEffect(() => {
-        const onScroll = () => setShowScrollTop(window.scrollY > 280);
-        window.addEventListener('scroll', onScroll, { passive: true });
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
-
-    const [diasActivos, setDiasActivos] = useState(0);
-    const [movimientos, setMovimientos] = useState([]);
-    const [turnoActivo, setTurnoActivo] = useState(null);
+    const {
+        turnoActivo, movimientos, diasActivos, cargarDatos,
+        agregarOptimista: handleGuardadoOptimista, confirmarMovimiento: handleMovimientoConfirmado,
+        editarLocal, borrar: handleDelete, borrarVarios, cambiarHora, guardarIngreso,
+    } = useMovimientosTurno(user?.id, isPending);
 
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
@@ -139,11 +96,6 @@ const WorkspacePage = () => {
         if (id !== 'plataformas') { setPlatSearchShow(false); setPlatSearchQuery(''); }
     };
 
-    // Con la búsqueda activa (la de Movimientos o la de Plataformas y
-    // Nominativos), al bajar se oculta la fila de íconos (menú, usuario,
-    // día/noche, lupa) y la barra de búsqueda sube a ocupar ese espacio; al
-    // subir un poco vuelve a aparecer la fila para poder desactivar la
-    // búsqueda desde la lupa.
     // Búsqueda de Flujos → General (su barra también vive en la barra superior)
     const [flujosGenQuery, setFlujosGenQuery] = useState('');
     const [flujosGenCampo, setFlujosGenCampo] = useState('todos');
@@ -152,48 +104,8 @@ const WorkspacePage = () => {
     const searchBarActive = showSearch
         || (tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && platSearchShow)
         || flujosBusquedaActiva;
-    const [topbarIconsHidden, setTopbarIconsHidden] = useState(false);
-
-    useEffect(() => {
-        if (!searchBarActive) { setTopbarIconsHidden(false); return; }
-        const UMBRAL = 24;          // recorrido mínimo en un mismo sentido para cambiar
-        const ZONA_SUPERIOR = 40;   // cerca del inicio la fila siempre se ve
-        const ALTURA_FILA = 80;     // lo que mide la fila de íconos (más margen)
-        const BLOQUEO_MS = 350;     // la transición de la fila dura 0.22 s
-        let ultimoY = window.scrollY;
-        let acumulado = 0;
-        let oculto = false;
-        let bloqueadoHasta = 0;
-
-        const cambiar = valor => {
-            if (oculto === valor) return;
-            oculto = valor;
-            setTopbarIconsHidden(valor);
-            // Ocultar o mostrar la fila cambia el alto de la página y el
-            // navegador corrige el scroll por su cuenta. Ese movimiento no es
-            // del usuario: si se tomara en cuenta, la fila volvería a cambiar
-            // y quedaría parpadeando.
-            bloqueadoHasta = performance.now() + BLOQUEO_MS;
-            acumulado = 0;
-        };
-
-        const onScroll = () => {
-            const y = window.scrollY;
-            if (performance.now() < bloqueadoHasta) { ultimoY = y; return; }
-            const delta = y - ultimoY;
-            ultimoY = y;
-            if (y < ZONA_SUPERIOR) { cambiar(false); return; }
-            // Se suma el recorrido mientras siga en el mismo sentido; al
-            // cambiar de sentido se empieza a contar de nuevo.
-            acumulado = Math.sign(delta) === Math.sign(acumulado) ? acumulado + delta : delta;
-            // Solo se oculta con margen suficiente: si no, al quitar la fila
-            // el scroll caería dentro de la zona superior y volvería a salir.
-            if (acumulado > UMBRAL && y > ZONA_SUPERIOR + ALTURA_FILA) cambiar(true);
-            else if (acumulado < -UMBRAL) cambiar(false);
-        };
-        window.addEventListener('scroll', onScroll, { passive: true });
-        return () => window.removeEventListener('scroll', onScroll);
-    }, [searchBarActive]);
+    // Con la búsqueda activa, al bajar se oculta la fila de íconos
+    const topbarIconsHidden = useOcultarAlBajar(searchBarActive);
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -219,33 +131,8 @@ const WorkspacePage = () => {
     const [highlightMovId, setHighlightMovId] = useState(null);
     const [highlightRegId, setHighlightRegId] = useState(null);
 
-    useEffect(() => {
-        if (!highlightRegId || vistaInicio !== 'registro') return;
-        const t = setTimeout(() => {
-            const el = document.querySelector(`[data-regid="${highlightRegId}"]`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('flash-highlight');
-                setTimeout(() => el.classList.remove('flash-highlight'), 1400);
-            }
-            setHighlightRegId(null);
-        }, 200);
-        return () => clearTimeout(t);
-    }, [highlightRegId, vistaInicio]);
-
-    useEffect(() => {
-        if (!highlightMovId || vistaInicio !== 'movimientos') return;
-        const t = setTimeout(() => {
-            const el = document.querySelector(`[data-movid="${highlightMovId}"]`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('flash-highlight');
-                setTimeout(() => el.classList.remove('flash-highlight'), 1400);
-            }
-            setHighlightMovId(null);
-        }, 200);
-        return () => clearTimeout(t);
-    }, [highlightMovId, vistaInicio]);
+    useResaltar(highlightRegId, vistaInicio === 'registro', 'data-regid', setHighlightRegId);
+    useResaltar(highlightMovId, vistaInicio === 'movimientos', 'data-movid', setHighlightMovId);
 
     const stats = useMemo(
         () => movimientos.length > 0 ? buildStats(movimientos, diasActivos) : null,
@@ -284,70 +171,7 @@ const WorkspacePage = () => {
         return counts;
     }, [movimientos]);
 
-    const bitacora = useMemo(() => {
-        // Ordenar cronológicamente (más antiguo primero) para que salida siempre preceda su ingreso
-        const sorted = [...movimientos].sort((a, b) => (a.hora || '').localeCompare(b.hora || '') || (a._id || '').localeCompare(b._id || ''));
-        const openSalidas = {};
-        const pairs = [];
-        for (const mov of sorted) {
-            if (mov.tipo === 'salida') {
-                if (!openSalidas[mov.placa]) openSalidas[mov.placa] = [];
-                openSalidas[mov.placa].push(mov);
-            } else if (mov.tipo === 'ingreso') {
-                if (openSalidas[mov.placa] && openSalidas[mov.placa].length > 0) {
-                    const sal = openSalidas[mov.placa].shift();
-                    const condSal = (sal.conductor || '').trim();
-                    const condIng = (mov.conductor || '').trim();
-                    pairs.push({
-                        placa: mov.placa,
-                        salida: sal,
-                        ingreso: mov,
-                        horaS: sal.hora,
-                        horaI: mov.hora,
-                        conductor: condSal.toLowerCase() === condIng.toLowerCase()
-                            ? (condSal || '—')
-                            : `${condSal || '—'} / ${condIng || '—'}`,
-                        conductorChanged: condSal.toLowerCase() !== condIng.toLowerCase(),
-                        marca: sal.marca || mov.marca,
-                        empresa: sal.empresa || mov.empresa,
-                        tipoVehiculo: sal.tipoVehiculo || mov.tipoVehiculo,
-                        destino: sal.destino || mov.destino,
-                        actividad: mov.actividad || sal.actividad || '',
-                        status: 'completo',
-                    });
-                } else {
-                    pairs.push({
-                        placa: mov.placa, salida: null, ingreso: mov,
-                        horaS: '—', horaI: mov.hora,
-                        conductor: mov.conductor || '—', conductorChanged: false,
-                        marca: mov.marca, empresa: mov.empresa,
-                        tipoVehiculo: mov.tipoVehiculo, destino: mov.destino,
-                        actividad: mov.actividad || '',
-                        status: 'solo-ingreso',
-                    });
-                }
-            }
-        }
-        for (const sals of Object.values(openSalidas)) {
-            for (const s of sals) {
-                pairs.push({
-                    placa: s.placa, salida: s, ingreso: null,
-                    horaS: s.hora, horaI: '—',
-                    conductor: s.conductor || '—', conductorChanged: false,
-                    marca: s.marca, empresa: s.empresa,
-                    tipoVehiculo: s.tipoVehiculo, destino: s.destino,
-                    actividad: s.actividad || '',
-                    status: 'en-campo',
-                });
-            }
-        }
-        // Ordenar por el primer evento registrado (mínimo entre horaS y horaI)
-        const firstHora = p => {
-            const times = [p.horaS, p.horaI].filter(h => h && h !== '—');
-            return times.length ? times.slice().sort()[0] : '99:99';
-        };
-        return pairs.sort((a, b) => firstHora(a).localeCompare(firstHora(b)));
-    }, [movimientos]);
+    const bitacora = useMemo(() => armarBitacora(movimientos), [movimientos]);
 
     const bitacoraFiltrada = useMemo(() => {
         const sq = searchQuery.trim().toLowerCase();
@@ -364,107 +188,10 @@ const WorkspacePage = () => {
         return c;
     }, [bitacora]);
 
-    // El turno se guarda también en el dispositivo: sin conexión se sigue
-    // trabajando con él (incluido uno abierto offline que aún no se sube).
-    useEffect(() => {
-        const cargarTurno = () => {
-            const local = leerTurnoLocal(user?.id);
-            if (local) setTurnoActivo(local);
-            api.get('/turnos/activo')
-                .then(({ data }) => {
-                    if (data.turno) {
-                        setTurnoActivo(data.turno);
-                        guardarTurnoLocal(data.turno, user?.id);
-                    } else if (!local?._pendiente) {
-                        setTurnoActivo(null);
-                    }
-                })
-                .catch(() => { });
-        };
-        cargarTurno();
-        const onOperacion = e => { if (e.detail?.tipo === 'turno' && e.detail.data) cargarTurno(); };
-        window.addEventListener('flujo:operaciones', onOperacion);
-        return () => window.removeEventListener('flujo:operaciones', onOperacion);
-    }, [user?.id]);
-
-    const cargarDatos = async () => {
-        if (!turnoActivo) return;
-        const turnoFecha = turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual);
-        try {
-            const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
-            // No volver a mostrar un movimiento que el usuario ya borró pero que
-            // todavía no se confirmó contra el servidor (borrado en cola offline).
-            const borrados = new Set(await getBorradosPendientesIds());
-            const serverMovs = mRes.data.movimientos.filter(m => !borrados.has(m._id));
-            const serverIds = new Set(serverMovs.map(m => m._id));
-            const pending = await getPendingMovimientos();
-            const pendingItems = pending
-                .filter(item => !serverIds.has(item.uuid))
-                .map(item => ({ _id: item.uuid, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
-            setMovimientos([...serverMovs, ...pendingItems]);
-            api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`)
-                .then(sRes => setDiasActivos(sRes.data.diasActivos ?? 0))
-                .catch(() => {});
-        } catch {
-            // Sin conexión: conservar confirmados + cola Dexie
-            const pending = await getPendingMovimientos();
-            setMovimientos(prev => {
-                const confirmed = prev.filter(m => !m._pending);
-                const confirmedIds = new Set(confirmed.map(m => m._id));
-                const queueItems = pending
-                    .filter(i => !confirmedIds.has(i.uuid))
-                    .map(i => ({ _id: i.uuid, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
-                return [...confirmed, ...queueItems];
-            });
-        }
-    };
-
-    useEffect(() => { cargarDatos(); }, [turnoActivo]);
-
     // Cargar/recargar la config de narrativa cada vez que cambia el puesto
     useEffect(() => {
         if (turnoActivo?.puesto) setRegistroConfig(getRegistroConfig(turnoActivo.puesto));
     }, [turnoActivo?.puesto]);
-
-    // Handlers para guardado optimista (nuevo movimiento aparece al instante)
-    const handleGuardadoOptimista = tempMov => {
-        setMovimientos(prev => [...prev, tempMov]);
-    };
-
-    const handleMovimientoConfirmado = (tempId, realMov) => {
-        setMovimientos(prev => prev.map(m => m._id === tempId ? realMov : m));
-    };
-
-    // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión,
-    // cuando la pestaña recupera el foco (el navegador puede pausar el intervalo
-    // mientras está en segundo plano) y cada 30 s como respaldo.
-    useEffect(() => {
-        if (!turnoActivo || isPending) return;
-        const onSynced = ({ uuid, serverId, cancelado }) => {
-            if (cancelado) return; // el usuario ya lo borró localmente mientras se subía
-            setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
-        };
-        const onSyncedEdicion = (id, movData) => {
-            setMovimientos(prev => prev.map(m => m._id === id ? { ...m, ...movData } : m));
-        };
-        const sync = () => {
-            if (navigator.onLine) {
-                syncPendingMovimientos(onSynced);
-                syncPendingEdiciones(onSyncedEdicion);
-                syncPendingBorrados();
-            }
-        };
-        const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
-        sync();
-        window.addEventListener('online', sync);
-        document.addEventListener('visibilitychange', onVisibility);
-        const interval = setInterval(sync, 30_000);
-        return () => {
-            window.removeEventListener('online', sync);
-            document.removeEventListener('visibilitychange', onVisibility);
-            clearInterval(interval);
-        };
-    }, [turnoActivo, isPending]);
 
     useEffect(() => {
         if (location.state?.openDrawer) {
@@ -495,29 +222,6 @@ const WorkspacePage = () => {
         selectedIds.size === movimientos.length ? new Set() : new Set(movimientos.map(m => m._id))
     );
 
-    // Borrado optimista: quita la fila de inmediato. Si el movimiento todavía
-    // no se había subido al servidor (sigue en la cola offline), basta con
-    // cancelarlo ahí — nunca llegó a crearse allá. Si ya estaba confirmado,
-    // se encola el borrado y se reintenta solo hasta que se confirme —
-    // ya no depende de que haya internet en el momento exacto del clic.
-    const handleDelete = async id => {
-        const target = movimientos.find(m => m._id === id);
-        setMovimientos(prev => prev.filter(m => m._id !== id));
-
-        if (target?._pending) {
-            await cancelarMovimientoPendiente(id).catch(() => {});
-            return;
-        }
-
-        await encolarBorrado(id);
-        try {
-            await api.delete(`/movimientos/${id}`);
-            await cancelarBorradoEncolado(id);
-        } catch {
-            // Queda en la cola; el motor de sincronización lo reintentará
-        }
-    };
-
     const handleDeleteBitPair = async (b, idx) => {
         const ids = [b.salida?._id, b.ingreso?._id].filter(Boolean);
         if (!ids.length) return;
@@ -530,24 +234,9 @@ const WorkspacePage = () => {
     const handleBatchDelete = async () => {
         if (!selectedIds.size) return;
         const ids = [...selectedIds];
-        const pendingIds = ids.filter(id => movimientos.find(m => m._id === id)?._pending);
-        const confirmedIds = ids.filter(id => !pendingIds.includes(id));
-
-        setMovimientos(prev => prev.filter(m => !selectedIds.has(m._id)));
         setSelectedIds(new Set());
         setSelectMode(false);
-
-        await Promise.all(pendingIds.map(id => cancelarMovimientoPendiente(id).catch(() => {})));
-
-        if (confirmedIds.length) {
-            await Promise.all(confirmedIds.map(id => encolarBorrado(id)));
-            try {
-                await api.delete('/movimientos/batch', { data: { ids: confirmedIds } });
-                await Promise.all(confirmedIds.map(id => cancelarBorradoEncolado(id)));
-            } catch {
-                // Quedan en la cola; el motor de sincronización las reintentará una por una
-            }
-        }
+        await borrarVarios(ids);
     };
 
     const handleCopy = m => navigator.clipboard?.writeText(movToText(m));
@@ -560,57 +249,12 @@ const WorkspacePage = () => {
 
     const handleEdit = m => setEditMov(m);
 
-    // Actualiza el movimiento en estado local de inmediato (antes de que la API confirme)
-    const handleEditadoOptimista = updatedMov => {
-        setMovimientos(prev => prev.map(m => m._id === updatedMov._id ? { ...m, ...updatedMov } : m));
-        setEditMov(null);
-    };
+    const handleEditadoOptimista = updatedMov => { editarLocal(updatedMov); setEditMov(null); };
 
-    const handleEditHora = async (id, newHora) => {
-        setMovimientos(prev => prev.map(m => m._id === id ? { ...m, hora: newHora } : m));
-        setEditHoraMov(null);
-        try { await api.put(`/movimientos/${id}`, { hora: newHora }); }
-        catch { cargarDatos(); }
-    };
+    const handleEditHora = (id, newHora) => { setEditHoraMov(null); cambiarHora(id, newHora); };
 
     // Registrar / editar ingreso directo desde la bitácora
-    const handleGuardarIngreso = async ({ b, hora, conductor, cedula, actividad, destino }) => {
-        setEditIngresoBit(null);
-        if (b.ingreso) {
-            // Actualizar ingreso existente — optimista
-            const updated = { ...b.ingreso, hora, conductor, cedula, actividad, destino };
-            setMovimientos(prev => prev.map(m => m._id === b.ingreso._id ? updated : m));
-            api.put(`/movimientos/${b.ingreso._id}`, { hora, conductor, cedula, actividad, destino }).catch(() => cargarDatos());
-        } else {
-            // Crear nuevo movimiento de ingreso
-            const tempId = crypto.randomUUID();
-            const fechaFlujo = turnoActivo?.fecha || getTurnoFecha(turnoActivo?.turnoActual);
-            const payload = {
-                tipo: 'ingreso',
-                puesto: turnoActivo?.puesto,
-                bloque: turnoActivo?.bloque,
-                placa: b.placa,
-                marca: b.salida?.marca || '',
-                color: b.salida?.color || '',
-                tipoVehiculo: b.salida?.tipoVehiculo || '',
-                empresa: b.salida?.empresa || '',
-                conductor: conductor || b.salida?.conductor || '',
-                cedula: cedula || b.salida?.cedula || '',
-                actividad,
-                destino,
-                fecha: fechaFlujo,
-                hora,
-                clientUUID: tempId,
-            };
-            const tempMov = { ...payload, _id: tempId, _pending: true };
-            setMovimientos(prev => [...prev, tempMov]);
-            await encolarMovimiento({ uuid: tempId, payload, hora, fecha: fechaFlujo });
-            try {
-                const result = await subirMovimientoPendiente(tempId);
-                if (result?.movimiento) handleMovimientoConfirmado(tempId, result.movimiento);
-            } catch { /* queda en cola Dexie */ }
-        }
-    };
+    const handleGuardarIngreso = datos => { setEditIngresoBit(null); guardarIngreso(datos); };
 
     const exportData = format => {
         setShowExportMenu(false);
@@ -618,92 +262,18 @@ const WorkspacePage = () => {
         exportMovimientos(movimientos, format, `movimientos_${fecha}`);
     };
 
-    const exportBitacora = async () => {
-        const XLSX = await import('xlsx');
-        const fecha = new Date().toISOString().split('T')[0];
-        const cols = ['#', 'Placa', 'Tipo Vehículo', 'Marca', 'Empresa', 'Hora Salida', 'Hora Ingreso', 'Conductor', 'Destino / Actividad', 'Estado'];
-        const estadoLabel = { completo: 'Completado', 'en-campo': 'En campo', 'solo-ingreso': 'Solo ingreso' };
-        const rows = bitacora.map((b, i) => [
-            i + 1,
-            b.placa,
-            b.tipoVehiculo || '—',
-            b.marca || '—',
-            b.empresa || '—',
-            b.horaS,
-            b.horaI,
-            b.conductor,
-            b.destino || '—',
-            estadoLabel[b.status] || b.status,
-        ]);
-        const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
-        ws['!cols'] = [{ wch: 4 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 13 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Bitácora');
-        XLSX.writeFile(wb, `bitacora_${fecha}.xlsx`);
-    };
+    const exportBitacora = () => exportarBitacoraExcel(bitacora);
 
     const handleSaveRegistroConfig = cfg => {
         localStorage.setItem(getRegistroConfigKey(turnoActivo?.puesto), JSON.stringify(cfg));
         setRegistroConfig(cfg);
     };
 
-    const exportRegistroExcel = async () => {
-        if (!movimientos.length) return;
-        const XLSX = await import('xlsx');
-        const fecha = new Date().toISOString().split('T')[0];
-        const cols = ['#', 'Hora', 'Tipo', 'Placa', 'Tipo Vehículo', 'Conductor', 'Cédula', 'Empresa', 'Destino', 'Guía', 'Empresa Autoriza', 'Quién Autoriza', 'Narrativa'];
-        const rows = [...movimientos].map((m, i) => [
-            i + 1,
-            m.hora,
-            m.tipo === 'ingreso' ? 'Ingreso' : 'Salida',
-            m.placa,
-            m.tipoVehiculo || '—',
-            m.conductor || '—',
-            m.cedula || '—',
-            m.empresa || '—',
-            m.destino || '—',
-            m.guia || '—',
-            m.empresaAutoriza || registroConfig.empresaAutoriza || '—',
-            m.quienAutoriza || '—',
-            generarNarrativa(m, registroConfig),
-        ]);
-        const ws = XLSX.utils.aoa_to_sheet([cols, ...rows]);
-        ws['!cols'] = [{ wch: 4 }, { wch: 7 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 13 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 80 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Registro');
-        XLSX.writeFile(wb, `registro_${fecha}.xlsx`);
-    };
+    const exportRegistroExcel = () => exportarRegistroExcel(movimientos, registroConfig);
 
-    const exportRegistroWord = () => {
-        if (!movimientos.length) return;
-        const fecha = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const puesto = turnoActivo?.puesto || '';
-        const entradas = [...movimientos].map(m => `<p style="margin:0 0 10pt 0;font-size:12pt;">${generarNarrativa(m, registroConfig)}</p>`).join('');
-        const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Registro</title><style>body{font-family:Arial,sans-serif;margin:2cm;}h2{font-size:14pt;margin-bottom:4pt;}p.sub{font-size:11pt;color:#555;margin:0 0 16pt 0;}hr{border:none;border-top:1px solid #ccc;margin:12pt 0;}</style></head><body><h2>REGISTRO DE MOVIMIENTOS DE VEHÍCULOS</h2><p class="sub">${fecha} &nbsp;·&nbsp; ${puesto}</p><hr/>${entradas}</body></html>`;
-        const blob = new Blob(['﻿', html], { type: 'application/msword' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `registro_${new Date().toISOString().split('T')[0]}.doc`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-    };
+    const exportRegistroWord = () => exportarRegistroWord(movimientos, registroConfig, turnoActivo);
 
-    const handleShareMovs = async (movsToShare) => {
-        setShowShareMenu(false);
-        if (!movsToShare.length) return;
-        const fechaLarga = new Date().toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        const text = `FLUJO DE VEHÍCULOS — ${fechaLarga}\nTotal: ${movsToShare.length} movimiento${movsToShare.length !== 1 ? 's' : ''}\n\n` +
-            movsToShare.map((m, i) =>
-                `${i + 1}. [${(m.tipo || 'MOV').toUpperCase()}] ${m.placa}\n` +
-                `   ${m.conductor || '—'} · ${m.empresa || '—'}\n` +
-                `   → ${m.destino || '—'}  ${m.hora}`
-            ).join('\n\n');
-        if (navigator.share) {
-            await navigator.share({ title: 'FLUJO — Movimientos', text }).catch(() => {});
-        } else {
-            navigator.clipboard?.writeText(text);
-        }
-    };
+    const handleShareMovs = movsToShare => { setShowShareMenu(false); compartirMovimientos(movsToShare); };
 
     const openDetailMov = m => {
         const idx = sortedMovs.findIndex(x => x._id === m._id);
