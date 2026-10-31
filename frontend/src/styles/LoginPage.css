@@ -1,4 +1,4 @@
-.login-wrapper {    width: 100%;
+.login {    width: 100%;
     max-width: 390px;
     padding: 48px 32px;
     display: flex;
@@ -7,13 +7,13 @@
 }
 
 /* Header */
-.login-header {
+.login__header {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.login-logo {
+.login__logo {
     width: 40px;
     height: 40px;
     background: linear-gradient(135deg, #6c63ff, #4a90d9);
@@ -23,7 +23,7 @@
     justify-content: center;
 }
 
-.login-brand {
+.login__brand {
     font-size: 20px;
     font-weight: 700;
     letter-spacing: 4px;
@@ -31,7 +31,7 @@
 }
 
 /* Tabs */
-.login-tabs {
+.login__tabs {
     display: flex;
     background: #1a1a1a;
     border-radius: 12px;
@@ -39,7 +39,7 @@
     gap: 4px;
 }
 
-.tab-btn {
+.login__tab-btn {
     flex: 1;
     padding: 10px;
     border: none;
@@ -52,21 +52,21 @@
     transition: all 0.2s;
 }
 
-.tab-btn.active {
+.login__tab-btn--active {
     background: #2a2a2a;
     color: #ffffff;
     font-weight: 600;
 }
 
 /* Title */
-.login-title h1 {
+.login__title h1 {
     font-size: 36px;
     font-weight: 800;
     line-height: 1.15;
     white-space: pre-line;
 }
 
-.login-subtitle {
+.login__subtitle {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -75,7 +75,7 @@
     color: #888;
 }
 
-.dot {
+.login__dot {
     width: 8px;
     height: 8px;
     background: #22c55e;
@@ -84,32 +84,32 @@
 }
 
 /* Form */
-.login-form {
+.login__form {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-.field-group {
+.login__field-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.field-group label {
+.login__field-group label {
     font-size: 11px;
     font-weight: 600;
     color: #666;
     letter-spacing: 1px;
 }
 
-.input-wrapper {
+.login__input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-.input-wrapper input {
+.login__input-wrapper input {
     width: 100%;
     background: #1e1e1e;
     border: 1px solid #2e2e2e;
@@ -121,15 +121,15 @@
     transition: border-color 0.2s;
 }
 
-.input-wrapper input:focus {
+.login__input-wrapper input:focus {
     border-color: #6c63ff;
 }
 
-.input-wrapper input::placeholder {
+.login__input-wrapper input::placeholder {
     color: #444;
 }
 
-.input-icon {
+.login__input-icon {
     position: absolute;
     right: 14px;
     color: #555;
@@ -137,7 +137,7 @@
     pointer-events: none;
 }
 
-.toggle-password {
+.login__toggle-password {
     position: absolute;
     right: 12px;
     background: none;
@@ -148,12 +148,12 @@
     line-height: 1;
 }
 
-.forgot-password {
+.login__forgot-password {
     text-align: right;
     margin-top: -8px;
 }
 
-.forgot-password a {
+.login__forgot-password a {
     font-size: 13px;
     color: #6c63ff;
     text-decoration: none;
@@ -161,13 +161,13 @@
 }
 
 /* Tarjetas de acción */
-.login-action-cards {
+.login__action-cards {
     display: flex;
     gap: 10px;
     margin-top: 4px;
 }
 
-.login-action-card {
+.login__action-card {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -187,49 +187,49 @@
     min-height: 80px;
     line-height: 1.3;
 }
-.login-action-card:hover:not(:disabled) {
+.login__action-card:hover:not(:disabled) {
     background: #222;
     border-color: #444;
 }
-.login-action-card:active:not(:disabled) {
+.login__action-card:active:not(:disabled) {
     transform: scale(0.97);
 }
-.login-action-card:disabled {
+.login__action-card:disabled {
     cursor: not-allowed;
 }
 
-.card-primary {
+.login__action-card--primary {
     background: #ffffff;
     color: #000000;
     border-color: transparent;
 }
-.card-primary:hover:not(:disabled) {
+.login__action-card--primary:hover:not(:disabled) {
     background: #eeeeee;
     border-color: transparent;
 }
 
-.card-bio {
+.login__action-card--bio {
     background: rgba(108, 99, 255, 0.1);
     border-color: rgba(108, 99, 255, 0.35);
     color: #a5b4fc;
 }
-.card-bio:hover:not(:disabled) {
+.login__action-card--bio:hover:not(:disabled) {
     background: rgba(108, 99, 255, 0.18);
     border-color: rgba(108, 99, 255, 0.6);
 }
 
-.card-google {
+.login__action-card--google {
     background: #1a1a1a;
     border-color: #2e2e2e;
     color: #ffffff;
 }
-.card-google:hover:not(:disabled) {
+.login__action-card--google:hover:not(:disabled) {
     background: #242424;
     border-color: #444;
 }
 
 /* Error */
-.error-msg {
+.login__error-msg {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #f87171;
@@ -240,13 +240,13 @@
 }
 
 /* Footer */
-.login-footer {
+.login__footer {
     text-align: center;
     font-size: 13px;
     color: #666;
 }
 
-.login-footer a {
+.login__footer a {
     color: #6c63ff;
     cursor: pointer;
     font-weight: 600;
@@ -254,6 +254,6 @@
 }
 
 /* Botón de Google cuando el login con Google no está configurado */
-.login-action-card.card-google-sin-configurar {
+.login__action-card--google-sin-configurar {
     opacity: 0.4;
 }

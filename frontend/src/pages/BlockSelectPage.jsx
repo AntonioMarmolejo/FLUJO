@@ -51,30 +51,30 @@ const BlockSelectPage = () => {
     };
 
     return (
-        <div className="block-wrapper">
-            <div className="block-card">
+        <div className="block">
+            <div className="block__card">
 
                 {/* Avatar */}
-                <div className="block-avatar">
+                <div className="block__avatar">
                     <span>{getInitials(user?.name)}</span>
                 </div>
 
                 {/* Saludo */}
-                <div className="block-greeting">
+                <div className="block__greeting">
                     <p>¡Bienvenido/a de vuelta,</p>
                     <h2>{user?.name}</h2>
                 </div>
 
-                <div className="block-divider" />
+                <div className="block__divider" />
 
                 {/* Pregunta */}
-                <div className="block-question">
+                <div className="block__question">
                     <h3>¿A qué bloque perteneces?</h3>
                     <p>Selecciona tu bloque para continuar con el registro. Un administrador debe aprobar tu acceso a cada bloque.</p>
                 </div>
 
                 {/* Lista de bloques */}
-                <div className="block-list">
+                <div className="block__list">
                     {BLOQUES.map((bloque) => {
                         const isSelected = selected.includes(bloque.id);
                         const aprobado = tieneBloque(bloque.id);
@@ -82,44 +82,44 @@ const BlockSelectPage = () => {
                         return (
                             <div
                                 key={bloque.id}
-                                className={`block-item ${isSelected ? 'selected' : ''}`}
+                                className={`block__item${isSelected ? ' block__item--selected' : ''}`}
                                 onClick={() => toggleBloque(bloque.id)}
                             >
                                 <div
-                                    className="block-badge"
+                                    className="block__badge"
                                     style={{ background: bloque.bg, color: bloque.color }}
                                 >
                                     {bloque.id}
                                 </div>
-                                <div className="block-info">
-                                    <span className="block-nombre">{bloque.nombre}</span>
-                                    <span className="block-codigo">{bloque.codigo}</span>
-                                    {aprobado && <span className="block-estado block-estado-ok">Aprobado</span>}
-                                    {solicitado && <span className="block-estado block-estado-pend">Pendiente de aprobación</span>}
+                                <div className="block__info">
+                                    <span className="block__nombre">{bloque.nombre}</span>
+                                    <span className="block__codigo">{bloque.codigo}</span>
+                                    {aprobado && <span className="block__estado block__estado--ok">Aprobado</span>}
+                                    {solicitado && <span className="block__estado block__estado--pend">Pendiente de aprobación</span>}
                                 </div>
-                                <div className={`block-radio ${isSelected ? 'checked' : ''}`}>
-                                    {isSelected && <div className="block-radio-inner" />}
+                                <div className={`block__radio${isSelected ? ' block__radio--checked' : ''}`}>
+                                    {isSelected && <div className="block__radio-inner" />}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {error && <p className="block-error">{error}</p>}
+                {error && <p className="block__error">{error}</p>}
                 {solicitudEnviada && (
-                    <p className="block-aviso">
+                    <p className="block__aviso">
                         Solicitud enviada. Podrás abrir turno en tu bloque cuando un administrador apruebe tu acceso.
                     </p>
                 )}
 
                 {/* Botón */}
                 {solicitudEnviada ? (
-                    <button className="block-btn active" onClick={() => navigate('/workspace')}>
+                    <button className="block__btn block__btn--active" onClick={() => navigate('/workspace')}>
                         Ir al inicio
                     </button>
                 ) : (
                     <button
-                        className={`block-btn ${selected.length > 0 ? 'active' : ''}`}
+                        className={`block__btn${selected.length > 0 ? ' block__btn--active' : ''}`}
                         onClick={handleContinuar}
                         disabled={loading}
                     >

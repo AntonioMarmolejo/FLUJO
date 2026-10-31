@@ -121,11 +121,11 @@ const TurnoPage = () => {
     if (!bloque) return null;
 
     return (
-        <div className="turno-wrapper">
-            <div className="turno-card">
+        <div className="turno">
+            <div className="turno__card">
 
                 {/* Avatar icono */}
-                <div className="turno-avatar" style={{ background: bloque.bg }}>
+                <div className="turno__avatar" style={{ background: bloque.bg }}>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="11" width="18" height="11" rx="2"
                             stroke={bloque.color} strokeWidth="2" />
@@ -136,7 +136,7 @@ const TurnoPage = () => {
                 </div>
 
                 {/* Título */}
-                <div className="turno-title">
+                <div className="turno__title">
                     <span style={{ color: bloque.color }}>
                         {bloque.nombre.toUpperCase()} {bloque.codigo}
                     </span>
@@ -146,25 +146,25 @@ const TurnoPage = () => {
 
                 {/* Indicador de progreso si hay múltiples puestos */}
                 {!fromWorkspace && totalBloques > 1 && (
-                    <div className="turno-progress">
+                    <div className="turno__progress">
                         Puesto {bloqueIndex + 1} de {totalBloques}
                     </div>
                 )}
 
                 {/* Selector puesto/bloque cuando viene de workspace */}
                 {fromWorkspace && (
-                    <div className="turno-cambiar">
+                    <div className="turno__cambiar">
                         {/* Puesto con dropdown */}
-                        <div className="turno-puesto">
-                            <button className="turno-puesto-btn" onClick={() => setShowPuestoMenu(v => !v)}>
-                                <span><span className="turno-cambiar-label">Puesto:</span><strong className="turno-puesto-actual">{puestoActual}</strong></span>
-                                <span className="turno-cambiar-aviso">¿Cambiaste de puesto? ▾</span>
+                        <div className="turno__puesto">
+                            <button className="turno__puesto-btn" onClick={() => setShowPuestoMenu(v => !v)}>
+                                <span><span className="turno__cambiar-label">Puesto:</span><strong className="turno__puesto-actual">{puestoActual}</strong></span>
+                                <span className="turno__cambiar-aviso">¿Cambiaste de puesto? ▾</span>
                             </button>
                             {showPuestoMenu && (
-                                <div className="turno-puesto-menu">
+                                <div className="turno__puesto-menu">
                                     {bloque.puestos.map(p => (
                                         <div key={p}
-                                            className={`turno-puesto-opcion${p === puestoActual ? ' actual' : ''}`}
+                                            className={`turno__puesto-opcion${p === puestoActual ? ' turno__puesto-opcion--actual' : ''}`}
                                             onClick={() => { setPuestoActual(p); setShowPuestoMenu(false); }}
                                         >
                                             {p}
@@ -175,27 +175,27 @@ const TurnoPage = () => {
                         </div>
                         {/* Cambiar bloque */}
                         <button
-                            className="turno-bloque-btn"
+                            className="turno__bloque-btn"
                             onClick={() => navigate('/onboarding')}
                         >
-                            <span className="turno-cambiar-label">Bloque:</span>
-                            <strong className="turno-bloque-actual">{bloque.nombre} {bloque.codigo}</strong>
-                            <span className="turno-bloque-aviso">¿Cambiaste de bloque? →</span>
+                            <span className="turno__cambiar-label">Bloque:</span>
+                            <strong className="turno__bloque-actual">{bloque.nombre} {bloque.codigo}</strong>
+                            <span className="turno__bloque-aviso">¿Cambiaste de bloque? →</span>
                         </button>
                     </div>
                 )}
 
-                <div className="turno-divider" />
+                <div className="turno__divider" />
 
                 {/* Formulario */}
                 {autoFilled && (
-                    <div className="turno-autollenado">
+                    <div className="turno__autollenado">
                         Datos del último turno cargados automáticamente
                     </div>
                 )}
-                <div className="turno-form">
+                <div className="turno__form">
 
-                    <div className="turno-field">
+                    <div className="turno__field">
                         <label>Cédula de identidad</label>
                         <input
                             type="text"
@@ -206,8 +206,8 @@ const TurnoPage = () => {
                         />
                     </div>
 
-                    <div className="turno-row">
-                        <div className="turno-field">
+                    <div className="turno__row">
+                        <div className="turno__field">
                             <label>Nombre</label>
                             <input
                                 type="text"
@@ -217,7 +217,7 @@ const TurnoPage = () => {
                                 onChange={handleChange}
                             />
                         </div>
-                        <div className="turno-field">
+                        <div className="turno__field">
                             <label>Apellidos</label>
                             <input
                                 type="text"
@@ -229,7 +229,7 @@ const TurnoPage = () => {
                         </div>
                     </div>
 
-                    <div className="turno-field">
+                    <div className="turno__field">
                         <label>Empresa</label>
                         <input
                             type="text"
@@ -241,52 +241,52 @@ const TurnoPage = () => {
                     </div>
 
                     {/* Selección de turno */}
-                    <div className="turno-field">
+                    <div className="turno__field">
                         <label>Turno</label>
-                        <div className="turno-options">
+                        <div className="turno__options">
                             <div
-                                className={`turno-option ${turno === 'diurno' ? 'selected' : ''}`}
+                                className={`turno__option${turno === 'diurno' ? ' turno__option--selected' : ''}`}
                                 onClick={() => setTurno('diurno')}
                             >
-                                <div className="turno-option-icon diurno">
+                                <div className="turno__option-icon turno__option-icon--diurno">
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                                         <circle cx="12" cy="12" r="4" stroke="#f59e0b" strokeWidth="2" />
                                         <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
                                             stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
                                     </svg>
                                 </div>
-                                <span className="turno-option-nombre">Diurno</span>
-                                <span className="turno-option-hora">06:00 – 18:00</span>
+                                <span className="turno__option-nombre">Diurno</span>
+                                <span className="turno__option-hora">06:00 – 18:00</span>
                             </div>
 
                             <div
-                                className={`turno-option ${turno === 'nocturno' ? 'selected' : ''}`}
+                                className={`turno__option${turno === 'nocturno' ? ' turno__option--selected' : ''}`}
                                 onClick={() => setTurno('nocturno')}
                             >
-                                <div className="turno-option-icon nocturno">
+                                <div className="turno__option-icon turno__option-icon--nocturno">
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
                                             stroke="#818cf8" strokeWidth="2"
                                             strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </div>
-                                <span className="turno-option-nombre">Nocturno</span>
-                                <span className="turno-option-hora">18:00 – 06:00</span>
+                                <span className="turno__option-nombre">Nocturno</span>
+                                <span className="turno__option-hora">18:00 – 06:00</span>
                             </div>
                         </div>
                     </div>
 
                 </div>
 
-                {error && <p className="turno-error">{error}</p>}
+                {error && <p className="turno__error">{error}</p>}
 
                 {/* Botones */}
-                <div className="turno-actions">
-                    <button className="turno-btn-back" onClick={handleVolver}>
+                <div className="turno__actions">
+                    <button className="turno__btn-back" onClick={handleVolver}>
                         ← Volver
                     </button>
                     <button
-                        className={`turno-btn-submit ${form.cedula && form.nombre && form.apellidos && form.empresa && turno ? 'active' : ''}`}
+                        className={`turno__btn-submit${form.cedula && form.nombre && form.apellidos && form.empresa && turno ? ' turno__btn-submit--active' : ''}`}
                         onClick={handleSubmit}
                         disabled={loading}
                     >

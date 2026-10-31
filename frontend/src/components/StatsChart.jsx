@@ -21,16 +21,16 @@ const TURNO_HORAS = {
 const MiniPie = ({ data, emptyLabel }) => {
     if (!data || data.length === 0) {
         return (
-            <div className="stats-vacio">{emptyLabel || 'Sin datos'}</div>
+            <div className="stats__vacio">{emptyLabel || 'Sin datos'}</div>
         );
     }
 
     const total = data.reduce((s, d) => s + d.value, 0);
 
     return (
-        <div className="stats-pie">
+        <div className="stats__pie">
             {/* Donut */}
-            <div className="stats-pie-donut">
+            <div className="stats__pie-donut">
                 <PieChart width={130} height={130}>
                     <Pie
                         data={data}
@@ -51,13 +51,13 @@ const MiniPie = ({ data, emptyLabel }) => {
                 </PieChart>
             </div>
             {/* Leyenda */}
-            <div className="stats-pie-leyenda">
+            <div className="stats__pie-leyenda">
                 {data.map((d, i) => (
-                    <div key={i} className="stats-pie-item">
+                    <div key={i} className="stats__pie-item">
                         {/* El color depende de la posición de la serie: va como variable */}
-                        <span className="stats-pie-punto" style={{ '--serie-color': PIE_COLORS[i % PIE_COLORS.length] }} />
-                        <span className="stats-pie-nombre">{d.name}</span>
-                        <span className="stats-pie-valor">{d.value}</span>
+                        <span className="stats__pie-punto" style={{ '--serie-color': PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="stats__pie-nombre">{d.name}</span>
+                        <span className="stats__pie-valor">{d.value}</span>
                     </div>
                 ))}
             </div>
@@ -69,11 +69,11 @@ const MiniPie = ({ data, emptyLabel }) => {
 const HourTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="stats-tooltip">
-            <div className="stats-tooltip-titulo">{label}</div>
+        <div className="stats__tooltip">
+            <div className="stats__tooltip-titulo">{label}</div>
             {payload.map(p => (
                 // El color de cada fila es el de su serie (lo da recharts)
-                <div key={p.dataKey} className="stats-tooltip-fila" style={{ color: p.color }}>
+                <div key={p.dataKey} className="stats__tooltip-fila" style={{ color: p.color }}>
                     <span>{p.name}:</span>
                     <strong>{p.value}</strong>
                 </div>
@@ -87,8 +87,8 @@ const PieTooltip = ({ active, payload, total }) => {
     if (!active || !payload?.length) return null;
     const { name, value } = payload[0];
     return (
-        <div className="stats-tooltip">
-            <div className="stats-tooltip-fila">
+        <div className="stats__tooltip">
+            <div className="stats__tooltip-fila">
                 <span>{name}:</span>
                 <strong>{value} ({Math.round(value / total * 100)}%)</strong>
             </div>
@@ -175,16 +175,16 @@ const StatsChart = ({
                 </LineChart>
             </ResponsiveContainer>
             {/* Leyenda del gráfico de línea */}
-            <div className="stats-linea-leyenda">
-                <span className="stats-linea-serie">
-                    <span className="stats-linea-marca stats-linea-ingresos" />
+            <div className="stats__linea-leyenda">
+                <span className="stats__linea-serie">
+                    <span className="stats__linea-marca stats__linea-ingresos" />
                     Ingresos
                 </span>
-                <span className="stats-linea-serie">
-                    <span className="stats-linea-marca stats-linea-salidas" />
+                <span className="stats__linea-serie">
+                    <span className="stats__linea-marca stats__linea-salidas" />
                     Salidas
                 </span>
-                <span className="stats-linea-turno">
+                <span className="stats__linea-turno">
                     {turno === 'nocturno' ? '18:00 – 06:00' : '06:00 – 18:00'}
                 </span>
             </div>
@@ -202,27 +202,27 @@ const StatsChart = ({
 
     return (
         <div
-            className="stats-chart"
+            className="stats"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             onMouseDown={onMouseDown}
         >
             {/* Cabecera de la vista actual */}
-            <div className="stats-cabecera">
-                <span className="stats-titulo">{CHART_TITLES[chartIdx]}</span>
-                <span className="stats-contador">{chartIdx + 1} / {totalCharts}</span>
+            <div className="stats__cabecera">
+                <span className="stats__titulo">{CHART_TITLES[chartIdx]}</span>
+                <span className="stats__contador">{chartIdx + 1} / {totalCharts}</span>
             </div>
 
             {/* Vista activa */}
             {views[chartIdx]}
 
             {/* Indicadores de posición (dots) */}
-            <div className="stats-puntos">
+            <div className="stats__puntos">
                 {Array.from({ length: totalCharts }, (_, i) => (
                     <button
                         key={i}
                         onClick={() => setChartIdx(i)}
-                        className={`stats-punto${i === chartIdx ? ' activo' : ''}`}
+                        className={`stats__punto${i === chartIdx ? ' stats__punto--activo' : ''}`}
                         title={CHART_TITLES[i]}
                     />
                 ))}

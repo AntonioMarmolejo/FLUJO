@@ -93,13 +93,13 @@ const PostSelectPage = () => {
     const esUltimo = bloqueIndex === totalBloques - 1;
 
     return (
-        <div className="post-wrapper">
-            <div className="post-card">
+        <div className="post">
+            <div className="post__card">
 
                 {/* Header */}
-                <div className="post-header">
-                    <button className="post-back" onClick={handleVolver}>‹</button>
-                    <div className="post-step">
+                <div className="post__header">
+                    <button className="post__back" onClick={handleVolver}>‹</button>
+                    <div className="post__step">
                         <span>Paso 2 de 2</span>
                         <h2>Selecciona tu puesto</h2>
                     </div>
@@ -107,64 +107,64 @@ const PostSelectPage = () => {
 
                 {/* Bloque actual */}
                 <div
-                    className="post-bloque-badge"
+                    className="post__bloque-badge"
                     style={{ background: bloqueActual.bg, borderColor: bloqueActual.color + '40' }}
                 >
                     <div
-                        className="post-bloque-num"
+                        className="post__bloque-num"
                         style={{ background: bloqueActual.bg, color: bloqueActual.color }}
                     >
                         {bloqueActualId}
                     </div>
-                    <div className="post-bloque-info">
+                    <div className="post__bloque-info">
                         <span
-                            className="post-bloque-nombre"
+                            className="post__bloque-nombre"
                             style={{ color: bloqueActual.color }}
                         >
                             {bloqueActual.nombre} {bloqueActual.codigo}
                         </span>
-                        <span className="post-bloque-count">
+                        <span className="post__bloque-count">
                             {bloqueActual.puestos.length} puestos disponibles
                         </span>
                     </div>
 
                     {/* Indicador si hay múltiples bloques */}
                     {totalBloques > 1 && (
-                        <span className="post-bloque-progress">
+                        <span className="post__bloque-progress">
                             {bloqueIndex + 1}/{totalBloques}
                         </span>
                     )}
                 </div>
 
                 {/* Pregunta */}
-                <p className="post-question">
+                <p className="post__question">
                     ¿Cuál es tu puesto dentro de este bloque?
                 </p>
 
                 {/* Lista puestos */}
-                <div className="post-list">
+                <div className="post__list">
                     {bloqueActual.puestos.map((puesto) => {
                         const isSelected = selectedPuestos.includes(puesto);
                         return (
                             <div
                                 key={puesto}
-                                className={`post-item ${isSelected ? 'selected' : ''}`}
+                                className={`post__item${isSelected ? ' post__item--selected' : ''}`}
                                 onClick={() => togglePuesto(puesto)}
                             >
-                                <span className="post-nombre">{puesto}</span>
-                                <div className={`post-radio ${isSelected ? 'checked' : ''}`}>
-                                    {isSelected && <div className="post-radio-inner" />}
+                                <span className="post__nombre">{puesto}</span>
+                                <div className={`post__radio${isSelected ? ' post__radio--checked' : ''}`}>
+                                    {isSelected && <div className="post__radio-inner" />}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {error && <p className="post-error">{error}</p>}
+                {error && <p className="post__error">{error}</p>}
 
                 {/* Botón */}
                 <button
-                    className={`post-btn ${selectedPuestos.length > 0 ? 'active' : ''}`}
+                    className={`post__btn${selectedPuestos.length > 0 ? ' post__btn--active' : ''}`}
                     onClick={handleContinuar}
                     disabled={loading}
                 >

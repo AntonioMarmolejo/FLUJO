@@ -1,4 +1,4 @@
-.block-wrapper {    display: flex;
+.block {    display: flex;
     width: 100%;
     justify-content: center;
     align-items: center;
@@ -6,7 +6,7 @@
     padding: 8px;
 }
 
-.block-card {
+.block__card {
     width: 100%;
     max-width: 480px;
     background: #1c1c1c;
@@ -19,7 +19,7 @@
 }
 
 /* Avatar */
-.block-avatar {
+.block__avatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
@@ -29,61 +29,61 @@
     justify-content: center;
 }
 
-.block-avatar span {
+.block__avatar span {
     font-size: 28px;
     font-weight: 700;
     color: #3730a3;
 }
 
 /* Greeting */
-.block-greeting {
+.block__greeting {
     text-align: center;
 }
 
-.block-greeting p {
+.block__greeting p {
     color: #888;
     font-size: 15px;
     margin-bottom: 4px;
 }
 
-.block-greeting h2 {
+.block__greeting h2 {
     font-size: 26px;
     font-weight: 700;
     color: #ffffff;
 }
 
-.block-divider {
+.block__divider {
     width: 100%;
     height: 1px;
     background: #2e2e2e;
 }
 
 /* Question */
-.block-question {
+.block__question {
     width: 100%;
 }
 
-.block-question h3 {
+.block__question h3 {
     font-size: 17px;
     font-weight: 700;
     color: #ffffff;
     margin-bottom: 6px;
 }
 
-.block-question p {
+.block__question p {
     font-size: 14px;
     color: #888;
 }
 
 /* List */
-.block-list {
+.block__list {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.block-item {
+.block__item {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -95,17 +95,19 @@
     transition: all 0.2s;
 }
 
-.block-item:hover {
+.block__item:hover {
     border-color: #444;
     background: #2a2a2a;
 }
 
-.block-item.selected {
+/* Con :hover para que el elegido no pierda su color al pasar el mouse */
+.block__item--selected,
+.block__item--selected:hover {
     border-color: #6c63ff;
     background: rgba(108, 99, 255, 0.08);
 }
 
-.block-badge {
+.block__badge {
     width: 42px;
     height: 42px;
     border-radius: 50%;
@@ -117,27 +119,27 @@
     flex-shrink: 0;
 }
 
-.block-info {
+.block__info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.block-nombre {
+.block__nombre {
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
 }
 
-.block-codigo {
+.block__codigo {
     font-size: 12px;
     color: #666;
     letter-spacing: 1px;
 }
 
 /* Radio */
-.block-radio {
+.block__radio {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -149,11 +151,11 @@
     transition: border-color 0.2s;
 }
 
-.block-radio.checked {
+.block__radio--checked {
     border-color: #6c63ff;
 }
 
-.block-radio-inner {
+.block__radio-inner {
     width: 10px;
     height: 10px;
     border-radius: 50%;
@@ -161,7 +163,7 @@
 }
 
 /* Error */
-.block-error {
+.block__error {
     width: 100%;
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
@@ -173,7 +175,7 @@
 }
 
 /* Estado de aprobación del bloque */
-.block-estado {
+.block__estado {
     align-self: flex-start;
     margin-top: 3px;
     font-size: 11px;
@@ -181,17 +183,17 @@
     border-radius: 10px;
 }
 
-.block-estado-ok {
+.block__estado--ok {
     color: #4ade80;
     background: rgba(74, 222, 128, 0.12);
 }
 
-.block-estado-pend {
+.block__estado--pend {
     color: #f59e0b;
     background: rgba(245, 158, 11, 0.12);
 }
 
-.block-aviso {
+.block__aviso {
     width: 100%;
     background: rgba(245, 158, 11, 0.1);
     border: 1px solid rgba(245, 158, 11, 0.3);
@@ -203,7 +205,7 @@
 }
 
 /* Button */
-.block-btn {
+.block__btn {
     width: 100%;
     padding: 15px;
     background: #2a2a2a;
@@ -216,18 +218,18 @@
     transition: all 0.2s;
 }
 
-.block-btn.active {
+.block__btn--active {
     background: #ffffff;
     border-color: #ffffff;
     color: #000000;
     cursor: pointer;
 }
 
-.block-btn.active:hover {
+.block__btn--active:hover {
     opacity: 0.9;
 }
 
-.block-btn:disabled {
+.block__btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }

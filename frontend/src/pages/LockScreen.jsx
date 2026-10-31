@@ -106,27 +106,27 @@ const LockScreen = ({ onUnlocked }) => {
     };
 
     return (
-        <div className="pin-wrapper">
-            <div className="pin-logo">
+        <div className="pin">
+            <div className="pin__logo">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </div>
-            <h1 className="pin-title">{lockedMsg ? 'Sesión bloqueada' : 'Ingresa tu PIN'}</h1>
-            {!lockedMsg && cachedName && <p className="pin-user-name">{cachedName}</p>}
+            <h1 className="pin__title">{lockedMsg ? 'Sesión bloqueada' : 'Ingresa tu PIN'}</h1>
+            {!lockedMsg && cachedName && <p className="pin__user-name">{cachedName}</p>}
             {lockedMsg ? (
-                <p className="pin-subtitle">{lockedMsg}</p>
+                <p className="pin__subtitle">{lockedMsg}</p>
             ) : (
                 <>
                     <PinPad length={PIN_LENGTH} value={pin} onDigit={handleDigit} onBackspace={handleBackspace}
                         error={!!error} shake={shake} disabled={busy}
                         extraKey={canUseBiometric && (
-                            <button className="pin-key" type="button" disabled={busy} onClick={handleBiometric} title="Usar huella">
+                            <button className="pin__key" type="button" disabled={busy} onClick={handleBiometric} title="Usar huella">
                                 <FingerprintIcon />
                             </button>
                         )} />
-                    <p className="pin-error-msg">{error}</p>
-                    <button className="pin-footer-link" onClick={handleOlvide}>Olvidé mi PIN</button>
+                    <p className="pin__error-msg">{error}</p>
+                    <button className="pin__footer-link" onClick={handleOlvide}>Olvidé mi PIN</button>
                 </>
             )}
         </div>

@@ -79,15 +79,15 @@ const ConfirmacionTurnoPage = () => {
     if (!turno || !bloque) return null;
 
     return (
-        <div className="conf-wrapper">
-            <div className="conf-content">
+        <div className="conf">
+            <div className="conf__content">
 
                 {/* Card turno activo */}
                 {/* .conf-diurno / .conf-nocturno definen los colores del turno */}
-                <div className={`conf-turno-card ${esDiurno ? 'conf-diurno' : 'conf-nocturno'}`}>
-                    <div className="conf-turno-top">
-                        <div className="conf-turno-left">
-                            <div className="conf-icon">
+                <div className={`conf__turno-card ${esDiurno ? 'conf__turno-card--diurno' : 'conf__turno-card--nocturno'}`}>
+                    <div className="conf__turno-top">
+                        <div className="conf__turno-left">
+                            <div className="conf__icon">
                                 {esDiurno ? (
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                         <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
@@ -103,29 +103,29 @@ const ConfirmacionTurnoPage = () => {
                                 )}
                             </div>
                             <div>
-                                <span className="conf-badge">
+                                <span className="conf__badge">
                                     Turno {esDiurno ? 'diurno' : 'nocturno'} activo
                                 </span>
-                                <div className="conf-timer">
+                                <div className="conf__timer">
                                     {formatTiempo(tiempoTranscurrido)}
                                 </div>
                             </div>
                         </div>
-                        <div className="conf-fecha">
+                        <div className="conf__fecha">
                             <span>{fechaFormateada}</span>
                             <span>{esDiurno ? '06:00' : '18:00'} – {esDiurno ? '18:00' : '06:00'}</span>
                         </div>
                     </div>
 
                     {/* Barra de progreso */}
-                    <div className="conf-progress-bar">
-                        <div className="conf-progress-track">
+                    <div className="conf__progress-bar">
+                        <div className="conf__progress-track">
                             <div
-                                className="conf-progress-fill"
+                                className="conf__progress-fill"
                                 style={{ width: `${progreso}%` }}
                             />
                         </div>
-                        <div className="conf-progress-labels">
+                        <div className="conf__progress-labels">
                             <span>{esDiurno ? '06:00' : '18:00'}</span>
                             <span>{horasRestantes}h {minutosRestantes}min restantes</span>
                             <span>{esDiurno ? '18:00' : '06:00'}</span>
@@ -134,11 +134,11 @@ const ConfirmacionTurnoPage = () => {
                 </div>
 
                 {/* Card datos del guardia */}
-                <div className="conf-datos-card">
-                    <span className="conf-datos-titulo">DATOS DEL GUARDIA</span>
+                <div className="conf__datos-card">
+                    <span className="conf__datos-titulo">DATOS DEL GUARDIA</span>
 
-                    <div className="conf-guardia-header">
-                        <div className="conf-guardia-avatar">
+                    <div className="conf__guardia-header">
+                        <div className="conf__guardia-avatar">
                             {iniciales}
                         </div>
                         <div>
@@ -147,20 +147,20 @@ const ConfirmacionTurnoPage = () => {
                         </div>
                     </div>
 
-                    <div className="conf-divider" />
+                    <div className="conf__divider" />
 
-                    <div className="conf-datos-grid">
-                        <div className="conf-dato-row">
-                            <span className="conf-dato-label">Cédula</span>
-                            <span className="conf-dato-valor">{turno.cedula}</span>
+                    <div className="conf__datos-grid">
+                        <div className="conf__dato-row">
+                            <span className="conf__dato-label">Cédula</span>
+                            <span className="conf__dato-valor">{turno.cedula}</span>
                         </div>
-                        <div className="conf-dato-row">
-                            <span className="conf-dato-label">Puesto</span>
-                            <span className="conf-dato-valor">{turno.puesto}</span>
+                        <div className="conf__dato-row">
+                            <span className="conf__dato-label">Puesto</span>
+                            <span className="conf__dato-valor">{turno.puesto}</span>
                         </div>
-                        <div className="conf-dato-row">
-                            <span className="conf-dato-label">Bloque</span>
-                            <span className="conf-dato-valor">
+                        <div className="conf__dato-row">
+                            <span className="conf__dato-label">Bloque</span>
+                            <span className="conf__dato-valor">
                                 {bloque.nombre} {bloque.codigo}
                             </span>
                         </div>
@@ -168,14 +168,14 @@ const ConfirmacionTurnoPage = () => {
                 </div>
 
                 {/* Botón continuar */}
-                <button className="conf-btn" onClick={handleContinuar}>
+                <button className="conf__btn" onClick={handleContinuar}>
                     {bloqueIndex + 1 === totalBloques
                         ? 'Ir al dashboard →'
                         : `Siguiente puesto →`}
                 </button>
 
                 {/* Nota navegación */}
-                <p className="conf-nota">
+                <p className="conf__nota">
                     Puedes ver esta ventana desde la barra de navegación ↗
                 </p>
 

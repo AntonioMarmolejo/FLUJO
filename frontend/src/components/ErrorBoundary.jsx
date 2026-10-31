@@ -22,14 +22,14 @@ class ErrorBoundary extends Component {
         if (this.state.hasError) {
             return (
                 <div className="error-pantalla">
-                    <h2 className="error-pantalla-titulo">
+                    <h2 className="error-pantalla__titulo">
                         Algo salió mal
                     </h2>
-                    <p className="error-pantalla-texto">
+                    <p className="error-pantalla__texto">
                         Ocurrió un error inesperado. Puedes volver al inicio e intentarlo de nuevo.
                     </p>
                     <button
-                        className="error-pantalla-btn"
+                        className="error-pantalla__btn"
                         onClick={this.handleReload}
                     >
                         Volver al inicio

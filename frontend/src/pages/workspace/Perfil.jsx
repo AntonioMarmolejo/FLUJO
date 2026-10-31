@@ -81,14 +81,14 @@ const DesbloqueoHuellaLocal = () => {
             {enabled ? (
                 <>
                     <p className="perfil-bio-success">✓ Huella activada para desbloquear la app en este dispositivo</p>
-                    <button className="pin-footer-link" onClick={handleDesactivar}>Desactivar</button>
+                    <button className="pin__footer-link" onClick={handleDesactivar}>Desactivar</button>
                 </>
             ) : confirming ? (
                 <>
                     <p className="perfil-install-note">Confirma tu PIN para activar la huella</p>
                     <PinPad length={6} value={pin} onDigit={handleDigit} onBackspace={handleBackspace}
                         error={!!error} shake={shake} disabled={busy} />
-                    <p className="pin-error-msg">{error}</p>
+                    <p className="pin__error-msg">{error}</p>
                 </>
             ) : (
                 <button className="perfil-bio-btn" onClick={() => setConfirming(true)}>

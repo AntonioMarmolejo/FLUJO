@@ -1,7 +1,7 @@
 // Pantalla de carga a pantalla completa (estilos en styles/comunes.css)
 const Spinner = () => (
-    <div className="spinner-pantalla">
-        <div className="spinner-circulo" />
+    <div className="spinner">
+        <div className="spinner__circulo" />
     </div>
 );
 

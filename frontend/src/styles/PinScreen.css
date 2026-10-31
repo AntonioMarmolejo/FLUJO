@@ -1,4 +1,4 @@
-.pin-wrapper {
+.pin {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -9,7 +9,7 @@
     background: #0a0a0a;
 }
 
-.pin-logo {
+.pin__logo {
     width: 48px;
     height: 48px;
     background: linear-gradient(135deg, #6c63ff, #4a90d9);
@@ -19,7 +19,7 @@
     justify-content: center;
 }
 
-.pin-title {
+.pin__title {
     font-size: 18px;
     font-weight: 700;
     color: #fff;
@@ -27,7 +27,7 @@
     margin: 0;
 }
 
-.pin-subtitle {
+.pin__subtitle {
     font-size: 13px;
     color: #888;
     text-align: center;
@@ -35,12 +35,12 @@
     max-width: 280px;
 }
 
-.pin-dots {
+.pin__dots {
     display: flex;
     gap: 14px;
 }
 
-.pin-dot {
+.pin__dot {
     width: 14px;
     height: 14px;
     border-radius: 50%;
@@ -49,15 +49,15 @@
     transition: background 0.15s, border-color 0.15s;
 }
 
-.pin-dot.filled {
+.pin__dot--filled {
     background: #6c63ff;
     border-color: #6c63ff;
 }
 
-.pin-dots.error .pin-dot {
+.pin__dots--error .pin__dot {
     border-color: #ef4444;
 }
-.pin-dots.error .pin-dot.filled {
+.pin__dots--error .pin__dot--filled {
     background: #ef4444;
     border-color: #ef4444;
 }
@@ -67,9 +67,9 @@
     20%, 60% { transform: translateX(-8px); }
     40%, 80% { transform: translateX(8px); }
 }
-.pin-dots.shake { animation: pin-shake 0.4s ease; }
+.pin__dots--shake { animation: pin-shake 0.4s ease; }
 
-.pin-error-msg {
+.pin__error-msg {
     font-size: 13px;
     color: #ef4444;
     margin: 0;
@@ -77,7 +77,7 @@
     min-height: 16px;
 }
 
-.pin-keypad {
+.pin__keypad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 14px;
@@ -85,7 +85,7 @@
     max-width: 280px;
 }
 
-.pin-key {
+.pin__key {
     aspect-ratio: 1;
     border-radius: 50%;
     border: 1px solid #2a2a2a;
@@ -100,12 +100,12 @@
     transition: background 0.15s;
     font-family: inherit;
 }
-.pin-key:active { background: #242424; }
-.pin-key:disabled { opacity: 0.35; cursor: not-allowed; }
-.pin-key.ghost { background: transparent; border: none; cursor: default; }
-.pin-key.ghost:active { background: transparent; }
+.pin__key:active { background: #242424; }
+.pin__key:disabled { opacity: 0.35; cursor: not-allowed; }
+.pin__key--ghost { background: transparent; border: none; cursor: default; }
+.pin__key--ghost:active { background: transparent; }
 
-.pin-footer-link {
+.pin__footer-link {
     background: transparent;
     border: none;
     color: #888;
@@ -115,7 +115,7 @@
     font-family: inherit;
 }
 
-.pin-user-name {
+.pin__user-name {
     font-size: 15px;
     color: #ccc;
     text-align: center;

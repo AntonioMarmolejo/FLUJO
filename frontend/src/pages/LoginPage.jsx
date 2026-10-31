@@ -86,28 +86,28 @@ const LoginPage = () => {
     });
 
     return (
-        <div className="login-wrapper">
+        <div className="login">
             {/* Header */}
-            <div className="login-header">
-                <div className="login-logo">
+            <div className="login__header">
+                <div className="login__logo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5"
                             strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
-                <span className="login-brand">FLUJO</span>
+                <span className="login__brand">FLUJO</span>
             </div>
 
             {/* Tabs */}
-            <div className="login-tabs">
+            <div className="login__tabs">
                 <button
-                    className={`tab-btn ${tab === 'login' ? 'active' : ''}`}
+                    className={`login__tab-btn${tab === 'login' ? ' login__tab-btn--active' : ''}`}
                     onClick={() => { setTab('login'); setError(''); }}
                 >
                     Iniciar sesión
                 </button>
                 <button
-                    className={`tab-btn ${tab === 'register' ? 'active' : ''}`}
+                    className={`login__tab-btn${tab === 'register' ? ' login__tab-btn--active' : ''}`}
                     onClick={() => { setTab('register'); setError(''); }}
                 >
                     Registrarse
@@ -115,10 +115,10 @@ const LoginPage = () => {
             </div>
 
             {/* Title */}
-            <div className="login-title">
+            <div className="login__title">
                 <h1>{tab === 'login' ? 'Bienvenido\nde vuelta' : 'Crea tu\ncuenta'}</h1>
-                <p className="login-subtitle">
-                    <span className="dot" />
+                <p className="login__subtitle">
+                    <span className="login__dot" />
                     {tab === 'login'
                         ? 'Tu espacio de trabajo te espera'
                         : 'Empieza a gestionar tu flujo'}
@@ -126,11 +126,11 @@ const LoginPage = () => {
             </div>
 
             {/* Form */}
-            <div className="login-form">
+            <div className="login__form">
                 {tab === 'register' && (
-                    <div className="field-group">
+                    <div className="login__field-group">
                         <label>NOMBRE</label>
-                        <div className="input-wrapper">
+                        <div className="login__input-wrapper">
                             <input
                                 type="text"
                                 name="name"
@@ -142,9 +142,9 @@ const LoginPage = () => {
                     </div>
                 )}
 
-                <div className="field-group">
+                <div className="login__field-group">
                     <label>CORREO ELECTRÓNICO</label>
-                    <div className="input-wrapper">
+                    <div className="login__input-wrapper">
                         <input
                             type="email"
                             name="email"
@@ -152,13 +152,13 @@ const LoginPage = () => {
                             value={form.email}
                             onChange={handleChange}
                         />
-                        <span className="input-icon">✉</span>
+                        <span className="login__input-icon">✉</span>
                     </div>
                 </div>
 
-                <div className="field-group">
+                <div className="login__field-group">
                     <label>CONTRASEÑA</label>
-                    <div className="input-wrapper">
+                    <div className="login__input-wrapper">
                         <input
                             type={showPassword ? 'text' : 'password'}
                             name="password"
@@ -168,7 +168,7 @@ const LoginPage = () => {
                             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                         />
                         <button
-                            className="toggle-password"
+                            className="login__toggle-password"
                             onClick={() => setShowPassword(!showPassword)}
                             type="button"
                         >
@@ -178,17 +178,17 @@ const LoginPage = () => {
                 </div>
 
                 {tab === 'login' && (
-                    <div className="forgot-password">
+                    <div className="login__forgot-password">
                         <a href="#">¿Olvidaste tu contraseña?</a>
                     </div>
                 )}
 
-                {error && <p className="error-msg">{error}</p>}
+                {error && <p className="login__error-msg">{error}</p>}
 
                 {/* Tarjetas de acción */}
-                <div className="login-action-cards">
+                <div className="login__action-cards">
                     {/* Contraseña / Crear cuenta */}
-                    <button className="login-action-card card-primary" onClick={handleSubmit} disabled={loading}>
+                    <button className="login__action-card login__action-card--primary" onClick={handleSubmit} disabled={loading}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2"/>
                             <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -198,7 +198,7 @@ const LoginPage = () => {
 
                     {/* Huella — solo en login y si el dispositivo lo soporta */}
                     {tab === 'login' && biometricSupported && (
-                        <button className="login-action-card card-bio" onClick={handleBiometric} disabled={bioLoading}>
+                        <button className="login__action-card login__action-card--bio" onClick={handleBiometric} disabled={bioLoading}>
                             <FingerprintIcon />
                             <span>{bioLoading ? 'Verificando…' : 'Huella / Face ID'}</span>
                         </button>
@@ -207,7 +207,7 @@ const LoginPage = () => {
                     {/* Google */}
                     {GOOGLE_CONFIGURED ? (
                         <button
-                            className="login-action-card card-google"
+                            className="login__action-card login__action-card--google"
                             onClick={() => { setError(''); setGoogleLoading(true); googleLogin(); }}
                             disabled={googleLoading}
                         >
@@ -220,7 +220,7 @@ const LoginPage = () => {
                             <span>{googleLoading ? 'Conectando…' : 'Google'}</span>
                         </button>
                     ) : (
-                        <button className="login-action-card card-google card-google-sin-configurar" disabled title="Google login no configurado">
+                        <button className="login__action-card login__action-card--google login__action-card--google-sin-configurar" disabled title="Google login no configurado">
                             <svg width="20" height="20" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -232,7 +232,7 @@ const LoginPage = () => {
                     )}
                 </div>
 
-                <p className="login-footer">
+                <p className="login__footer">
                     {tab === 'login' ? '¿Sin cuenta? ' : '¿Ya tienes cuenta? '}
                     <a onClick={() => setTab(tab === 'login' ? 'register' : 'login')}>
                         {tab === 'login' ? 'Créala gratis' : 'Inicia sesión'}

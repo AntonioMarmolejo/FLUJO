@@ -1,4 +1,4 @@
-.post-wrapper {    width: 100%;
+.post {    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -6,7 +6,7 @@
     padding: 8px;
 }
 
-.post-card {
+.post__card {
     width: 100%;
     max-width: 480px;
     background: #1c1c1c;
@@ -18,13 +18,13 @@
 }
 
 /* Header */
-.post-header {
+.post__header {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-.post-back {
+.post__back {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -41,17 +41,17 @@
     line-height: 1;
 }
 
-.post-back:hover {
+.post__back:hover {
     background: #333;
 }
 
-.post-step span {
+.post__step span {
     font-size: 12px;
     color: #666;
     letter-spacing: 0.5px;
 }
 
-.post-step h2 {
+.post__step h2 {
     font-size: 18px;
     font-weight: 700;
     color: #ffffff;
@@ -59,7 +59,7 @@
 }
 
 /* Bloque badge */
-.post-bloque-badge {
+.post__bloque-badge {
     display: flex;
     align-items: center;
     gap: 14px;
@@ -68,7 +68,7 @@
     border: 1px solid transparent;
 }
 
-.post-bloque-num {
+.post__bloque-num {
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -80,24 +80,24 @@
     flex-shrink: 0;
 }
 
-.post-bloque-info {
+.post__bloque-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.post-bloque-nombre {
+.post__bloque-nombre {
     font-size: 15px;
     font-weight: 700;
 }
 
-.post-bloque-count {
+.post__bloque-count {
     font-size: 12px;
     color: #888;
 }
 
-.post-bloque-progress {
+.post__bloque-progress {
     font-size: 12px;
     color: #666;
     background: #2a2a2a;
@@ -106,14 +106,14 @@
 }
 
 /* Question */
-.post-question {
+.post__question {
     font-size: 14px;
     color: #888;
     margin-top: -8px;
 }
 
 /* List */
-.post-list {
+.post__list {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -122,20 +122,20 @@
     padding-right: 4px;
 }
 
-.post-list::-webkit-scrollbar {
+.post__list::-webkit-scrollbar {
     width: 4px;
 }
 
-.post-list::-webkit-scrollbar-track {
+.post__list::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.post-list::-webkit-scrollbar-thumb {
+.post__list::-webkit-scrollbar-thumb {
     background: #333;
     border-radius: 4px;
 }
 
-.post-item {
+.post__item {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -147,24 +147,26 @@
     transition: all 0.2s;
 }
 
-.post-item:hover {
+.post__item:hover {
     border-color: #444;
     background: #2a2a2a;
 }
 
-.post-item.selected {
+/* Con :hover para que el elegido no pierda su color al pasar el mouse */
+.post__item--selected,
+.post__item--selected:hover {
     border-color: #6c63ff;
     background: rgba(108, 99, 255, 0.08);
 }
 
-.post-nombre {
+.post__nombre {
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
 }
 
 /* Radio */
-.post-radio {
+.post__radio {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -176,11 +178,11 @@
     transition: border-color 0.2s;
 }
 
-.post-radio.checked {
+.post__radio--checked {
     border-color: #6c63ff;
 }
 
-.post-radio-inner {
+.post__radio-inner {
     width: 10px;
     height: 10px;
     border-radius: 50%;
@@ -188,7 +190,7 @@
 }
 
 /* Error */
-.post-error {
+.post__error {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #f87171;
@@ -199,7 +201,7 @@
 }
 
 /* Button */
-.post-btn {
+.post__btn {
     width: 100%;
     padding: 15px;
     background: #3730a3;
@@ -213,15 +215,15 @@
     transition: all 0.2s;
 }
 
-.post-btn.active {
+.post__btn--active {
     opacity: 1;
     cursor: pointer;
 }
 
-.post-btn.active:hover {
+.post__btn--active:hover {
     background: #4338ca;
 }
-.post-btn:disabled {
+.post__btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }

@@ -1,11 +1,11 @@
-.turno-wrapper {    display: flex;
+.turno {    display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     padding: 2px;
 }
 
-.turno-card {
+.turno__card {
     width: 100%;
     max-width: 520px;
     background: #1c1c1c;
@@ -18,7 +18,7 @@
 }
 
 /* Avatar */
-.turno-avatar {
+.turno__avatar {
     width: 72px;
     height: 72px;
     border-radius: 50%;
@@ -28,31 +28,31 @@
 }
 
 /* Title */
-.turno-title {
+.turno__title {
     text-align: center;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.turno-title span {
+.turno__title span {
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 2px;
 }
 
-.turno-title h2 {
+.turno__title h2 {
     font-size: 24px;
     font-weight: 800;
     color: #ffffff;
 }
 
-.turno-title p {
+.turno__title p {
     font-size: 14px;
     color: #888;
 }
 
-.turno-progress {
+.turno__progress {
     font-size: 12px;
     color: #666;
     background: #2a2a2a;
@@ -60,39 +60,39 @@
     border-radius: 20px;
 }
 
-.turno-divider {
+.turno__divider {
     width: 100%;
     height: 1px;
     background: #2e2e2e;
 }
 
 /* Form */
-.turno-form {
+.turno__form {
     width: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-.turno-row {
+.turno__row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.turno-field {
+.turno__field {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.turno-field label {
+.turno__field label {
     font-size: 13px;
     font-weight: 600;
     color: #cccccc;
 }
 
-.turno-field input {
+.turno__field input {
     background: #252525;
     border: 1px solid #2e2e2e;
     border-radius: 10px;
@@ -104,22 +104,22 @@
     width: 100%;
 }
 
-.turno-field input:focus {
+.turno__field input:focus {
     border-color: #6c63ff;
 }
 
-.turno-field input::placeholder {
+.turno__field input::placeholder {
     color: #444;
 }
 
 /* Turno options */
-.turno-options {
+.turno__options {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.turno-option {
+.turno__option {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -132,22 +132,24 @@
     transition: all 0.2s;
 }
 
-.turno-option:hover {
+.turno__option:hover {
     border-color: #444;
     background: #2a2a2a;
 }
 
-.turno-option.selected.diurno-selected {
+.turno__option--selected.turno__option--diurno {
     border-color: #f59e0b;
     background: rgba(245, 158, 11, 0.08);
 }
 
-.turno-option.selected {
+/* Con :hover para que la opción elegida no pierda su color al pasar el mouse */
+.turno__option--selected,
+.turno__option--selected:hover {
     border-color: #6c63ff;
     background: rgba(108, 99, 255, 0.08);
 }
 
-.turno-option-icon {
+.turno__option-icon {
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -156,27 +158,27 @@
     justify-content: center;
 }
 
-.turno-option-icon.diurno {
+.turno__option-icon--diurno {
     background: rgba(245, 158, 11, 0.15);
 }
 
-.turno-option-icon.nocturno {
+.turno__option-icon--nocturno {
     background: rgba(129, 140, 248, 0.15);
 }
 
-.turno-option-nombre {
+.turno__option-nombre {
     font-size: 15px;
     font-weight: 700;
     color: #ffffff;
 }
 
-.turno-option-hora {
+.turno__option-hora {
     font-size: 12px;
     color: #666;
 }
 
 /* Error */
-.turno-error {
+.turno__error {
     width: 100%;
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
@@ -188,14 +190,14 @@
 }
 
 /* Actions */
-.turno-actions {
+.turno__actions {
     width: 100%;
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 12px;
 }
 
-.turno-btn-back {
+.turno__btn-back {
     padding: 14px 20px;
     background: transparent;
     border: 1px solid #2e2e2e;
@@ -207,12 +209,12 @@
     white-space: nowrap;
 }
 
-.turno-btn-back:hover {
+.turno__btn-back:hover {
     border-color: #444;
     color: #fff;
 }
 
-.turno-btn-submit {
+.turno__btn-submit {
     padding: 14px;
     background: #3730a3;
     border: none;
@@ -225,31 +227,31 @@
     transition: all 0.2s;
 }
 
-.turno-btn-submit.active {
+.turno__btn-submit--active {
     opacity: 1;
     cursor: pointer;
 }
 
-.turno-btn-submit.active:hover {
+.turno__btn-submit--active:hover {
     background: #4338ca;
 }
 
-.turno-btn-submit:disabled {
+.turno__btn-submit:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
 /* ── Cambiar de puesto o de bloque (al abrir turno desde el inicio) ── */
-.turno-cambiar {
+.turno__cambiar {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
 }
-.turno-puesto {
+.turno__puesto {
     position: relative;
 }
-.turno-puesto-btn {
+.turno__puesto-btn {
     width: 100%;
     display: flex;
     justify-content: space-between;
@@ -262,18 +264,18 @@
     font-size: 13px;
     cursor: pointer;
 }
-.turno-cambiar-label {
+.turno__cambiar-label {
     margin-right: 8px;
     color: #666;
 }
-.turno-puesto-actual {
+.turno__puesto-actual {
     color: #fff;
 }
-.turno-cambiar-aviso {
+.turno__cambiar-aviso {
     font-size: 11px;
     color: #818cf8;
 }
-.turno-puesto-menu {
+.turno__puesto-menu {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
@@ -284,7 +286,7 @@
     background: #1e1e1e;
     border: 1px solid #2e2e2e;
 }
-.turno-puesto-opcion {
+.turno__puesto-opcion {
     padding: 12px 16px;
     border-bottom: 1px solid #2a2a2a;
     background: transparent;
@@ -292,11 +294,11 @@
     font-size: 14px;
     cursor: pointer;
 }
-.turno-puesto-opcion.actual {
+.turno__puesto-opcion--actual {
     background: rgba(129, 140, 248, 0.08);
     color: #818cf8;
 }
-.turno-bloque-btn {
+.turno__bloque-btn {
     padding: 10px 16px;
     border-radius: 10px;
     background: transparent;
@@ -306,16 +308,16 @@
     text-align: left;
     cursor: pointer;
 }
-.turno-bloque-actual {
+.turno__bloque-actual {
     color: #888;
 }
-.turno-bloque-aviso {
+.turno__bloque-aviso {
     float: right;
     font-size: 11px;
     color: #f59e0b;
 }
 /* Aviso de datos tomados del último turno */
-.turno-autollenado {
+.turno__autollenado {
     padding: 6px 12px;
     border-radius: 8px;
     background: rgba(74, 222, 128, 0.08);

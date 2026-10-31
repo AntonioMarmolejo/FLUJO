@@ -68,21 +68,21 @@ const CreatePinScreen = () => {
     const handleBackspace = () => { if (!busy) { setPin(p => p.slice(0, -1)); setError(''); } };
 
     return (
-        <div className="pin-wrapper">
-            <div className="pin-logo">
+        <div className="pin">
+            <div className="pin__logo">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </div>
-            <h1 className="pin-title">{stage === 'enter' ? 'Crea un PIN' : 'Confirma tu PIN'}</h1>
+            <h1 className="pin__title">{stage === 'enter' ? 'Crea un PIN' : 'Confirma tu PIN'}</h1>
             {stage === 'enter' && (
-                <p className="pin-subtitle">
+                <p className="pin__subtitle">
                     Lo usarás para entrar rápido en este dispositivo sin conexión, en vez de escribir tu correo y contraseña cada vez.
                 </p>
             )}
             <PinPad length={PIN_LENGTH} value={pin} onDigit={handleDigit} onBackspace={handleBackspace}
                 error={!!error} shake={shake} disabled={busy} />
-            <p className="pin-error-msg">{error}</p>
+            <p className="pin__error-msg">{error}</p>
         </div>
     );
 };

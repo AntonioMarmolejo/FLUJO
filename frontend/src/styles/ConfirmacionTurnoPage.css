@@ -1,11 +1,11 @@
-.conf-wrapper {    display: flex;
+.conf {    display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     padding: 24px;
 }
 
-.conf-content {
+.conf__content {
     width: 100%;
     max-width: 540px;
     display: flex;
@@ -14,7 +14,7 @@
 }
 
 /* Card turno */
-.conf-turno-card {
+.conf__turno-card {
     border-radius: 16px;
     border: 1.5px solid;
     padding: 20px 24px;
@@ -23,20 +23,20 @@
     gap: 16px;
 }
 
-.conf-turno-top {
+.conf__turno-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
 }
 
-.conf-turno-left {
+.conf__turno-left {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-.conf-icon {
+.conf__icon {
     width: 52px;
     height: 52px;
     border-radius: 50%;
@@ -46,7 +46,7 @@
     flex-shrink: 0;
 }
 
-.conf-badge {
+.conf__badge {
     display: inline-block;
     padding: 3px 10px;
     border-radius: 20px;
@@ -55,14 +55,14 @@
     margin-bottom: 4px;
 }
 
-.conf-timer {
+.conf__timer {
     font-size: 32px;
     font-weight: 800;
     letter-spacing: 1px;
     font-variant-numeric: tabular-nums;
 }
 
-.conf-fecha {
+.conf__fecha {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -72,33 +72,33 @@
 }
 
 /* Progress */
-.conf-progress-bar {
+.conf__progress-bar {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.conf-progress-track {
+.conf__progress-track {
     height: 6px;
     background: rgba(0, 0, 0, 0.1);
     border-radius: 99px;
     overflow: hidden;
 }
 
-.conf-progress-fill {
+.conf__progress-fill {
     height: 100%;
     border-radius: 99px;
     transition: width 1s linear;
 }
 
-.conf-progress-labels {
+.conf__progress-labels {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
 }
 
 /* Card datos */
-.conf-datos-card {
+.conf__datos-card {
     background: #1e1e1e;
     border-radius: 16px;
     padding: 24px;
@@ -107,20 +107,20 @@
     gap: 16px;
 }
 
-.conf-datos-titulo {
+.conf__datos-titulo {
     font-size: 11px;
     font-weight: 700;
     color: #666;
     letter-spacing: 1.5px;
 }
 
-.conf-guardia-header {
+.conf__guardia-header {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-.conf-guardia-avatar {
+.conf__guardia-avatar {
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -134,48 +134,48 @@
     flex-shrink: 0;
 }
 
-.conf-guardia-header h3 {
+.conf__guardia-header h3 {
     font-size: 17px;
     font-weight: 700;
     color: #ffffff;
 }
 
-.conf-guardia-header p {
+.conf__guardia-header p {
     font-size: 13px;
     color: #888;
     margin-top: 2px;
 }
 
-.conf-divider {
+.conf__divider {
     height: 1px;
     background: #2e2e2e;
 }
 
-.conf-datos-grid {
+.conf__datos-grid {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.conf-dato-row {
+.conf__dato-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.conf-dato-label {
+.conf__dato-label {
     font-size: 14px;
     color: #888;
 }
 
-.conf-dato-valor {
+.conf__dato-valor {
     font-size: 14px;
     font-weight: 700;
     color: #ffffff;
 }
 
 /* Botón */
-.conf-btn {
+.conf__btn {
     width: 100%;
     padding: 15px;
     background: #ffffff;
@@ -188,19 +188,19 @@
     transition: opacity 0.2s;
 }
 
-.conf-btn:hover {
+.conf__btn:hover {
     opacity: 0.9;
 }
 
 /* Nota */
-.conf-nota {
+.conf__nota {
     text-align: center;
     font-size: 13px;
     color: #555;
 }
 
 /* ── Colores de la tarjeta según el turno ── */
-.conf-turno-card.conf-diurno {
+.conf__turno-card--diurno {
     --conf-bg: #fff8ec;
     --conf-borde: #f59e0b;
     --conf-texto: #92400e;
@@ -210,7 +210,7 @@
     --conf-icono-bg: #fde68a;
     --conf-icono: #92400e;
 }
-.conf-turno-card.conf-nocturno {
+.conf__turno-card--nocturno {
     --conf-bg: #1e1b4b;
     --conf-borde: #818cf8;
     --conf-texto: #c7d2fe;
@@ -220,26 +220,25 @@
     --conf-icono-bg: #3730a3;
     --conf-icono: #c7d2fe;
 }
-/* Selectores con la tarjeta delante para ganarle a las reglas generales,
-   como antes ganaban los estilos en línea */
-.conf-turno-card.conf-diurno,
-.conf-turno-card.conf-nocturno {
+/* Van después de .conf__turno-card para ganarle a sus valores generales */
+.conf__turno-card--diurno,
+.conf__turno-card--nocturno {
     background: var(--conf-bg);
     border-color: var(--conf-borde);
 }
-.conf-turno-card .conf-icon {
+.conf__turno-card .conf__icon {
     background: var(--conf-icono-bg);
     color: var(--conf-icono);
 }
-.conf-turno-card .conf-badge {
+.conf__turno-card .conf__badge {
     background: var(--conf-badge);
     color: var(--conf-badge-texto);
 }
-.conf-turno-card .conf-timer,
-.conf-turno-card .conf-fecha,
-.conf-turno-card .conf-progress-labels {
+.conf__turno-card .conf__timer,
+.conf__turno-card .conf__fecha,
+.conf__turno-card .conf__progress-labels {
     color: var(--conf-texto);
 }
-.conf-turno-card .conf-progress-fill {
+.conf__turno-card .conf__progress-fill {
     background: var(--conf-progreso);
 }

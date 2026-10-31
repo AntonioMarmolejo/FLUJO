@@ -3,65 +3,65 @@
    Las líneas y porciones del gráfico las colorea recharts con sus props;
    aquí va todo lo demás. Los colores salen de styles/tema.css.
 ══════════════════════════════════════════════════════════ */
-.stats-chart {
+.stats {
     touch-action: pan-y;
     -webkit-user-select: none;
     user-select: none;
 }
-.stats-cabecera {
+.stats__cabecera {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 2px 8px;
 }
-.stats-titulo {
+.stats__titulo {
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.6px;
     text-transform: uppercase;
     color: var(--texto-muy-apagado);
 }
-.stats-contador {
+.stats__contador {
     font-size: 10px;
     color: #333;
     font-variant-numeric: tabular-nums;
 }
 
 /* ── Leyenda del gráfico de línea ── */
-.stats-linea-leyenda {
+.stats__linea-leyenda {
     display: flex;
     justify-content: center;
     gap: 16px;
     padding-top: 6px;
 }
-.stats-linea-serie {
+.stats__linea-serie {
     display: flex;
     align-items: center;
     gap: 4px;
     font-size: 10px;
     color: var(--texto-apagado);
 }
-.stats-linea-marca {
+.stats__linea-marca {
     display: inline-block;
     width: 10px;
     height: 3px;
     border-radius: 2px;
 }
 /* Mismos colores que las líneas del gráfico (props de recharts) */
-.stats-linea-ingresos {
+.stats__linea-ingresos {
     background: #818cf8;
 }
-.stats-linea-salidas {
+.stats__linea-salidas {
     background: #f87171;
 }
-.stats-linea-turno {
+.stats__linea-turno {
     margin-left: 4px;
     font-size: 10px;
     color: #444;
 }
 
 /* ── Gráficos de pastel ── */
-.stats-vacio {
+.stats__vacio {
     height: 170px;
     display: flex;
     align-items: center;
@@ -69,16 +69,16 @@
     font-size: 12px;
     color: #444;
 }
-.stats-pie {
+.stats__pie {
     display: flex;
     align-items: center;
     gap: 10px;
     height: 170px;
 }
-.stats-pie-donut {
+.stats__pie-donut {
     flex-shrink: 0;
 }
-.stats-pie-leyenda {
+.stats__pie-leyenda {
     flex: 1;
     min-width: 0;
     max-height: 162px;
@@ -87,20 +87,20 @@
     flex-direction: column;
     gap: 5px;
 }
-.stats-pie-item {
+.stats__pie-item {
     display: flex;
     align-items: center;
     gap: 6px;
 }
 /* --serie-color llega en línea: depende de la posición de la serie */
-.stats-pie-punto {
+.stats__pie-punto {
     flex-shrink: 0;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--serie-color);
 }
-.stats-pie-nombre {
+.stats__pie-nombre {
     flex: 1;
     min-width: 0;
     font-size: 10px;
@@ -109,7 +109,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.stats-pie-valor {
+.stats__pie-valor {
     flex-shrink: 0;
     font-size: 10px;
     color: var(--texto-apagado);
@@ -117,30 +117,30 @@
 }
 
 /* ── Tooltips (línea y pastel) ── */
-.stats-tooltip {
+.stats__tooltip {
     padding: 6px 10px;
     font-size: 11px;
     background: var(--fondo-3);
     border: 1px solid var(--borde-5);
     border-radius: 8px;
 }
-.stats-tooltip-titulo {
+.stats__tooltip-titulo {
     margin-bottom: 4px;
     color: var(--texto-4);
 }
-.stats-tooltip-fila {
+.stats__tooltip-fila {
     display: flex;
     gap: 8px;
 }
 
 /* ── Puntos para cambiar de gráfico ── */
-.stats-puntos {
+.stats__puntos {
     display: flex;
     justify-content: center;
     gap: 5px;
     padding-top: 10px;
 }
-.stats-punto {
+.stats__punto {
     width: 6px;
     height: 6px;
     padding: 0;
@@ -150,7 +150,7 @@
     cursor: pointer;
     transition: width 0.2s ease, background 0.2s ease;
 }
-.stats-punto.activo {
+.stats__punto--activo {
     width: 18px;
     background: var(--acento);
 }
