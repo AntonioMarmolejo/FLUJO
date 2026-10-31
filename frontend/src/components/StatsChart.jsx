@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import '../styles/StatsChart.css';
 import {
     LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
     PieChart, Pie, Cell,
@@ -20,21 +21,16 @@ const TURNO_HORAS = {
 const MiniPie = ({ data, emptyLabel }) => {
     if (!data || data.length === 0) {
         return (
-            <div style={{
-                height: 170, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: '#444', fontSize: 12,
-            }}>
-                {emptyLabel || 'Sin datos'}
-            </div>
+            <div className="stats-vacio">{emptyLabel || 'Sin datos'}</div>
         );
     }
 
     const total = data.reduce((s, d) => s + d.value, 0);
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 170 }}>
+        <div className="stats-pie">
             {/* Donut */}
-            <div style={{ flexShrink: 0 }}>
+            <div className="stats-pie-donut">
                 <PieChart width={130} height={130}>
                     <Pie
                         data={data}
@@ -51,33 +47,17 @@ const MiniPie = ({ data, emptyLabel }) => {
                             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                     </Pie>
-                    <Tooltip
-                        contentStyle={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, fontSize: 11 }}
-                        formatter={(value, name) => [`${value} (${Math.round(value / total * 100)}%)`, name]}
-                    />
+                    <Tooltip content={<PieTooltip total={total} />} />
                 </PieChart>
             </div>
             {/* Leyenda */}
-            <div style={{
-                flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5,
-                maxHeight: 162, overflowY: 'auto',
-            }}>
+            <div className="stats-pie-leyenda">
                 {data.map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                            width: 8, height: 8, borderRadius: '50%',
-                            background: PIE_COLORS[i % PIE_COLORS.length],
-                            flexShrink: 0,
-                        }} />
-                        <span style={{
-                            fontSize: 10, color: '#aaa', flex: 1, minWidth: 0,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                            {d.name}
-                        </span>
-                        <span style={{ fontSize: 10, color: '#666', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                            {d.value}
-                        </span>
+                    <div key={i} className="stats-pie-item">
+                        {/* El color depende de la posición de la serie: va como variable */}
+                        <span className="stats-pie-punto" style={{ '--serie-color': PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="stats-pie-nombre">{d.name}</span>
+                        <span className="stats-pie-valor">{d.value}</span>
                     </div>
                 ))}
             </div>
@@ -89,14 +69,29 @@ const MiniPie = ({ data, emptyLabel }) => {
 const HourTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-        <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: '6px 10px', fontSize: 11 }}>
-            <div style={{ color: '#aaa', marginBottom: 4 }}>{label}</div>
+        <div className="stats-tooltip">
+            <div className="stats-tooltip-titulo">{label}</div>
             {payload.map(p => (
-                <div key={p.dataKey} style={{ color: p.color, display: 'flex', gap: 8 }}>
+                // El color de cada fila es el de su serie (lo da recharts)
+                <div key={p.dataKey} className="stats-tooltip-fila" style={{ color: p.color }}>
                     <span>{p.name}:</span>
-                    <span style={{ fontWeight: 700 }}>{p.value}</span>
+                    <strong>{p.value}</strong>
                 </div>
             ))}
+        </div>
+    );
+};
+
+// ── Tooltip de los gráficos de pastel: valor y porcentaje ──
+const PieTooltip = ({ active, payload, total }) => {
+    if (!active || !payload?.length) return null;
+    const { name, value } = payload[0];
+    return (
+        <div className="stats-tooltip">
+            <div className="stats-tooltip-fila">
+                <span>{name}:</span>
+                <strong>{value} ({Math.round(value / total * 100)}%)</strong>
+            </div>
         </div>
     );
 };
@@ -180,16 +175,16 @@ const StatsChart = ({
                 </LineChart>
             </ResponsiveContainer>
             {/* Leyenda del gráfico de línea */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, paddingTop: 6 }}>
-                <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 10, height: 3, background: '#818cf8', borderRadius: 2, display: 'inline-block' }} />
+            <div className="stats-linea-leyenda">
+                <span className="stats-linea-serie">
+                    <span className="stats-linea-marca stats-linea-ingresos" />
                     Ingresos
                 </span>
-                <span style={{ fontSize: 10, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 10, height: 3, background: '#f87171', borderRadius: 2, display: 'inline-block' }} />
+                <span className="stats-linea-serie">
+                    <span className="stats-linea-marca stats-linea-salidas" />
                     Salidas
                 </span>
-                <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>
+                <span className="stats-linea-turno">
                     {turno === 'nocturno' ? '18:00 – 06:00' : '06:00 – 18:00'}
                 </span>
             </div>
@@ -207,43 +202,28 @@ const StatsChart = ({
 
     return (
         <div
-            style={{ userSelect: 'none', touchAction: 'pan-y', WebkitUserSelect: 'none' }}
+            className="stats-chart"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             onMouseDown={onMouseDown}
         >
             {/* Cabecera de la vista actual */}
-            <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0 2px 8px',
-            }}>
-                <span style={{ fontSize: 10, color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                    {CHART_TITLES[chartIdx]}
-                </span>
-                <span style={{ fontSize: 10, color: '#333', fontVariantNumeric: 'tabular-nums' }}>
-                    {chartIdx + 1} / {totalCharts}
-                </span>
+            <div className="stats-cabecera">
+                <span className="stats-titulo">{CHART_TITLES[chartIdx]}</span>
+                <span className="stats-contador">{chartIdx + 1} / {totalCharts}</span>
             </div>
 
             {/* Vista activa */}
             {views[chartIdx]}
 
             {/* Indicadores de posición (dots) */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 5, paddingTop: 10 }}>
+            <div className="stats-puntos">
                 {Array.from({ length: totalCharts }, (_, i) => (
                     <button
                         key={i}
                         onClick={() => setChartIdx(i)}
-                        style={{
-                            width: i === chartIdx ? 18 : 6,
-                            height: 6,
-                            borderRadius: 3,
-                            background: i === chartIdx ? '#818cf8' : '#2a2a2a',
-                            border: 'none',
-                            padding: 0,
-                            cursor: 'pointer',
-                            transition: 'width 0.2s ease, background 0.2s ease',
-                        }}
+                        className={`stats-punto${i === chartIdx ? ' activo' : ''}`}
+                        title={CHART_TITLES[i]}
                     />
                 ))}
             </div>

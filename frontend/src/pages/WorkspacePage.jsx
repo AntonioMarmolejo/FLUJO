@@ -472,7 +472,7 @@ const DRAWER_TITLES = { avance: 'AVANCE DEL DÍA', 'placas-db': 'PLACAS', extens
 // ── Campos del formulario ────────────────────────────────
 const ModalField = ({ name, label, placeholder, required, value, onChange, autoFilled }) => (
     <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
-        <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}</label>
+        <label>{label}{required && <span className="campo-obligatorio"> *</span>}</label>
         <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} />
     </div>
 );
@@ -491,7 +491,7 @@ const SuggestionField = ({ name, label, required, placeholder, value, onChange, 
     const inputRef = useRef(null);
     return (
         <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
-            <label>{label}{required && <span style={{ color: '#f87171' }}> *</span>}{labelAction}</label>
+            <label>{label}{required && <span className="campo-obligatorio"> *</span>}{labelAction}</label>
             <div className="placa-wrapper">
                 <input ref={inputRef} type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off"
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} />
@@ -600,7 +600,7 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, onComentarios, activeTa
                     return (
                     <button key={item.tab}
                         className={`drawer-item ${item.tab === activeTab ? 'drawer-item-active' : ''}`}
-                        style={!ok ? { opacity: 0.55 } : undefined}
+                        data-bloqueado={!ok || undefined}
                         onClick={() => {
                             if (!ok) return;
                             onNavigate(item.tab); onClose();
@@ -608,7 +608,7 @@ const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, onComentarios, activeTa
                         <span className="drawer-item-icon">{item.icon}</span>
                         <span className="drawer-item-label">{item.label}</span>
                         {ok ? <IconChevronRight /> : (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, opacity: 0.7 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="drawer-item-candado">
                                 <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
                                 <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
@@ -837,7 +837,7 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
         <div className="modal-overlay" onClick={onClose}>
             <div className="qr-scanner-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="modal-titulo-icono">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
@@ -847,28 +847,28 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
                             <rect x="15" y="19" width="2" height="2" fill="#818cf8"/>
                             <rect x="19" y="19" width="2" height="2" fill="#818cf8"/>
                         </svg>
-                        <h3 style={{ margin: 0 }}>Escanear QR</h3>
+                        <h3 className="sin-margen">Escanear QR</h3>
                     </div>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
                 {camError
-                    ? <p className="modal-error" style={{ margin: '16px 0 0' }}>{camError}</p>
+                    ? <p className="modal-error qr-error">{camError}</p>
                     : (
                         <>
-                            <p style={{ fontSize: 12, color: '#666', margin: '8px 0 12px' }}>
+                            <p className="qr-hint">
                                 {hint || 'Iniciando cámara...'}
                             </p>
                             <div className="qr-video-wrap">
                                 <video ref={videoRef} className="qr-video" playsInline muted />
                                 <div className="qr-frame" />
                             </div>
-                            <p style={{ fontSize: 11, color: '#444', marginTop: 12, textAlign: 'center' }}>
+                            <p className="qr-nota">
                                 Funciona con QR de vehículos y tarjetas de personas
                             </p>
                         </>
                     )
                 }
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <canvas ref={canvasRef} hidden />
                 <div className="qr-img-divider">— o selecciona una imagen —</div>
                 <button className="qr-img-btn" onClick={() => fileInputRef.current.click()}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -878,8 +878,8 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
                     </svg>
                     Elegir imagen
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageFile} />
-                {imgError && <p style={{ color: '#ef4444', fontSize: 11, marginTop: 8, textAlign: 'center' }}>{imgError}</p>}
+                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageFile} />
+                {imgError && <p className="qr-img-error">{imgError}</p>}
             </div>
         </div>
     );
@@ -1346,8 +1346,8 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                 <div className="modal-fields">
                     <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
                         <label>
-                            <span>PLACAS <span style={{ color: '#f87171' }}>*</span></span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>PLACAS <span className="campo-obligatorio">*</span></span>
+                            <span className="label-acciones">
                                 {showHoraInput ? (
                                     <input
                                         ref={horaInputRef}
@@ -1368,7 +1368,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                                     </button>
                                 )}
                                 {horaManual && (
-                                    <button className="activ-add-tag-btn" style={{ color: '#f87171' }} onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
+                                    <button className="activ-add-tag-btn activ-add-tag-btn-quitar" onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
                                 )}
                             </span>
                             {!editData && (
@@ -1443,7 +1443,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                         onClearSugs={() => setConductorSugs([])}
                         onClear={() => { setForm(f => ({ ...f, conductor: '' })); setConductorSugs([]); setAutoFilled(false); }}
                         labelAction={
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span className="label-acciones">
                                 <button className={`genero-toggle-btn${form.genero === 'm' ? ' active' : ''}`} title="Masculino" onClick={() => setForm(f => ({ ...f, genero: 'm' }))}>♂</button>
                                 <button className={`genero-toggle-btn${form.genero === 'f' ? ' active-f' : ''}`} title="Femenino" onClick={() => setForm(f => ({ ...f, genero: 'f' }))}>♀</button>
                                 {!editData && (
@@ -1563,7 +1563,7 @@ const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'E
                 </div>
                 {error && <p className="modal-error">{error}</p>}
                 {guardado && (
-                    <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#4ade80', textAlign: 'center', fontWeight: 600 }}>
+                    <div className="mov-guardado">
                         ✓ Movimiento registrado
                     </div>
                 )}
@@ -1599,59 +1599,23 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
     ].filter(c => c.valor);
 
     const actBtn = (title, onClick, svg) => (
-        <button
-            key={title}
-            title={title}
-            onClick={onClick}
-            style={{
-                width: 26, height: 26, padding: 0, border: 'none', flexShrink: 0,
-                borderRadius: 8, background: 'rgba(255,255,255,0.05)',
-                color: '#d4d4d8', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-            dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        <button key={title} title={title} onClick={onClick} className="movdet-act-btn"
+            dangerouslySetInnerHTML={{ __html: svg }} />
     );
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="movdet-card detalle-arriba-movil"
-                onClick={e => e.stopPropagation()}
-                style={{
-                    width: '94vw', maxWidth: 580,
-                    background: '#18181b',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: 20,
-                    boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
-                    overflow: 'hidden',
-                }}
-            >
+            <div className="movdet-card detalle-arriba-movil" onClick={e => e.stopPropagation()}>
                 {/* ── Cabecera: hora · badge · placa + cerrar ── */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 24px 0 24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#60a5fa', flexShrink: 0 }}>{mov.hora}</span>
-                        <span style={{
-                            display: 'inline-flex', alignItems: 'center', padding: '5px 11px',
-                            borderRadius: 100, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0,
-                            background: isIngreso ? 'rgba(59,130,246,0.15)' : 'rgba(244,63,94,0.15)',
-                            color: isIngreso ? '#60a5fa' : '#fb7185',
-                        }}>
+                <div className="movdet-header">
+                    <div className="movdet-header-info">
+                        <span className="movdet-hora">{mov.hora}</span>
+                        <span className={`movdet-tipo ${isIngreso ? 'movdet-tipo-ingreso' : 'movdet-tipo-salida'}`}>
                             {isIngreso ? 'INGRESO' : 'SALIDA'}
                         </span>
-                        <span className="movdet-placa" style={{
-                            fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>{mov.placa}</span>
+                        <span className="movdet-placa">{mov.placa}</span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            width: 32, height: 32, borderRadius: '100%', border: 'none', flexShrink: 0,
-                            background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 12,
-                        }}
-                    >
+                    <button className="movdet-cerrar" onClick={onClose}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                             <path d="M18 6 6 18M6 6l12 12" />
                         </svg>
@@ -1659,57 +1623,30 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
                 </div>
 
                 {/* ── Fecha ── */}
-                <div style={{
-                    padding: '10px 24px 18px 24px',
-                    borderBottom: '1px solid rgba(255,255,255,0.07)',
-                    display: 'flex', justifyContent: 'flex-end',
-                }}>
-                    <span className="movdet-fecha" style={{ fontSize: 13, fontWeight: 500, color: '#8b8b92' }}>{mov.fecha}</span>
+                <div className="movdet-fecha-row">
+                    <span className="movdet-fecha">{mov.fecha}</span>
                 </div>
 
                 {/* ── Grid de campos ── */}
                 {campos.length > 0 && (
-                    <div style={{
-                        padding: '20px 24px 6px 24px',
-                        display: 'grid', gridTemplateColumns: '1fr 1fr',
-                        columnGap: 24, rowGap: 18,
-                    }}>
+                    <div className="movdet-campos">
                         {campos.map(c => (
-                            <div key={c.label} style={{ gridColumn: c.span ? 'span 2' : undefined }}>
-                                <div className="movdet-label" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
-                                    {c.label}
-                                </div>
-                                <div className="movdet-valor" style={{ marginTop: 5, fontSize: 15, fontWeight: 600, color: '#f4f4f5' }}>
-                                    {c.valor}
-                                </div>
+                            <div key={c.label} className={c.span ? 'movdet-campo-ancho' : undefined}>
+                                <div className="movdet-label">{c.label}</div>
+                                <div className="movdet-valor">{c.valor}</div>
                             </div>
                         ))}
                     </div>
                 )}
 
                 {/* ── Caja actividad ── */}
-                {/* Margen, relleno y tamaño de letra cambian en celular: ver .movdet-actividad-box en el CSS */}
-                <div className="movdet-actividad-box" style={{
-                    background: 'rgba(255,255,255,0.035)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 12,
-                }}>
-                    <div className="movdet-label" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#71717a', textTransform: 'uppercase' }}>
-                        Actividad / Obs.
-                    </div>
-                    <div className="movdet-actividad" style={{
-                        lineHeight: '26px', color: '#e4e4e7',
-                        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.25) 0.8px, transparent 0.8px)',
-                        backgroundSize: '6px 26px', backgroundRepeat: 'repeat', backgroundPosition: '0 30px',
-                        minHeight: 26,
-                    }}>
-                        {mov.actividad || '—'}
-                    </div>
+                <div className="movdet-actividad-box">
+                    <div className="movdet-label">Actividad / Obs.</div>
+                    <div className="movdet-actividad">{mov.actividad || '—'}</div>
                 </div>
 
                 {/* ── Acciones ── */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 24px 20px 24px' }}>
+                <div className="movdet-acciones">
                     {onEdit   && actBtn('Editar',    () => { onEdit(mov); onClose(); },
                         `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`)}
                     {onCopy   && actBtn('Copiar',    () => onCopy(mov),
@@ -1722,33 +1659,14 @@ const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev
 
                 {/* ── Navegación anterior / siguiente ── */}
                 {(hasPrev || hasNext || counter) && (
-                    <div className="movdet-nav" style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        borderTop: '1px solid rgba(255,255,255,0.07)',
-                    }}>
-                        <button
-                            onClick={onPrev} disabled={!hasPrev}
-                            style={{
-                                width: 34, height: 34, padding: 0, borderRadius: 10,
-                                border: '1px solid rgba(255,255,255,0.09)', background: 'transparent',
-                                color: hasPrev ? '#d4d4d8' : '#3f3f46', cursor: hasPrev ? 'pointer' : 'default',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
+                    <div className="movdet-nav">
+                        <button className="movdet-nav-btn" onClick={onPrev} disabled={!hasPrev}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M15 6c-2 2-5.5 4.5-8 6 2.5 1.5 6 4 8 6" />
                             </svg>
                         </button>
-                        <span style={{ fontSize: 13, color: '#8b8b92', fontWeight: 600 }}>{counter}</span>
-                        <button
-                            onClick={onNext} disabled={!hasNext}
-                            style={{
-                                width: 34, height: 34, padding: 0, borderRadius: 10,
-                                border: '1px solid rgba(255,255,255,0.09)', background: 'transparent',
-                                color: hasNext ? '#d4d4d8' : '#3f3f46', cursor: hasNext ? 'pointer' : 'default',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
+                        <span className="movdet-contador">{counter}</span>
+                        <button className="movdet-nav-btn" onClick={onNext} disabled={!hasNext}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 6c2 2 5.5 4.5 8 6-2.5 1.5-6 4-8 6" />
                             </svg>
@@ -1766,22 +1684,17 @@ const ModalEditHora = ({ mov, onClose, onSave }) => {
     const [hora, setHora] = useState(mov.hora);
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" style={{ maxWidth: 300 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card modal-angosto" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Editar hora · {mov.placa}</span>
+                    <span className="modal-titulo-chico">Editar hora · {mov.placa}</span>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="modal-cuerpo">
                     <input
                         type="time"
                         value={hora}
                         onChange={e => setHora(e.target.value)}
-                        style={{
-                            width: '100%', padding: '12px', background: '#1e1e1e',
-                            border: '1px solid #2e2e2e', borderRadius: 10, color: '#fff',
-                            fontSize: 28, fontWeight: 700, textAlign: 'center',
-                            boxSizing: 'border-box',
-                        }}
+                        className="hora-grande"
                     />
                     <button className="modal-btn active" onClick={() => hora && onSave(mov._id, hora)}>
                         Guardar
@@ -1868,54 +1781,31 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
         onGuardar({ b, hora, conductor: conductor.trim(), cedula: cedula.trim(), actividad: actividad.trim(), destino: destino.trim() });
     };
 
-    const fld = {
-        width: '100%', padding: '10px 12px', background: '#141820',
-        border: '1px solid #2a2f3d', borderRadius: 8, color: '#e8eaed',
-        fontSize: 13, boxSizing: 'border-box', outline: 'none',
-    };
-
-    const PersonaSugList = ({ items }) => !items.length ? null : (
-        <div style={{
-            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
-            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
-        }}>
+    // Listas de sugerencias: funciones (no componentes) para que no se
+    // vuelvan a montar en cada render
+    const listaPersonas = items => !items.length ? null : (
+        <div className="ingbit-sugs">
             {items.map((p, i) => (
-                <div key={i} onClick={() => selectPersona(p)}
-                    style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#232838'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#e8eaed' }}>{p.nombres}</div>
-                    {p.cedula && <div style={{ fontSize: 11, color: '#5a6070' }}>CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
+                <div key={i} className="ingbit-sug" onClick={() => selectPersona(p)}>
+                    <div className="ingbit-sug-nombre">{p.nombres}</div>
+                    {p.cedula && <div className="ingbit-sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
                 </div>
             ))}
         </div>
     );
 
-    const StrSugList = ({ items, onSel }) => !items.length ? null : (
-        <div style={{
-            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
-            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
-        }}>
+    const listaTextos = (items, onSel) => !items.length ? null : (
+        <div className="ingbit-sugs">
             {items.map((s, i) => (
-                <div key={i} onClick={() => onSel(s)}
-                    style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, color: '#c4c8d2',
-                        borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#232838'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}>{s}</div>
+                <div key={i} className="ingbit-sug ingbit-sug-texto" onClick={() => onSel(s)}>{s}</div>
             ))}
         </div>
-    );
-
-    const LBL = ({ t }) => (
-        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', color: '#5a6070', textTransform: 'uppercase', marginBottom: 6 }}>{t}</div>
     );
 
     // Agrega la ✕ para limpiar un campo. Es una función y no un componente
     // para que el input no se vuelva a montar (y pierda el foco) al escribir.
     const conLimpiar = (input, value, onClear) => (
-        <div style={{ position: 'relative' }}>
+        <div className="ingbit-limpiable">
             {input}
             {value && (
                 <button className="field-clear-btn" type="button" title="Limpiar" onMouseDown={e => {
@@ -1926,113 +1816,87 @@ const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onClose, on
             )}
         </div>
     );
-    const fldLimpiable = { ...fld, paddingRight: 34 };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div onClick={e => e.stopPropagation()} style={{
-                width: '94vw', maxWidth: 400,
-                background: 'linear-gradient(180deg,#1a1c23 0%,#16171d 100%)',
-                border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16,
-                boxShadow: '0 24px 60px rgba(0,0,0,0.55)', overflow: 'visible',
-            }}>
+            <div className="ingbit-card" onClick={e => e.stopPropagation()}>
                 {/* Cabecera */}
-                <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                        <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px',
-                            borderRadius: 100, background: 'rgba(59,130,246,0.15)', color: '#60a5fa',
-                            fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0,
-                        }}>
+                <div className="ingbit-header">
+                    <div className="ingbit-header-info">
+                        <span className="ingbit-badge">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                             </svg>
                             INGRESO
                         </span>
-                        <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{b.placa}</span>
-                        {b.tipoVehiculo && <span style={{ fontSize: 11, color: '#5a6070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.tipoVehiculo}</span>}
+                        <span className="ingbit-placa">{b.placa}</span>
+                        {b.tipoVehiculo && <span className="ingbit-tipo">{b.tipoVehiculo}</span>}
                     </div>
-                    <button onClick={onClose} style={{
-                        width: 30, height: 30, borderRadius: '50%', border: 'none', flexShrink: 0,
-                        background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 10,
-                    }}>
+                    <button className="ingbit-cerrar" onClick={onClose}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
 
-                <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="ingbit-cuerpo">
                     {/* Hora */}
                     <div>
-                        <LBL t="Hora de retorno" />
-                        <input type="time" value={hora} onChange={e => setHora(e.target.value)} autoFocus
-                            style={{ ...fld, fontSize: 26, fontWeight: 700, textAlign: 'center', padding: '12px' }} />
+                        <div className="ingbit-label">Hora de retorno</div>
+                        <input type="time" className="ingbit-input ingbit-hora" value={hora} onChange={e => setHora(e.target.value)} autoFocus />
                     </div>
 
                     {/* Conductor */}
-                    <div style={{ position: 'relative' }}>
-                        <LBL t="Conductor de retorno" />
+                    <div className="ingbit-campo">
+                        <div className="ingbit-label">Conductor de retorno</div>
                         {conLimpiar(
-                            <input type="text" placeholder="Nombre del conductor..." value={conductor}
+                            <input type="text" className="ingbit-input" placeholder="Nombre del conductor..." value={conductor}
                                 onChange={e => handleConductorChange(e.target.value)}
-                                onBlur={() => setTimeout(() => setConductorSugs([]), 150)} style={fldLimpiable} />,
+                                onBlur={() => setTimeout(() => setConductorSugs([]), 150)} />,
                             conductor, () => { setConductor(''); setConductorSugs([]); setPersonaNotFound(false); }
                         )}
-                        <PersonaSugList items={conductorSugs} />
+                        {listaPersonas(conductorSugs)}
                     </div>
 
                     {/* Cédula */}
-                    <div style={{ position: 'relative' }}>
-                        <LBL t="Cédula" />
+                    <div className="ingbit-campo">
+                        <div className="ingbit-label">Cédula</div>
                         {conLimpiar(
-                            <input type="text" placeholder="Nro. de cédula..." value={cedula}
+                            <input type="text" className="ingbit-input" placeholder="Nro. de cédula..." value={cedula}
                                 onChange={e => handleCedulaChange(e.target.value)}
-                                onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} style={fldLimpiable} />,
+                                onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} />,
                             cedula, () => { setCedula(''); setCedulaSugs([]); setPersonaNotFound(false); }
                         )}
-                        <PersonaSugList items={cedulaSugs} />
+                        {listaPersonas(cedulaSugs)}
                         {personaNotFound && cedula.length >= 3 && (
-                            <div style={{ marginTop: 5, fontSize: 11, color: '#e0a83e' }}>
-                                ⚠️ Persona no encontrada — se guardará automáticamente
-                            </div>
+                            <div className="ingbit-aviso">⚠️ Persona no encontrada — se guardará automáticamente</div>
                         )}
                     </div>
 
                     {/* Actividad */}
-                    <div style={{ position: 'relative' }}>
-                        <LBL t="Actividad / Observación" />
+                    <div className="ingbit-campo">
+                        <div className="ingbit-label">Actividad / Observación</div>
                         {conLimpiar(
-                            <input type="text" placeholder="Descripción de la actividad..." value={actividad}
+                            <input type="text" className="ingbit-input" placeholder="Descripción de la actividad..." value={actividad}
                                 onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
-                                onBlur={() => setTimeout(() => setActividadSugs([]), 150)}
-                                style={fldLimpiable} />,
+                                onBlur={() => setTimeout(() => setActividadSugs([]), 150)} />,
                             actividad, () => { setActividad(''); setActividadSugs([]); }
                         )}
-                        <StrSugList items={actividadSugs} onSel={s => { setActividad(s); setActividadSugs([]); }} />
+                        {listaTextos(actividadSugs, s => { setActividad(s); setActividadSugs([]); })}
                     </div>
 
                     {/* Destino */}
-                    <div style={{ position: 'relative' }}>
-                        <LBL t="Destino" />
+                    <div className="ingbit-campo">
+                        <div className="ingbit-label">Destino</div>
                         {conLimpiar(
-                            <input type="text" placeholder="Área o lugar..." value={destino}
+                            <input type="text" className="ingbit-input" placeholder="Área o lugar..." value={destino}
                                 onChange={e => { setDestino(e.target.value); setDestinoSugs(e.target.value.length >= 1 ? recentUniq('destino', e.target.value) : []); }}
-                                onBlur={() => setTimeout(() => setDestinoSugs([]), 150)}
-                                style={fldLimpiable} />,
+                                onBlur={() => setTimeout(() => setDestinoSugs([]), 150)} />,
                             destino, () => { setDestino(''); setDestinoSugs([]); }
                         )}
-                        <StrSugList items={destinoSugs} onSel={s => { setDestino(s); setDestinoSugs([]); }} />
+                        {listaTextos(destinoSugs, s => { setDestino(s); setDestinoSugs([]); })}
                     </div>
 
-                    {/* Botón guardar */}
-                    <button onClick={handleSubmit} disabled={!hora} style={{
-                        padding: '12px', borderRadius: 10, border: 'none', marginTop: 2,
-                        background: hora ? '#4a5be0' : '#1e2030',
-                        color: hora ? '#fff' : '#3a3f4a',
-                        fontSize: 14, fontWeight: 700, cursor: hora ? 'pointer' : 'not-allowed',
-                        transition: 'background 0.15s ease',
-                    }}>
+                    {/* Botón guardar (se habilita con la hora) */}
+                    <button className="ingbit-guardar" onClick={handleSubmit} disabled={!hora}>
                         {isNew ? 'Registrar ingreso' : 'Guardar cambios'}
                     </button>
                 </div>
@@ -2146,29 +2010,29 @@ const ModalRegistroConfig = ({ config, onSave, onClose }) => {
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#ccc' }}>Configurar Narrativa</span>
+                    <span className="modal-titulo-chico">Configurar Narrativa</span>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>DESTINO / UBICACIÓN</p>
+                <div className="modal-cuerpo modal-cuerpo-junto">
+                    <p className="config-seccion">DESTINO / UBICACIÓN</p>
                     <Row k="ubicacion"   label="NOMBRE DEL LUGAR (para ingresos)"  placeholder="EPF" />
                     <Row k="conSalida"   label="CONECTOR SALIDA"                    placeholder="Sale al" />
                     <Row k="conIngreso"  label="CONECTOR INGRESO"                   placeholder="Ingresa al" />
-                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>CONDUCTOR</p>
+                    <p className="config-seccion">CONDUCTOR</p>
                     <Row k="conTitHombre" label="TÍTULO MASCULINO"                  placeholder="el Sr." />
                     <Row k="conTitMujer"  label="TÍTULO FEMENINO"                   placeholder="la Srta." />
-                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>OTROS CONECTORES</p>
+                    <p className="config-seccion">OTROS CONECTORES</p>
                     <Row k="conCedula"   label="PREFIJO CÉDULA"                     placeholder="cc:" />
                     <Row k="conEmpresa"  label="PREFIJO EMPRESA"                    placeholder="de" />
                     <Row k="conVehiculo" label="ACCIÓN VEHÍCULO (vacío = auto)"     placeholder="conduciendo el / conduciendo la" />
                     <Row k="conPlaca"    label="PREFIJO PLACA"                       placeholder="de Placas" />
-                    <p style={{ fontSize: 11, color: '#818cf8', margin: 0, fontWeight: 700 }}>EXCEL / WORD</p>
+                    <p className="config-seccion">EXCEL / WORD</p>
                     <Row k="empresaAutoriza" label="EMPRESA AUTORIZANTE (default)"  placeholder="EP Petroecuador" />
-                    <p style={{ fontSize: 11, color: '#555', margin: 0, lineHeight: 1.5 }}>
+                    <p className="config-nota">
                         Deja "Acción vehículo" vacío para detectar el/la automáticamente según el tipo.
                     </p>
                 </div>
-                <div style={{ padding: '0 16px 16px' }}>
+                <div className="modal-pie">
                     <button className="modal-btn active" onClick={() => { onSave(local); onClose(); }}>
                         Guardar configuración
                     </button>
@@ -2307,11 +2171,11 @@ const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDet
                     {/* Chevron */}
                     <button className="mov-chevron-btn" onClick={e => { e.stopPropagation(); setCollapsed(c => !c); }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                             style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                             className={`chevron-giro${collapsed ? '' : ' abierto'}`}>
                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </button>
-                    {m._pending && <span className="mov-pending-dot" title="Sin conexión — se sincronizará al reconectar" style={{ marginLeft: 'auto', alignSelf: 'center' }} />}
+                    {m._pending && <span className="mov-pending-dot mov-pending-dot-fin" title="Sin conexión — se sincronizará al reconectar" />}
                 </div>
                 {!collapsed && m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
                     <div className="mov-actividad">{m.actividad}</div>
@@ -2345,7 +2209,7 @@ const PantallaAvance = ({ turnoActivo, user }) => {
     }, [horaInicio]);
 
     if (!turnoActivo || !bloque) {
-        return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
+        return <p className="ws-empty ws-empty-amplio">Sin turno activo</p>;
     }
 
     const progreso = Math.min(100, (transcurrido / duracion) * 100);
@@ -2356,76 +2220,70 @@ const PantallaAvance = ({ turnoActivo, user }) => {
     const hrRest = Math.floor(restante / 3600);
     const minRest = Math.floor((restante % 3600) / 60);
 
-    const col = esDiurno
-        ? { bg: '#1a1200', border: '#f59e0b', text: '#fcd34d', badge: '#2d1f00', badgeText: '#fbbf24', progress: '#f59e0b', iconBg: '#2d1f00', iconColor: '#fcd34d' }
-        : { bg: '#0d0f2e', border: '#818cf8', text: '#c7d2fe', badge: '#1e1b4b', badgeText: '#a5b4fc', progress: '#818cf8', iconBg: '#1e1b4b', iconColor: '#c7d2fe' };
 
     const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
     const fecha = horaActual.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
     return (
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {/* Card turno activo */}
-            <div style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 16, padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: col.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="avance">
+            {/* Card turno activo: los colores cambian con .diurno / .nocturno */}
+            <div className={`avance-turno ${esDiurno ? 'diurno' : 'nocturno'}`}>
+                <div className="avance-turno-top">
+                    <div className="avance-turno-reloj">
+                        <div className="avance-turno-icono">
                             {esDiurno ? (
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                                    <circle cx="12" cy="12" r="4" stroke={col.iconColor} strokeWidth="2" />
-                                    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke={col.iconColor} strokeWidth="2" strokeLinecap="round" />
+                                    <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                                 </svg>
                             ) : (
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke={col.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             )}
                         </div>
                         <div>
-                            <span style={{ fontSize: 10, fontWeight: 700, background: col.badge, color: col.badgeText, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.5 }}>
+                            <span className="avance-turno-badge">
                                 Turno {esDiurno ? 'diurno' : 'nocturno'} activo
                             </span>
-                            <div style={{ fontSize: 34, fontWeight: 800, color: col.text, fontVariantNumeric: 'tabular-nums', letterSpacing: 2, marginTop: 4 }}>
-                                {hh}:{mm}:{ss}
-                            </div>
+                            <div className="avance-turno-tiempo">{hh}:{mm}:{ss}</div>
                         </div>
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: 12, color: col.text, lineHeight: 1.7 }}>
+                    <div className="avance-turno-fecha">
                         <div>{fecha}</div>
-                        <div style={{ fontWeight: 700 }}>{esDiurno ? '06:00 – 18:00' : '18:00 – 06:00'}</div>
+                        <div className="avance-turno-horario">{esDiurno ? '06:00 – 18:00' : '18:00 – 06:00'}</div>
                     </div>
                 </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 }}>
-                    <div style={{ height: '100%', width: `${progreso}%`, background: col.progress, borderRadius: 10, transition: 'width 1s linear' }} />
+                <div className="avance-progreso">
+                    {/* El ancho avanza cada segundo: único estilo en línea */}
+                    <div className="avance-progreso-barra" style={{ width: `${progreso}%` }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: col.text }}>
+                <div className="avance-progreso-escala">
                     <span>{esDiurno ? '06:00' : '18:00'}</span>
-                    <span style={{ fontWeight: 600 }}>{hrRest}h {minRest}min restantes</span>
+                    <span className="avance-restante">{hrRest}h {minRest}min restantes</span>
                     <span>{esDiurno ? '18:00' : '06:00'}</span>
                 </div>
             </div>
 
             {/* Card guardia */}
-            <div style={{ background: '#161616', borderRadius: 16, padding: 20 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: '#555', letterSpacing: 1.5, marginBottom: 14 }}>DATOS DEL GUARDIA</p>
-                <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#e0f2f1', color: '#0f766e', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {iniciales}
-                    </div>
+            <div className="avance-guardia">
+                <p className="avance-guardia-titulo">DATOS DEL GUARDIA</p>
+                <div className="avance-guardia-persona">
+                    <div className="avance-guardia-avatar">{iniciales}</div>
                     <div>
-                        <p style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{user?.name}</p>
-                        <p style={{ fontSize: 12, color: '#888' }}>{user?.email}</p>
+                        <p className="avance-guardia-nombre">{user?.name}</p>
+                        <p className="avance-guardia-email">{user?.email}</p>
                     </div>
                 </div>
-                <div style={{ borderTop: '1px solid #222', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="avance-guardia-datos">
                     {[
                         ['Puesto', turnoActivo.puesto],
                         ['Bloque', `${bloque.nombre} ${bloque.codigo}`],
                         ['Turno', esDiurno ? 'Diurno  06:00 – 18:00' : 'Nocturno  18:00 – 06:00'],
                     ].map(([label, val]) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: 11, color: '#555', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-                            <span style={{ fontSize: 13, color: '#ddd', fontWeight: 500 }}>{val}</span>
+                        <div key={label} className="avance-guardia-dato">
+                            <span className="avance-guardia-label">{label}</span>
+                            <span className="avance-guardia-valor">{val}</span>
                         </div>
                     ))}
                 </div>
@@ -2560,13 +2418,13 @@ const ModalQR = ({ vehiculo, onClose }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" style={{ alignItems: 'center', gap: 20 }} onClick={e => e.stopPropagation()}>
-                <div className="modal-header" style={{ width: '100%' }}>
+            <div className="modal-card qr-modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header qr-modal-header">
                     <h3>{vehiculo.placa}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <img src={qrUrl} alt="QR" style={{ width: 200, height: 200, borderRadius: 8, background: '#fff', padding: 8 }} />
-                <p style={{ fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 1.8 }}>
+                <img src={qrUrl} alt="QR" className="qr-modal-img" />
+                <p className="qr-modal-datos">
                     {data.split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
                 </p>
             </div>
@@ -2669,38 +2527,38 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
                     <h3>Importar vehículos</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <p style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
-                    Sube un archivo <strong style={{ color: '#4ade80' }}>CSV</strong> o <strong style={{ color: '#4ade80' }}>Excel (.xlsx)</strong>.<br />
-                    Encabezados reconocidos: <span style={{ color: '#818cf8' }}>PLACA, MARCA, COLOR, TIPO, EMPRESA</span>
+                <p className="import-ayuda">
+                    Sube un archivo <strong>CSV</strong> o <strong>Excel (.xlsx)</strong>.<br />
+                    Encabezados reconocidos: <span className="import-encabezados">PLACA, MARCA, COLOR, TIPO, EMPRESA</span>
                 </p>
                 <label className="import-dropzone">
-                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} style={{ display: 'none' }} />
+                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} hidden />
                     {fileName ? (
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
-                            <div style={{ color: '#ddd', fontWeight: 700, fontSize: 13 }}>{fileName}</div>
+                        <div className="import-archivo">
+                            <div className="import-archivo-icono">📄</div>
+                            <div className="import-archivo-nombre">{fileName}</div>
                             {parsedRows.length > 0
-                                ? <div style={{ color: '#4ade80', marginTop: 6, fontSize: 13 }}>{parsedRows.length} registros detectados</div>
-                                : <div style={{ color: '#f87171', marginTop: 6, fontSize: 12 }}>Sin registros válidos</div>}
+                                ? <div className="import-archivo-ok">{parsedRows.length} registros detectados</div>
+                                : <div className="import-archivo-error">Sin registros válidos</div>}
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', color: '#555' }}>
-                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 10 }}>
+                        <div className="import-vacio">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="import-vacio-icono">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            <div style={{ fontSize: 13 }}>Toca para seleccionar CSV o Excel</div>
+                            <div>Toca para seleccionar CSV o Excel</div>
                         </div>
                     )}
                 </label>
                 {parsedRows.length > 0 && (
-                    <div style={{ background: '#111', borderRadius: 10, padding: 12, fontSize: 12, color: '#888', maxHeight: 130, overflowY: 'auto' }}>
+                    <div className="import-preview">
                         {parsedRows.slice(0, 6).map((v, i) => (
-                            <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-                                <span style={{ color: '#818cf8', flexShrink: 0 }}>{v.placa}</span>
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[v.marca, v.empresa].filter(Boolean).join(' · ') || '—'}</span>
+                            <div key={i} className="import-preview-fila">
+                                <span className="import-preview-clave">{v.placa}</span>
+                                <span className="import-preview-detalle">{[v.marca, v.empresa].filter(Boolean).join(' · ') || '—'}</span>
                             </div>
                         ))}
-                        {parsedRows.length > 6 && <div style={{ color: '#444', marginTop: 6 }}>+{parsedRows.length - 6} más...</div>}
+                        {parsedRows.length > 6 && <div className="import-preview-mas">+{parsedRows.length - 6} más...</div>}
                     </div>
                 )}
                 {error && <p className="modal-error">{error}</p>}
@@ -2719,30 +2577,30 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
                     <h3>{result.conflicts.length} conflicto{result.conflicts.length !== 1 ? 's' : ''}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
-                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{result.created} nuevos</span> importados. Las placas siguientes ya existen — elige qué conservar:
+                <p className="import-conflictos-intro">
+                    <strong>{result.created} nuevos</strong> importados. Las placas siguientes ya existen — elige qué conservar:
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '48vh', overflowY: 'auto' }}>
+                <div className="import-conflictos">
                     {result.conflicts.map(c => (
-                        <div key={c.existing.placa} style={{ background: '#111', borderRadius: 12, padding: 14, fontSize: 12 }}>
-                            <div style={{ color: '#818cf8', fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>{c.existing.placa}</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
-                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ACTUAL</div>
-                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.existing.marca || '—'}</div>
-                                    <div style={{ color: '#888', marginTop: 2 }}>{c.existing.empresa || '—'}</div>
+                        <div key={c.existing.placa} className="import-conflicto">
+                            <div className="import-conflicto-clave">{c.existing.placa}</div>
+                            <div className="import-conflicto-comparar">
+                                <div className="import-version">
+                                    <div className="import-version-titulo">ACTUAL</div>
+                                    <div className="import-version-principal">{c.existing.marca || '—'}</div>
+                                    <div className="import-version-detalle">{c.existing.empresa || '—'}</div>
                                 </div>
-                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
-                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NUEVO</div>
-                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.incoming.marca || '—'}</div>
-                                    <div style={{ color: '#888', marginTop: 2 }}>{c.incoming.empresa || '—'}</div>
+                                <div className="import-version">
+                                    <div className="import-version-titulo">NUEVO</div>
+                                    <div className="import-version-principal">{c.incoming.marca || '—'}</div>
+                                    <div className="import-version-detalle">{c.incoming.empresa || '—'}</div>
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                {[['keep', 'Mantener actual', '#818cf8'], ['update', 'Usar nuevo', '#4ade80']].map(([val, label, color]) => (
+                            <div className="import-opciones">
+                                {[['keep', 'Mantener actual'], ['update', 'Usar nuevo']].map(([val, label]) => (
                                     <button key={val}
                                         onClick={() => setChoices(ch => ({ ...ch, [c.existing.placa]: val }))}
-                                        style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${choices[c.existing.placa] === val ? color : '#2e2e2e'}`, background: choices[c.existing.placa] === val ? `${color}18` : '#1e1e1e', color: choices[c.existing.placa] === val ? color : '#666', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}>
+                                        className={`import-opcion import-opcion-${val}${choices[c.existing.placa] === val ? ' elegida' : ''}`}>
                                         {label}
                                     </button>
                                 ))}
@@ -2760,17 +2618,17 @@ const ModalImportVehiculos = ({ onClose, onGuardado }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" style={{ alignItems: 'center', gap: 18 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card import-exito" onClick={e => e.stopPropagation()}>
                 <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="#4ade80" strokeWidth="2" />
                     <path d="M8 12l3 3 5-5" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Importación exitosa</div>
-                <div style={{ color: '#888', fontSize: 13, textAlign: 'center', lineHeight: 1.7 }}>
+                <div className="import-exito-titulo">Importación exitosa</div>
+                <div className="import-exito-texto">
                     {result.created} vehículo{result.created !== 1 ? 's' : ''} nuevos importados
                     {result.conflicts.length > 0 && ` · ${result.conflicts.length} conflicto${result.conflicts.length !== 1 ? 's' : ''} resuelto${result.conflicts.length !== 1 ? 's' : ''}`}
                 </div>
-                <button className="modal-btn active" style={{ marginBottom: 0 }} onClick={onClose}>Listo</button>
+                <button className="modal-btn active import-exito-btn" onClick={onClose}>Listo</button>
             </div>
         </div>
     );
@@ -2792,57 +2650,47 @@ const ModalDetalleVehiculo = ({ vehiculos, id, onClose, onEdit, onNavigate }) =>
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" style={{ maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card vehdet" onClick={e => e.stopPropagation()}>
                 {/* Cabecera */}
                 <div className="modal-header">
-                    <h3 style={{ fontFamily: 'monospace', fontSize: 20, letterSpacing: 3, color: '#818cf8' }}>{v.placa}</h3>
+                    <h3 className="vehdet-placa">{v.placa}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
 
                 {/* Campos */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '6px 0 14px' }}>
+                <div className="vehdet-campos">
                     {campos.length > 0 ? campos.map(({ label, val }) => (
-                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e1e1e', paddingBottom: 10 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-                            <span style={{ fontSize: 13, color: '#ddd', maxWidth: '68%', textAlign: 'right', wordBreak: 'break-word' }}>{val}</span>
+                        <div key={label} className="vehdet-campo">
+                            <span className="vehdet-label">{label}</span>
+                            <span className="vehdet-valor">{val}</span>
                         </div>
                     )) : (
-                        <p style={{ color: '#444', fontSize: 12, textAlign: 'center', padding: '8px 0' }}>Sin datos adicionales registrados</p>
+                        <p className="vehdet-vacio">Sin datos adicionales registrados</p>
                     )}
                 </div>
 
                 {/* Botón editar */}
                 <button
-                    className="modal-btn active"
-                    style={{ marginBottom: 10 }}
+                    className="modal-btn active vehdet-editar"
                     onClick={() => { onEdit(v); onClose(); }}
                 >
                     ✏️ Editar este vehículo
                 </button>
 
                 {/* Navegación anterior / siguiente */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div className="vehdet-nav">
                     <button
                         onClick={() => onNavigate(vehiculos[idx - 1]?._id)}
                         disabled={idx === 0}
-                        style={{
-                            flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #2a2a2a',
-                            background: idx === 0 ? '#111' : '#1a1a1a', color: idx === 0 ? '#333' : '#aaa',
-                            cursor: idx === 0 ? 'default' : 'pointer', fontSize: 16,
-                        }}
+                        className="vehdet-nav-btn"
                     >←</button>
-                    <span style={{ fontSize: 11, color: '#444', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    <span className="vehdet-contador">
                         {idx + 1} / {vehiculos.length}
                     </span>
                     <button
                         onClick={() => onNavigate(vehiculos[idx + 1]?._id)}
                         disabled={idx === vehiculos.length - 1}
-                        style={{
-                            flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #2a2a2a',
-                            background: idx === vehiculos.length - 1 ? '#111' : '#1a1a1a',
-                            color: idx === vehiculos.length - 1 ? '#333' : '#aaa',
-                            cursor: idx === vehiculos.length - 1 ? 'default' : 'pointer', fontSize: 16,
-                        }}
+                        className="vehdet-nav-btn"
                     >→</button>
                 </div>
             </div>
@@ -2865,11 +2713,11 @@ const formatRelativeTime = (ts) => {
 // Aviso reutilizable de "datos cargados desde caché offline" con su antigüedad
 // (vigencia tipo Netflix: cachedAt/expiresAt guardado por catálogo en Dexie).
 const CacheFreshnessBadge = ({ cachedAt, onRefresh }) => (
-    <div style={{ margin: '0 16px 6px', padding: '7px 12px', background: '#1a1400', border: '1px solid #3a2e00', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 11, color: '#a87f00' }}>
+    <div className="cache-aviso">
+        <span className="cache-aviso-texto">
             📴 Datos guardados localmente{cachedAt ? ` · ${formatRelativeTime(cachedAt)}` : ''}
         </span>
-        <button onClick={onRefresh} style={{ background: 'none', border: 'none', color: '#fbbf24', fontSize: 11, cursor: 'pointer', padding: 0 }}>
+        <button className="cache-aviso-btn" onClick={onRefresh}>
             Actualizar
         </button>
     </div>
@@ -2963,12 +2811,12 @@ const PantallaPlacasDB = () => {
     ].filter(Boolean).join('\n');
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+        <div className="lista">
 
             {/* Barra búsqueda */}
-            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+            <div className="lista-barra">
+                <div className="ws-search-bar lista-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -2983,7 +2831,7 @@ const PantallaPlacasDB = () => {
                             stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
-                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span className="lista-total">
                     {filtrados.length} reg.
                 </span>
             </div>
@@ -2996,14 +2844,11 @@ const PantallaPlacasDB = () => {
                 ? <p className="ws-empty">Cargando...</p>
                 : loadError
                     ? (
-                        <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-                            <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>
+                        <div className="lista-error">
+                            <p className="lista-error-texto">
                                 ⚠️ No se pudo cargar la lista de vehículos
                             </p>
-                            <button
-                                onClick={cargar}
-                                style={{ background: '#222', border: '1px solid #444', color: '#ddd', borderRadius: 8, padding: '7px 18px', fontSize: 12, cursor: 'pointer' }}
-                            >
+                            <button className="lista-error-reintentar" onClick={cargar}>
                                 Reintentar
                             </button>
                         </div>
@@ -3013,7 +2858,7 @@ const PantallaPlacasDB = () => {
                     : (
                         <div className="ftable-scroll">
                             {/* Encabezado */}
-                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '90px 110px 90px 120px 1fr' }}>
+                            <div className="ftable-head ftable-cols-placas">
                                 {['PLACA', 'MARCA', 'COLOR', 'TIPO', 'EMPRESA'].map(h => (
                                     <span key={h} className="ftable-head-cell">{h}</span>
                                 ))}
@@ -3031,8 +2876,7 @@ const PantallaPlacasDB = () => {
                                                 <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(v._id, v.placa); setSwipedVehId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
-                                                className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '90px 110px 90px 120px 1fr' }}
+                                                className={`ftable-row ftable-cols-placas${isSwiped ? ' ftable-swiped-5' : ''}`}
                                                 onTouchStart={ev => { vehSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
                                                 onTouchMove={ev => {
                                                     const dx = ev.touches[0].clientX - vehSwipeRef.current.startX;
@@ -3060,10 +2904,10 @@ const PantallaPlacasDB = () => {
                                                     setDetalleId(v._id);
                                                 }}
                                             >
-                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 90 }}>{v.placa}</span>
-                                                <span className="ftable-cell" style={{ width: 110 }}>{(v.marca || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 90 }}>{(v.color || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 120 }}>{(v.tipoVehiculo || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-accent">{v.placa}</span>
+                                                <span className="ftable-cell">{(v.marca || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{(v.color || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{(v.tipoVehiculo || '—').toUpperCase()}</span>
                                                 <span className="ftable-cell ftable-cell-flex">{(v.empresa || '—').toUpperCase()}</span>
                                             </div>
                                         </div>
@@ -3252,15 +3096,15 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     const detailMov = detailIdx !== null ? movsOrdered[detailIdx] : null;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+        <div className="flujodia">
             {/* Cabecera */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px 8px' }}>
-                <button className="ws-topbar-btn" style={{ flexShrink: 0 }} onClick={onBack}><IconArrowLeft /></button>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: '#aaa', textTransform: 'capitalize' }}>{fechaLarga}</div>
-                    <div style={{ fontSize: 11, color: '#555' }}>{movs.length} mov. · {bitacora.length} en bitácora</div>
+            <div className="flujodia-header">
+                <button className="ws-topbar-btn flujodia-volver" onClick={onBack}><IconArrowLeft /></button>
+                <div className="flujodia-titulo">
+                    <div className="flujodia-fecha">{fechaLarga}</div>
+                    <div className="flujodia-resumen">{movs.length} mov. · {bitacora.length} en bitácora</div>
                 </div>
-                <button className="ws-topbar-btn" style={{ color: '#818cf8', marginRight: 4 }} onClick={handleShareFlujo} title="Compartir">
+                <button className="ws-topbar-btn flujodia-compartir" onClick={handleShareFlujo} title="Compartir">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <circle cx="6" cy="12" r="2.2" stroke="currentColor" strokeWidth="2"/>
                         <circle cx="17" cy="6" r="2.2" stroke="currentColor" strokeWidth="2"/>
@@ -3268,7 +3112,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         <path d="M8 11l7-3.5M8 13l7 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
                 </button>
-                <button className="ws-topbar-btn" style={{ color: '#4ade80' }} onClick={() => setShowExport(s => !s)} title="Exportar">
+                <button className="ws-topbar-btn flujodia-exportar" onClick={() => setShowExport(s => !s)} title="Exportar">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -3277,7 +3121,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Menú exportar */}
             {showExport && (
-                <div style={{ margin: '0 16px 8px', background: '#1e1e1e', border: '1px solid #2e2e2e', borderRadius: 12, overflow: 'hidden' }}>
+                <div className="flujodia-export-menu">
                     {vista === 'movimientos' ? (<>
                         <div className="export-menu-item" onClick={() => doExport('xls')}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -3297,7 +3141,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
             )}
 
             {/* Contadores */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 16px 10px' }}>
+            <div className="flujodia-contadores">
                 <div className="ws-counter-card">
                     <span className="ws-counter-val">{contratistas}</span>
                     <span className="ws-counter-label">CONTRATISTAS</span>
@@ -3309,7 +3153,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
             </div>
 
             {/* Tabs Movimientos / Bitácora */}
-            <div style={{ display: 'flex', gap: 8, padding: '0 16px 10px' }}>
+            <div className="flujodia-tabs">
                 <button className={`ws-vista-tab${vista === 'movimientos' ? ' active' : ''}`}
                     onClick={() => setVista('movimientos')}>
                     Movimientos
@@ -3322,9 +3166,9 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Búsqueda + ordenamiento (solo movimientos) */}
             {vista === 'movimientos' && (
-                <div style={{ display: 'flex', gap: 8, padding: '0 16px 12px', alignItems: 'center' }}>
-                    <div className="ws-search-bar" style={{ flex: 1, background: 'transparent' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                <div className="flujodia-busqueda">
+                    <div className="ws-search-bar flujodia-search-bar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="flujodia-lupa">
                             <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                             <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                         </svg>
@@ -3335,12 +3179,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                     <button
                         onClick={() => setSortDesc(d => !d)}
                         title={sortDesc ? 'Más reciente primero' : 'Más antiguo primero'}
-                        style={{
-                            flexShrink: 0, width: 36, height: 36, borderRadius: 10,
-                            border: '1px solid #2e2e2e', background: '#1a1a1a',
-                            color: '#818cf8', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}
+                        className="flujodia-orden"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                             {sortDesc ? (
@@ -3359,7 +3198,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Lista de movimientos */}
             {vista === 'movimientos' && (
-                <div style={{ padding: '0 4px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="flujodia-lista">
                     {movsOrdered.length === 0
                         ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
                         : (() => {
@@ -3408,7 +3247,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                 {/* Chevron */}
                                                 <button className="mov-chevron-btn" onClick={e => { e.stopPropagation(); toggleMovCollapse(idx); }}>
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                                         style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                                                         className={`chevron-giro${isCollapsed ? '' : ' abierto'}`}>
                                                         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                                     </svg>
                                                 </button>
@@ -3488,7 +3327,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                                     {b.tipoVehiculo && <span className="bit-card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
                                                     <button className="bit-chevron-btn" onClick={e => { e.stopPropagation(); toggleBitFlujoCollapse(i); }}>
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                                             style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                                                             className={`chevron-giro${isCollapsed ? '' : ' abierto'}`}>
                                                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                                         </svg>
                                                     </button>
@@ -3498,7 +3337,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                             {!isCollapsed && (
                                                 <div className="bit-card-r2">
                                                     <span className={`bit-card-conductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                        {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                                        {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="icono-fijo"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                         {b.conductor || '—'}
                                                     </span>
                                                     {(b.destino || b.empresa) && (
@@ -3549,15 +3388,15 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 // ── Modal confirmación genérico ───────────────────────────
 const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
     <div className="modal-overlay" onClick={onCancel}>
-        <div className="modal-card" style={{ maxWidth: 320, gap: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto' }}>
+        <div className="modal-card confirmar" onClick={e => e.stopPropagation()}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar-icono">
                 <circle cx="12" cy="12" r="10" stroke="#f87171" strokeWidth="2" />
                 <path d="M12 8v4M12 16h.01" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <p style={{ color: '#ddd', fontSize: 15, fontWeight: 600, lineHeight: 1.5, margin: 0 }}>{mensaje}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
-                <button onClick={onCancel} style={{ padding: '11px 0', borderRadius: 10, border: '1px solid #2e2e2e', background: '#1e1e1e', color: '#aaa', fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
-                <button onClick={onConfirm} style={{ padding: '11px 0', borderRadius: 10, border: 'none', background: '#f87171', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Eliminar</button>
+            <p className="confirmar-mensaje">{mensaje}</p>
+            <div className="confirmar-botones">
+                <button className="confirmar-cancelar" onClick={onCancel}>Cancelar</button>
+                <button className="confirmar-eliminar" onClick={onConfirm}>Eliminar</button>
             </div>
         </div>
     </div>
@@ -3742,47 +3581,51 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
         setConfirmarFlujo(null);
     };
 
-    // Etiqueta de un día (reutilizada en el nivel de días y en los resultados de "General")
-    const renderDiaTag = (d) => {
+    // Tarjeta de un día: la usan Archivo y los resultados de "General" (con
+    // botón para borrar el flujo) y Puestos (solo abre el detalle)
+    const renderDiaTag = (d, { onAbrir, conBorrar = true } = {}) => {
         const fechaLarga = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         });
+        const abrir = onAbrir || (() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(d.fecha); });
         return (
-            <div key={d.fecha} className="flujo-card" onClick={() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(d.fecha); }}>
-                <div style={{ flex: 1 }}>
-                    <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: d.isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
+            <div key={d.fecha} className="flujo-card" onClick={abrir}>
+                <div className="flujo-card-info">
+                    <div className="flujo-fecha">
+                        <span className={`flujo-turno-icono${d.isDiurno ? ' diurno' : ''}`}>
                             {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
                         </span>
                         {fechaLarga}
                     </div>
                     <div className="flujo-stats">
-                        <span style={{ color: '#818cf8' }}>{d.ingresos} ing.</span>
-                        <span style={{ color: '#555' }}> · </span>
-                        <span style={{ color: '#f87171' }}>{d.salidas} sal.</span>
-                        {d.petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{d.petro} EP</span></>}
+                        <span className="flujo-stat-ingresos">{d.ingresos} ing.</span>
+                        <span className="flujo-stat-sep"> · </span>
+                        <span className="flujo-stat-salidas">{d.salidas} sal.</span>
+                        {d.petro > 0 && <><span className="flujo-stat-sep"> · </span><span className="flujo-stat-ep">{d.petro} EP</span></>}
                     </div>
                 </div>
-                <button
-                    className="flujo-delete-btn"
-                    title="Eliminar flujo"
-                    onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: d.fecha, fechaLarga, total: d.ingresos + d.salidas }); }}
-                >
-                    <IconMinus />
-                </button>
+                {conBorrar && (
+                    <button
+                        className="flujo-delete-btn"
+                        title="Eliminar flujo"
+                        onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: d.fecha, fechaLarga, total: d.ingresos + d.salidas }); }}
+                    >
+                        <IconMinus />
+                    </button>
+                )}
                 <IconChevronRight />
             </div>
         );
     };
 
     if (!puesto || !bloque) {
-        return <p className="ws-empty" style={{ padding: 32 }}>Sin turno activo</p>;
+        return <p className="ws-empty ws-empty-amplio">Sin turno activo</p>;
     }
 
     // Nivel 4: detalle de un día — se carga justo al entrar, y solo ese día
     if (flujoSeleccionado) {
         return loadingDia
-            ? <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>
+            ? <p className="ws-empty ws-empty-amplio">Cargando...</p>
             : <PantallaFlujoDetalle
                 fecha={flujoSeleccionado}
                 movs={diaMovs}
@@ -3794,7 +3637,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
     // movimientos de TODOS los usuarios que registraron en ese puesto/bloque.
     if (puestoFlujoSeleccionado) {
         return loadingDiaP
-            ? <p className="ws-empty" style={{ padding: 32 }}>Cargando...</p>
+            ? <p className="ws-empty ws-empty-amplio">Cargando...</p>
             : <PantallaFlujoDetalle
                 fecha={puestoFlujoSeleccionado}
                 movs={diaMovsP}
@@ -3805,7 +3648,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
     return (
         <>
         {/* Pestañas Archivo / General / Puestos */}
-        <div style={{ display: 'flex', gap: 8, padding: '12px 16px 10px' }}>
+        <div className="flujos-tabs">
             <button className={`ws-vista-tab${vistaFlujos === 'archivo' ? ' active' : ''}`}
                 onClick={() => setVistaFlujos('archivo')}>Archivo</button>
             <button className={`ws-vista-tab${vistaFlujos === 'general' ? ' active' : ''}`}
@@ -3816,7 +3659,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
 
         {/* ── TAB ARCHIVO: años → meses (calendario) → días ── */}
         {vistaFlujos === 'archivo' && (
-            <div style={{ padding: '0 16px 80px' }}>
+            <div className="flujos-panel">
                 {!anioSel ? (
                     loadingAnios
                         ? <p className="ws-empty">Cargando...</p>
@@ -3862,7 +3705,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
                             ? <p className="ws-empty">Cargando...</p>
                             : dias.length === 0
                                 ? <p className="ws-empty">Sin días registrados</p>
-                                : <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                                : <div className="flujos-dias">
                                     {dias.map(renderDiaTag)}
                                 </div>
                         }
@@ -3873,9 +3716,9 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
 
         {/* ── TAB GENERAL ── */}
         {vistaFlujos === 'general' && (
-            <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="flujos-panel flujos-general">
                 {/* Chips de filtro */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="flujos-chips">
                     {[
                         { id: 'todos',      label: 'Todos' },
                         { id: 'placa',      label: 'Placa' },
@@ -3893,14 +3736,14 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
 
                 {/* Resultados */}
                 {!genQuery.trim() ? (
-                    <p className="ws-empty" style={{ marginTop: 20 }}>Escribe algo para buscar en todos los registros</p>
+                    <p className="ws-empty flujos-general-aviso">Escribe algo para buscar en todos los registros</p>
                 ) : genLoading ? (
-                    <p className="ws-empty" style={{ marginTop: 20 }}>Buscando...</p>
+                    <p className="ws-empty flujos-general-aviso">Buscando...</p>
                 ) : genResultados.length === 0 ? (
-                    <p className="ws-empty" style={{ marginTop: 20 }}>Sin resultados para "{genQuery}"</p>
+                    <p className="ws-empty flujos-general-aviso">Sin resultados para "{genQuery}"</p>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <p style={{ fontSize: 11, color: '#555', margin: 0 }}>
+                    <div className="flujos-resultados">
+                        <p className="flujos-resultados-total">
                             {genResultados.length} resultado{genResultados.length !== 1 ? 's' : ''}
                         </p>
                         {genResultados.map(m => {
@@ -3908,7 +3751,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
                                 day: 'numeric', month: 'short', year: 'numeric',
                             });
                             return (
-                                <div key={m._id} className="mov-item" style={{ cursor: 'pointer' }}
+                                <div key={m._id} className="mov-item flujos-resultado"
                                     onClick={() => { returnTabRef.current = 'general'; setFlujoSeleccionado(m.fecha); }}>
                                     <div className="mov-item-inner">
                                         <div className={`mov-icon ${m.tipo}`}>
@@ -3918,14 +3761,14 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
                                             <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
                                             <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
                                             {(m.empresa || m.destino) && (
-                                                <span className="mov-detalle" style={{ fontSize: 11 }}>
+                                                <span className="mov-detalle mov-detalle-chico">
                                                     {[m.empresa, m.destino].filter(Boolean).join(' · ')}
                                                 </span>
                                             )}
                                             {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
                                                 <span className="mov-actividad">{m.actividad}</span>
                                             )}
-                                            <span style={{ fontSize: 10, color: '#555', marginTop: 1 }}>{fechaCorta}</span>
+                                            <span className="flujos-resultado-fecha">{fechaCorta}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -3941,7 +3784,7 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
             !puedeVerPuestos ? (
                 <AccesoRestringido label="Puestos del Bloque" />
             ) : (
-                <div style={{ padding: '0 16px 80px' }}>
+                <div className="flujos-panel">
                     {!puestoSel ? (
                         loadingPuestos
                             ? <p className="ws-empty">Cargando...</p>
@@ -4009,31 +3852,8 @@ const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, genCampo, 
                                 ? <p className="ws-empty">Cargando...</p>
                                 : diasP.length === 0
                                     ? <p className="ws-empty">Sin días registrados</p>
-                                    : <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                                        {diasP.map(d => {
-                                            const fechaLarga = new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-EC', {
-                                                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                                            });
-                                            return (
-                                                <div key={d.fecha} className="flujo-card" onClick={() => setPuestoFlujoSeleccionado(d.fecha)}>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div className="flujo-fecha" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                            <span style={{ color: d.isDiurno ? '#fcd34d' : '#818cf8', display: 'flex', alignItems: 'center' }}>
-                                                                {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
-                                                            </span>
-                                                            {fechaLarga}
-                                                        </div>
-                                                        <div className="flujo-stats">
-                                                            <span style={{ color: '#818cf8' }}>{d.ingresos} ing.</span>
-                                                            <span style={{ color: '#555' }}> · </span>
-                                                            <span style={{ color: '#f87171' }}>{d.salidas} sal.</span>
-                                                            {d.petro > 0 && <><span style={{ color: '#555' }}> · </span><span style={{ color: '#4ade80' }}>{d.petro} EP</span></>}
-                                                        </div>
-                                                    </div>
-                                                    <IconChevronRight />
-                                                </div>
-                                            );
-                                        })}
+                                    : <div className="flujos-dias">
+                                        {diasP.map(d => renderDiaTag(d, { onAbrir: () => setPuestoFlujoSeleccionado(d.fecha), conBorrar: false }))}
                                     </div>
                             }
                         </>
@@ -4146,26 +3966,26 @@ const CapturaFirma = ({ onCapturada, onCancelar }) => {
         <div className="modal-overlay" onClick={onCancelar}>
             <div className="firma-captura-card" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3 style={{ margin: 0 }}>Capturar firma</h3>
+                    <h3 className="sin-margen">Capturar firma</h3>
                     <button className="modal-close" onClick={onCancelar}>✕</button>
                 </div>
                 {camError
-                    ? <p className="modal-error" style={{ margin: '12px 0' }}>{camError}</p>
+                    ? <p className="modal-error firma-captura-error">{camError}</p>
                     : (
                         <div className="qr-video-wrap">
                             <video ref={videoRef} className="qr-video" playsInline muted />
                         </div>
                     )}
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <button className="firma-btn-primary" style={{ flex: 1 }} onClick={handleTomarFoto} disabled={!activa}>
+                <canvas ref={canvasRef} hidden />
+                <div className="firma-captura-botones">
+                    <button className="firma-btn-primary" onClick={handleTomarFoto} disabled={!activa}>
                         Tomar foto
                     </button>
-                    <button className="firma-btn-secondary" style={{ flex: 1 }} onClick={() => fileInputRef.current.click()}>
+                    <button className="firma-btn-secondary" onClick={() => fileInputRef.current.click()}>
                         Subir imagen
                     </button>
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleArchivo} />
+                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleArchivo} />
             </div>
         </div>
     );
@@ -4261,19 +4081,12 @@ const PersonaSugMini = ({ items, onSel }) => !items.length ? null : (
     // onBlur del input puede cerrar la lista al tocar fuera o cambiar de
     // campo, sin romper la selección por click/tap.
     <div
-        onMouseDown={e => e.preventDefault()}
-        style={{
-            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-            background: '#1a1e28', border: '1px solid #2a2f3d', borderRadius: 8,
-            overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.45)', marginTop: 2,
-        }}>
+        className="ingbit-sugs"
+        onMouseDown={e => e.preventDefault()}>
         {items.map((p, i) => (
-            <div key={i} onClick={() => onSel(p)}
-                style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: i < items.length - 1 ? '1px solid #1f2330' : 'none' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#232838'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#e8eaed' }}>{p.nombres}</div>
-                {p.cedula && <div style={{ fontSize: 11, color: '#5a6070' }}>CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
+            <div key={i} className="ingbit-sug" onClick={() => onSel(p)}>
+                <div className="ingbit-sug-nombre">{p.nombres}</div>
+                {p.cedula && <div className="ingbit-sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
             </div>
         ))}
     </div>
@@ -4462,7 +4275,7 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
                             <button className="firma-btn-primary" onClick={() => setCapturaAbierta(true)}>Tomar foto</button>
                             <button className="firma-btn-secondary" onClick={() => fileInputRef.current.click()}>Subir imagen</button>
                         </div>
-                        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleArchivoDirecto} />
+                        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleArchivoDirecto} />
                     </div>
                 ) : (
                     <>
@@ -4545,7 +4358,7 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
                 </div>
             </div>
 
-            {error && <p className="modal-error" style={{ margin: '0 16px' }}>{error}</p>}
+            {error && <p className="modal-error firma-form-error">{error}</p>}
             <p className="firma-footer-hint">{footerHint}</p>
             <div className="firma-footer-actions">
                 <button className="firma-btn-secondary" onClick={onCancelar} disabled={guardando}>Cancelar</button>
@@ -4689,7 +4502,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
         return (
             <div className="firma-detalle">
                 <div className="firma-detalle-header">
-                    <button className="util-back-btn" style={{ marginBottom: 0 }} onClick={() => { setVista('galeria'); setFirmaSel(null); }}>
+                    <button className="util-back-btn util-back-btn-junto" onClick={() => { setVista('galeria'); setFirmaSel(null); }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <div>
@@ -4699,12 +4512,13 @@ const PantallaFirmas = ({ turnoActivo }) => {
                 </div>
                 <div className="firma-detalle-img-wrap">
                     {firmaSel._pendiente
-                        ? <span className="firma-badge-registrada" style={{ color: firmaSel._error ? '#f87171' : '#f59e0b' }}>
+                        ? <span className={`firma-badge-registrada ${firmaSel._error ? 'firma-badge-error' : 'firma-badge-pendiente'}`}>
                             {firmaSel._error ? `No se pudo subir: ${firmaSel._error}` : 'Pendiente de subir · guardada en el dispositivo'}
                         </span>
                         : <span className="firma-badge-registrada">Firma registrada</span>}
-                    <div style={{ overflow: 'hidden' }}>
-                        <img src={firmaSel.imagen} alt="" style={{ transform: `scale(${zoom})`, transition: 'transform 0.15s' }} />
+                    <div className="firma-zoom-marco">
+                        {/* La escala cambia con los botones de zoom: único estilo en línea */}
+                        <img src={firmaSel.imagen} alt="" className="firma-zoom-img" style={{ transform: `scale(${zoom})` }} />
                     </div>
                 </div>
                 <div className="firma-zoom-controls">
@@ -4768,8 +4582,8 @@ const PantallaFirmas = ({ turnoActivo }) => {
                 <button className="firma-btn-primary" onClick={abrirNueva}>+ Nueva firma</button>
             </div>
 
-            <div className="ws-search-bar" style={{ margin: '0 16px 10px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+            <div className="ws-search-bar firma-search-bar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                     <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
@@ -4819,7 +4633,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
             {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {loading ? (
-                <div className="firma-grid" style={{ padding: '0 16px' }}>
+                <div className="firma-grid firma-grid-cargando">
                     {Array.from({ length: 6 }).map((_, i) => <div key={i} className="firma-skeleton" />)}
                 </div>
             ) : firmas.length === 0 ? (
@@ -4834,7 +4648,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
             ) : filtradas.length === 0 ? (
                 <p className="ws-empty">Sin resultados para "{search}"</p>
             ) : vistaGrid ? (
-                <div className="firma-grid" style={{ padding: '0 16px 24px' }}>
+                <div className="firma-grid firma-coleccion">
                     {filtradas.map(f => (
                         <button key={f._id} className="firma-card" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
                             <img src={f.imagen} alt="" className="firma-card-img" />
@@ -4847,7 +4661,7 @@ const PantallaFirmas = ({ turnoActivo }) => {
                     ))}
                 </div>
             ) : (
-                <div className="firma-list" style={{ padding: '0 16px 24px' }}>
+                <div className="firma-list firma-coleccion">
                     {filtradas.map(f => (
                         <button key={f._id} className="firma-list-row" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
                             <img src={f.imagen} alt="" className="firma-list-thumb" />
@@ -5207,7 +5021,7 @@ const PantallaPlataformas = ({ turnoActivo, search = '' }) => {
                         </div>
                     </div>
                 </div>
-                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={handleImportFile} />
             </div>
             {importMsg && <p className="plat-import-msg">{importMsg}</p>}
 
@@ -5241,7 +5055,7 @@ const PantallaPlataformas = ({ turnoActivo, search = '' }) => {
                             </button>
                             {abierta && (
                                 items.length === 0 ? (
-                                    <p className="ws-empty" style={{ padding: '8px 16px' }}>Sin nominativos{search ? ' para la búsqueda' : ''}</p>
+                                    <p className="ws-empty ws-empty-junto">Sin nominativos{search ? ' para la búsqueda' : ''}</p>
                                 ) : (
                                     <div className={vistaGrid ? 'plat-locacion-grid' : 'plat-lista'}>
                                         {items.map(n => (
@@ -5380,48 +5194,19 @@ const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => {
     ].filter(f => f.value);
 
     const S = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
-    const actionBtnStyle = (color) => ({
-        background: 'none', border: 'none', padding: '10px', cursor: 'pointer',
-        color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 10, transition: 'opacity 0.15s ease',
-    });
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="detalle-arriba-movil"
-                onClick={e => e.stopPropagation()}
-                style={{
-                    width: '90vw', maxWidth: 380,
-                    background: 'linear-gradient(180deg, #1a1c23 0%, #16171d 100%)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 20,
-                    boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
-                    overflow: 'hidden',
-                }}
-            >
+            <div className="ficha-det detalle-arriba-movil" onClick={e => e.stopPropagation()}>
                 {/* Barra superior: badge + botón cerrar */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0 20px' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        background: 'rgba(122,138,255,0.12)', border: '1px solid rgba(122,138,255,0.25)',
-                        color: '#a3b0ff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-                        padding: '6px 12px', borderRadius: 999,
-                    }}>
+                <div className="ficha-det-top">
+                    <div className="ficha-det-badge">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.37 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 3.09 4.18 2 2 0 0 1 5.06 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L9.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 17z" />
                         </svg>
                         EXTENSIÓN
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            width: 32, height: 32, borderRadius: 999, flexShrink: 0,
-                            background: 'rgba(255,255,255,0.05)', border: 'none',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: '#8b8d96',
-                        }}
-                    >
+                    <button className="ficha-det-cerrar" onClick={onClose}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                             <path d="M18 6 6 18" /><path d="M6 6l12 12" />
                         </svg>
@@ -5429,68 +5214,41 @@ const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => {
                 </div>
 
                 {/* Avatar + nombre + empresa */}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '20px 24px 22px 24px',
-                    borderBottom: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                    <div style={{
-                        width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                        background: 'linear-gradient(135deg, #6d7cff, #4a5be0)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 18, fontWeight: 800, color: '#fff',
-                    }}>{initials || '?'}</div>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{
-                            fontSize: 18, fontWeight: 800, color: '#f5f5f7',
-                            letterSpacing: '-0.01em',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>{(ext.nombre || '—').toUpperCase()}</div>
-                        {ext.empresa && (
-                            <div style={{ fontSize: 13, color: '#6c6e78', marginTop: 3,
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {ext.empresa.toUpperCase()}
-                            </div>
-                        )}
+                <div className="ficha-det-cabecera">
+                    <div className="ficha-det-avatar">{initials || '?'}</div>
+                    <div className="ficha-det-identidad">
+                        <div className="ficha-det-nombre">{(ext.nombre || '—').toUpperCase()}</div>
+                        {ext.empresa && <div className="ficha-det-sub">{ext.empresa.toUpperCase()}</div>}
                     </div>
                 </div>
 
                 {/* Campos */}
-                <div style={{ padding: '8px 24px 4px 24px' }}>
+                <div className="ficha-det-campos">
                     {fields.length > 0 ? fields.map(f => (
-                        <div key={f.label} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        }}>
-                            <span style={{ fontSize: 12, color: '#75767f', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>
-                                {f.label}
-                            </span>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: '#eeeef1', letterSpacing: '0.01em', textAlign: 'right', marginLeft: 12, fontVariantNumeric: 'tabular-nums' }}>
-                                {f.value}
-                            </span>
+                        <div key={f.label} className="ficha-det-campo">
+                            <span className="ficha-det-campo-label">{f.label}</span>
+                            <span className="ficha-det-campo-valor ficha-det-num">{f.value}</span>
                         </div>
                     )) : (
-                        <div style={{ padding: '16px 0', textAlign: 'center', color: '#444', fontSize: 12 }}>
-                            Sin datos adicionales
-                        </div>
+                        <div className="ficha-det-vacio">Sin datos adicionales</div>
                     )}
                 </div>
 
                 {/* Acciones */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '18px 24px 22px 24px' }}>
+                <div className="ficha-det-acciones">
                     {onEdit && (
-                        <button title="Editar" style={actionBtnStyle('#c7c8ce')} onClick={() => { onEdit(ext); onClose(); }}>
+                        <button title="Editar" className="ficha-det-accion" onClick={() => { onEdit(ext); onClose(); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M12 20h9" ${S}/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" ${S}/>` }} />
                         </button>
                     )}
-                    <button title="Copiar" style={actionBtnStyle('#c7c8ce')} onClick={() => handleCopyText(extToText(ext))}>
+                    <button title="Copiar" className="ficha-det-accion" onClick={() => handleCopyText(extToText(ext))}>
                         <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<rect x="9" y="9" width="12" height="12" rx="2" ${S}/><path d="M5 15V5a2 2 0 0 1 2-2h10" ${S}/>` }} />
                     </button>
-                    <button title="Compartir" style={actionBtnStyle('#c7c8ce')} onClick={() => handleShareText(extToText(ext))}>
+                    <button title="Compartir" className="ficha-det-accion" onClick={() => handleShareText(extToText(ext))}>
                         <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" ${S}/><path d="M16 6l-4-4-4 4" ${S}/><path d="M12 2v14" ${S}/>` }} />
                     </button>
                     {onDelete && (
-                        <button title="Eliminar" style={actionBtnStyle('#ff8a8a')} onClick={() => { onDelete(ext._id); onClose(); }}>
+                        <button title="Eliminar" className="ficha-det-accion peligro" onClick={() => { onDelete(ext._id); onClose(); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M5 12h14" ${S}/>` }} />
                         </button>
                     )}
@@ -5522,49 +5280,20 @@ const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onTo
     ].filter(f => f.value);
 
     const S = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
-    const actionBtnStyle = (color) => ({
-        background: 'none', border: 'none', padding: '10px', cursor: 'pointer',
-        color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 10, transition: 'opacity 0.15s ease',
-    });
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="detalle-arriba-movil"
-                onClick={e => e.stopPropagation()}
-                style={{
-                    width: '90vw', maxWidth: 380,
-                    background: 'linear-gradient(180deg, #1a1c23 0%, #16171d 100%)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 20,
-                    boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',
-                    overflow: 'hidden',
-                }}
-            >
+            <div className="ficha-det detalle-arriba-movil" onClick={e => e.stopPropagation()}>
                 {/* Barra superior: badge + botón cerrar */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 0 20px' }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        background: 'rgba(122,138,255,0.12)', border: '1px solid rgba(122,138,255,0.25)',
-                        color: '#a3b0ff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-                        padding: '6px 12px', borderRadius: 999,
-                    }}>
+                <div className="ficha-det-top">
+                    <div className="ficha-det-badge">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <circle cx="12" cy="8" r="4" />
                             <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
                         </svg>
                         PERSONA
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            width: 32, height: 32, borderRadius: 999, flexShrink: 0,
-                            background: 'rgba(255,255,255,0.05)', border: 'none',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: '#8b8d96',
-                        }}
-                    >
+                    <button className="ficha-det-cerrar" onClick={onClose}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                             <path d="M18 6 6 18" /><path d="M6 6l12 12" />
                         </svg>
@@ -5572,105 +5301,70 @@ const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onTo
                 </div>
 
                 {/* Avatar + nombre + cédula */}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '20px 24px 22px 24px',
-                    borderBottom: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                    <div style={{
-                        width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                        background: 'linear-gradient(135deg, #6d7cff, #4a5be0)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 18, fontWeight: 800, color: '#fff',
-                    }}>{initials || '?'}</div>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{
-                            fontSize: 20, fontWeight: 800, color: '#f5f5f7',
-                            letterSpacing: '-0.01em',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>{p.nombres}</div>
-                        <div style={{ fontSize: 13, color: '#6c6e78', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-                            {p.cedula}
-                        </div>
+                <div className="ficha-det-cabecera">
+                    <div className="ficha-det-avatar">{initials || '?'}</div>
+                    <div className="ficha-det-identidad">
+                        <div className="ficha-det-nombre ficha-det-nombre-grande">{p.nombres}</div>
+                        <div className="ficha-det-sub ficha-det-cedula">{p.cedula}</div>
                     </div>
                 </div>
 
                 {/* Autorización para registrar firma — solo el admin puede cambiarla */}
-                <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="ficha-det-seccion">
                     <button
                         onClick={isAdmin ? handleToggleAuth : undefined}
                         disabled={!isAdmin || togglingAuth}
-                        style={{
-                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            gap: 10, padding: '10px 14px', borderRadius: 12,
-                            background: p.autorizadoFirma ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.04)',
-                            border: `1px solid ${p.autorizadoFirma ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                            cursor: isAdmin ? 'pointer' : 'default', opacity: togglingAuth ? 0.6 : 1,
-                        }}
+                        className={[
+                            'ficha-det-auth',
+                            p.autorizadoFirma && 'activa',
+                            isAdmin && 'editable',
+                            togglingAuth && 'cargando',
+                        ].filter(Boolean).join(' ')}
                     >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: p.autorizadoFirma ? '#4ade80' : '#9a9ba3' }}>
+                        <span className="ficha-det-auth-texto">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
                             </svg>
                             {p.autorizadoFirma ? 'Autorizada para registrar firma' : 'No autorizada para registrar firma'}
                         </span>
                         {isAdmin && (
-                            <span style={{
-                                flexShrink: 0, width: 38, height: 22, borderRadius: 999, position: 'relative',
-                                background: p.autorizadoFirma ? '#4ade80' : 'rgba(255,255,255,0.12)',
-                                transition: 'background 0.15s ease',
-                            }}>
-                                <span style={{
-                                    position: 'absolute', top: 2, left: p.autorizadoFirma ? 18 : 2,
-                                    width: 18, height: 18, borderRadius: '50%', background: '#fff',
-                                    transition: 'left 0.15s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                                }} />
-                            </span>
+                            <span className="ficha-det-switch"><span className="ficha-det-switch-bola" /></span>
                         )}
                     </button>
                 </div>
 
                 {/* Campos */}
-                <div style={{ padding: '8px 24px 4px 24px' }}>
+                <div className="ficha-det-campos">
                     {fields.length > 0 ? fields.map(f => (
-                        <div key={f.label} style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        }}>
-                            <span style={{ fontSize: 12, color: '#75767f', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>
-                                {f.label}
-                            </span>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: '#eeeef1', letterSpacing: '0.01em', textAlign: 'right', marginLeft: 12 }}>
-                                {f.value}
-                            </span>
+                        <div key={f.label} className="ficha-det-campo">
+                            <span className="ficha-det-campo-label">{f.label}</span>
+                            <span className="ficha-det-campo-valor">{f.value}</span>
                         </div>
                     )) : (
-                        <div style={{ padding: '16px 0', textAlign: 'center', color: '#444', fontSize: 12 }}>
-                            Sin datos adicionales
-                        </div>
+                        <div className="ficha-det-vacio">Sin datos adicionales</div>
                     )}
                 </div>
 
                 {/* Acciones */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '18px 24px 22px 24px' }}>
+                <div className="ficha-det-acciones">
                     {onEdit && (
-                        <button title="Editar" style={actionBtnStyle('#c7c8ce')} onClick={() => { onEdit(p); onClose(); }}>
+                        <button title="Editar" className="ficha-det-accion" onClick={() => { onEdit(p); onClose(); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M12 20h9" ${S}/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" ${S}/>` }} />
                         </button>
                     )}
-                    <button title="Copiar" style={actionBtnStyle('#c7c8ce')} onClick={() => handleCopyText(pToText(p))}>
+                    <button title="Copiar" className="ficha-det-accion" onClick={() => handleCopyText(pToText(p))}>
                         <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<rect x="9" y="9" width="12" height="12" rx="2" ${S}/><path d="M5 15V5a2 2 0 0 1 2-2h10" ${S}/>` }} />
                     </button>
-                    <button title="Compartir" style={actionBtnStyle('#c7c8ce')} onClick={() => handleShareText(pToText(p))}>
+                    <button title="Compartir" className="ficha-det-accion" onClick={() => handleShareText(pToText(p))}>
                         <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" ${S}/><path d="M16 6l-4-4-4 4" ${S}/><path d="M12 2v14" ${S}/>` }} />
                     </button>
                     {onQR && (
-                        <button title="Ver QR" style={actionBtnStyle('#c7c8ce')} onClick={() => { onQR(p); onClose(); }}>
+                        <button title="Ver QR" className="ficha-det-accion" onClick={() => { onQR(p); onClose(); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<rect x="3" y="3" width="7" height="7" ${S}/><rect x="14" y="3" width="7" height="7" ${S}/><rect x="14" y="14" width="7" height="7" ${S}/><rect x="3" y="14" width="7" height="7" ${S}/>` }} />
                         </button>
                     )}
                     {onDelete && (
-                        <button title="Eliminar" style={actionBtnStyle('#ff8a8a')} onClick={() => { onDelete(p._id); onClose(); }}>
+                        <button title="Eliminar" className="ficha-det-accion peligro" onClick={() => { onDelete(p._id); onClose(); }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: `<path d="M5 12h14" ${S}/>` }} />
                         </button>
                     )}
@@ -5817,12 +5511,12 @@ const PantallaExtensiones = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+        <div className="lista">
 
             {/* Barra búsqueda */}
-            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+            <div className="lista-barra lista-barra-ancha">
+                <div className="ws-search-bar lista-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -5831,7 +5525,7 @@ const PantallaExtensiones = () => {
                         value={search} onChange={e => setSearch(e.target.value)} />
                     {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
                 </div>
-                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span className="lista-total">
                     {filtrados.length} reg.
                 </span>
             </div>
@@ -5847,7 +5541,7 @@ const PantallaExtensiones = () => {
                     : (
                         <div className="ftable-scroll">
                             {/* Encabezado */}
-                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 100px 70px 100px 110px' }}>
+                            <div className="ftable-head ftable-cols-extensiones">
                                 {['NOMBRE', 'CARGO', 'DEPTO', 'EXT.', 'CELULAR', 'EMPRESA'].map(h => (
                                     <span key={h} className="ftable-head-cell">{h}</span>
                                 ))}
@@ -5864,8 +5558,8 @@ const PantallaExtensiones = () => {
                                                 <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(e._id); setSwipedExtId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
-                                                className={`ftable-row${isSwiped ? ' ftable-swiped-4' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '1fr 130px 100px 70px 100px 110px' }}
+                                                className={`ftable-row ftable-cols-extensiones${isSwiped ? ' ftable-swiped-4' : ''}`}
+                                                
                                                 onTouchStart={ev => { extSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
                                                 onTouchMove={ev => {
                                                     const dx = ev.touches[0].clientX - extSwipeRef.current.startX;
@@ -5894,11 +5588,11 @@ const PantallaExtensiones = () => {
                                                 }}
                                             >
                                                 <span className="ftable-cell ftable-cell-flex ftable-cell-bold">{(e.nombre || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell" style={{ width: 130 }}>{e.cargo || '—'}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{(e.departamento || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-accent" style={{ width: 70 }}>{e.extension ? `Ext. ${e.extension}` : '—'}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ width: 100 }}>{e.celular || '—'}</span>
-                                                <span className="ftable-cell" style={{ width: 110 }}>{(e.empresa || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell">{e.cargo || '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{(e.departamento || '—').toUpperCase()}</span>
+                                                <span className="ftable-cell ftable-cell-accent">{e.extension ? `Ext. ${e.extension}` : '—'}</span>
+                                                <span className="ftable-cell ftable-cell-dim">{e.celular || '—'}</span>
+                                                <span className="ftable-cell">{(e.empresa || '—').toUpperCase()}</span>
                                             </div>
                                         </div>
                                     );
@@ -6108,41 +5802,41 @@ const ModalImportPersonas = ({ onClose, onGuardado }) => {
                     <h3>Importar personas</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <p style={{ fontSize: 12, color: '#666', lineHeight: 1.8 }}>
-                    Sube un archivo <strong style={{ color: '#4ade80' }}>CSV</strong> o <strong style={{ color: '#4ade80' }}>Excel (.xlsx)</strong>.<br />
-                    Encabezados reconocidos: <span style={{ color: '#818cf8' }}>CÉDULA, NOMBRES, EMPRESA, CARGO, DEPARTAMENTO, NOMINATIVO</span>
+                <p className="import-ayuda">
+                    Sube un archivo <strong>CSV</strong> o <strong>Excel (.xlsx)</strong>.<br />
+                    Encabezados reconocidos: <span className="import-encabezados">CÉDULA, NOMBRES, EMPRESA, CARGO, DEPARTAMENTO, NOMINATIVO</span>
                 </p>
 
                 <label className="import-dropzone">
-                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} style={{ display: 'none' }} />
+                    <input type="file" accept=".csv,.xls,.xlsx" onChange={handleFile} hidden />
                     {fileName ? (
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
-                            <div style={{ color: '#ddd', fontWeight: 700, fontSize: 13 }}>{fileName}</div>
+                        <div className="import-archivo">
+                            <div className="import-archivo-icono">📄</div>
+                            <div className="import-archivo-nombre">{fileName}</div>
                             {parsedRows.length > 0
-                                ? <div style={{ color: '#4ade80', marginTop: 6, fontSize: 13 }}>{parsedRows.length} registros detectados</div>
-                                : <div style={{ color: '#f87171', marginTop: 6, fontSize: 12 }}>Sin registros válidos</div>
+                                ? <div className="import-archivo-ok">{parsedRows.length} registros detectados</div>
+                                : <div className="import-archivo-error">Sin registros válidos</div>
                             }
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', color: '#555' }}>
-                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 10 }}>
+                        <div className="import-vacio">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="import-vacio-icono">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5-5 5 5M12 15V5" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            <div style={{ fontSize: 13 }}>Toca para seleccionar CSV o Excel</div>
+                            <div>Toca para seleccionar CSV o Excel</div>
                         </div>
                     )}
                 </label>
 
                 {parsedRows.length > 0 && (
-                    <div style={{ background: '#111', borderRadius: 10, padding: 12, fontSize: 12, color: '#888', maxHeight: 130, overflowY: 'auto' }}>
+                    <div className="import-preview">
                         {parsedRows.slice(0, 6).map((p, i) => (
-                            <div key={i} style={{ padding: '4px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-                                <span style={{ color: '#818cf8', flexShrink: 0 }}>{p.cedula}</span>
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombres}</span>
+                            <div key={i} className="import-preview-fila">
+                                <span className="import-preview-clave">{p.cedula}</span>
+                                <span className="import-preview-detalle">{p.nombres}</span>
                             </div>
                         ))}
-                        {parsedRows.length > 6 && <div style={{ color: '#444', marginTop: 6 }}>+{parsedRows.length - 6} más...</div>}
+                        {parsedRows.length > 6 && <div className="import-preview-mas">+{parsedRows.length - 6} más...</div>}
                     </div>
                 )}
 
@@ -6163,32 +5857,32 @@ const ModalImportPersonas = ({ onClose, onGuardado }) => {
                     <h3>{result.conflicts.length} conflicto{result.conflicts.length !== 1 ? 's' : ''}</h3>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
-                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{result.created} nuevos</span> importados. Las cédulas siguientes ya existen — elige qué conservar:
+                <p className="import-conflictos-intro">
+                    <strong>{result.created} nuevos</strong> importados. Las cédulas siguientes ya existen — elige qué conservar:
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '48vh', overflowY: 'auto' }}>
+                <div className="import-conflictos">
                     {result.conflicts.map(c => (
-                        <div key={c.existing.cedula} style={{ background: '#111', borderRadius: 12, padding: 14, fontSize: 12 }}>
-                            <div style={{ color: '#818cf8', fontWeight: 700, marginBottom: 10, letterSpacing: 0.5 }}>{c.existing.cedula}</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
-                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ACTUAL</div>
-                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.existing.nombres}</div>
-                                    <div style={{ color: '#888', marginTop: 2 }}>{c.existing.empresa || '—'}</div>
-                                    {c.existing.cargo && <div style={{ color: '#666', marginTop: 2 }}>{c.existing.cargo}</div>}
+                        <div key={c.existing.cedula} className="import-conflicto">
+                            <div className="import-conflicto-clave">{c.existing.cedula}</div>
+                            <div className="import-conflicto-comparar">
+                                <div className="import-version">
+                                    <div className="import-version-titulo">ACTUAL</div>
+                                    <div className="import-version-principal">{c.existing.nombres}</div>
+                                    <div className="import-version-detalle">{c.existing.empresa || '—'}</div>
+                                    {c.existing.cargo && <div className="import-version-extra">{c.existing.cargo}</div>}
                                 </div>
-                                <div style={{ background: '#1a1a1a', borderRadius: 8, padding: 10 }}>
-                                    <div style={{ color: '#555', fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NUEVO</div>
-                                    <div style={{ color: '#ddd', fontWeight: 600 }}>{c.incoming.nombres}</div>
-                                    <div style={{ color: '#888', marginTop: 2 }}>{c.incoming.empresa || '—'}</div>
-                                    {c.incoming.cargo && <div style={{ color: '#666', marginTop: 2 }}>{c.incoming.cargo}</div>}
+                                <div className="import-version">
+                                    <div className="import-version-titulo">NUEVO</div>
+                                    <div className="import-version-principal">{c.incoming.nombres}</div>
+                                    <div className="import-version-detalle">{c.incoming.empresa || '—'}</div>
+                                    {c.incoming.cargo && <div className="import-version-extra">{c.incoming.cargo}</div>}
                                 </div>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                {[['keep', 'Mantener actual', '#818cf8'], ['update', 'Usar nuevo', '#4ade80']].map(([val, label, color]) => (
+                            <div className="import-opciones">
+                                {[['keep', 'Mantener actual'], ['update', 'Usar nuevo']].map(([val, label]) => (
                                     <button key={val}
                                         onClick={() => setChoices(ch => ({ ...ch, [c.existing.cedula]: val }))}
-                                        style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${choices[c.existing.cedula] === val ? color : '#2e2e2e'}`, background: choices[c.existing.cedula] === val ? `${color}18` : '#1e1e1e', color: choices[c.existing.cedula] === val ? color : '#666', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s' }}>
+                                        className={`import-opcion import-opcion-${val}${choices[c.existing.cedula] === val ? ' elegida' : ''}`}>
                                         {label}
                                     </button>
                                 ))}
@@ -6207,17 +5901,17 @@ const ModalImportPersonas = ({ onClose, onGuardado }) => {
     // ── Pantalla éxito ──
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" style={{ alignItems: 'center', gap: 18 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card import-exito" onClick={e => e.stopPropagation()}>
                 <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="#4ade80" strokeWidth="2" />
                     <path d="M8 12l3 3 5-5" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 17 }}>Importación exitosa</div>
-                <div style={{ color: '#888', fontSize: 13, textAlign: 'center', lineHeight: 1.7 }}>
+                <div className="import-exito-titulo">Importación exitosa</div>
+                <div className="import-exito-texto">
                     {result.created} registro{result.created !== 1 ? 's' : ''} nuevos importados
                     {result.conflicts.length > 0 && ` · ${result.conflicts.length} conflicto${result.conflicts.length !== 1 ? 's' : ''} resuelto${result.conflicts.length !== 1 ? 's' : ''}`}
                 </div>
-                <button className="modal-btn active" style={{ marginBottom: 0 }} onClick={onClose}>Listo</button>
+                <button className="modal-btn active import-exito-btn" onClick={onClose}>Listo</button>
             </div>
         </div>
     );
@@ -6299,12 +5993,12 @@ const PantallaPersonas = () => {
     ].filter(Boolean).join('\n');
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
+        <div className="lista">
 
             {/* Barra búsqueda */}
-            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div className="ws-search-bar" style={{ padding: 0, flex: 1, margin: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+            <div className="lista-barra">
+                <div className="ws-search-bar lista-search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -6319,7 +6013,7 @@ const PantallaPersonas = () => {
                             stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
-                <span style={{ color: '#555', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span className="lista-total">
                     {filtrados.length} reg.
                 </span>
             </div>
@@ -6335,7 +6029,7 @@ const PantallaPersonas = () => {
                     : (
                         <div className="ftable-scroll">
                             {/* Encabezado fijo — mismo template que las filas para alineación perfecta */}
-                            <div className="ftable-head" style={{ display: 'grid', gridTemplateColumns: '100px 160px 140px 110px 100px 80px' }}>
+                            <div className="ftable-head ftable-cols-personas">
                                 {['CÉDULA', 'NOMBRE', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'].map(h => (
                                     <span key={h} className="ftable-head-cell">{h}</span>
                                 ))}
@@ -6353,8 +6047,8 @@ const PantallaPersonas = () => {
                                                 <button className="plist-act-btn danger" title="Eliminar" onClick={() => { handleDelete(p._id, p.cedula); setSwipedPersonaId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
-                                                className={`ftable-row${isSwiped ? ' ftable-swiped-5' : ''}`}
-                                                style={{ display: 'grid', gridTemplateColumns: '100px 160px 140px 110px 100px 80px' }}
+                                                className={`ftable-row ftable-cols-personas${isSwiped ? ' ftable-swiped-5' : ''}`}
+                                                
                                                 onTouchStart={ev => { personaSwipeRef.current = { startX: ev.touches[0].clientX, startY: ev.touches[0].clientY, moved: false, vertScroll: false }; }}
                                                 onTouchMove={ev => {
                                                     const dx = ev.touches[0].clientX - personaSwipeRef.current.startX;
@@ -6385,13 +6079,13 @@ const PantallaPersonas = () => {
                                                 <span className="ftable-cell ftable-cell-accent">{p.cedula || '—'}</span>
                                                 <span className="ftable-cell ftable-cell-bold">
                                                     {(p.nombres || '—').toUpperCase()}
-                                                    {p.autorizadoFirma && <span title="Autorizada para registrar firma" style={{ color: '#4ade80', marginLeft: 5 }}>●</span>}
+                                                    {p.autorizadoFirma && <span className="persona-autorizada" title="Autorizada para registrar firma">●</span>}
                                                     {p._pendiente && <PendienteBadge error={p._error} onDescartar={() => descartarOperacion(p._id)} />}
                                                 </span>
                                                 <span className="ftable-cell">{(p.empresa || '—').toUpperCase()}</span>
                                                 <span className="ftable-cell ftable-cell-dim">{p.cargo || '—'}</span>
                                                 <span className="ftable-cell ftable-cell-dim">{(p.departamento || '—').toUpperCase()}</span>
-                                                <span className="ftable-cell ftable-cell-dim" style={{ color: p.nominativo ? '#818cf8' : undefined }}>{p.nominativo || '—'}</span>
+                                                <span className={`ftable-cell ftable-cell-dim${p.nominativo ? ' ftable-cell-nominativo' : ''}`}>{p.nominativo || '—'}</span>
                                             </div>
                                         </div>
                                     );
@@ -6432,16 +6126,16 @@ const PantallaPersonas = () => {
             )}
             {qrPersona && (
                 <div className="modal-overlay" onClick={() => setQrPersona(null)}>
-                    <div className="modal-card" style={{ alignItems: 'center', gap: 20 }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header" style={{ width: '100%' }}>
+                    <div className="modal-card qr-modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header qr-modal-header">
                             <h3>{qrPersona.cedula}</h3>
                             <button className="modal-close" onClick={() => setQrPersona(null)}>✕</button>
                         </div>
                         <img
                             src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pQrData(qrPersona))}`}
-                            alt="QR" style={{ width: 200, height: 200, borderRadius: 8, background: '#fff', padding: 8 }}
+                            alt="QR" className="qr-modal-img"
                         />
-                        <p style={{ fontSize: 11, color: '#555', textAlign: 'center', lineHeight: 1.8 }}>
+                        <p className="qr-modal-datos">
                             {pQrData(qrPersona).split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
                         </p>
                     </div>
@@ -6453,7 +6147,7 @@ const PantallaPersonas = () => {
 
 // ── Pantalla stub ─────────────────────────────────────────
 const PantallaStub = ({ title }) => (
-    <div className="ws-section-content" style={{ padding: 16 }}>
+    <div className="ws-section-content ws-stub">
         <h3 className="ws-sub-title">{title}</h3>
         <p className="ws-empty">Próximamente</p>
     </div>
@@ -6544,7 +6238,7 @@ const DesbloqueoHuellaLocal = () => {
                     Activar desbloqueo con huella
                 </button>
             )}
-            <p className="perfil-install-note" style={{ marginTop: 2 }}>
+            <p className="perfil-install-note perfil-install-note-junto">
                 Esto solo desbloquea la app en este dispositivo — no reemplaza tu inicio de sesión.
             </p>
         </div>
@@ -6602,12 +6296,17 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             <h2 className="perfil-nombre">{user?.name}</h2>
             <p className="perfil-email">{user?.email}</p>
             {turnoActivo && bloque && (
-                <div className="perfil-turno-card" style={{ borderColor: bloque.color + '40', background: bloque.bg }}>
-                    {/* Colores de tema claro: ver .perfil-turno-* en el CSS */}
-                    <span className="perfil-turno-label" style={{ color: bloque.color, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TURNO ACTIVO</span>
-                    <p className="perfil-turno-puesto" style={{ color: '#fff', fontWeight: 700, marginTop: 4 }}>{turnoActivo.puesto}</p>
-                    <p className="perfil-turno-bloque" style={{ color: '#888', fontSize: 13 }}>{bloque.nombre} {bloque.codigo}</p>
-                    <p className="perfil-turno-horario" style={{ color: '#888', fontSize: 12, marginTop: 4 }}>
+                // Solo los colores del bloque van en línea, como variables CSS:
+                // cambian según el bloque del turno (ver .perfil-turno-* en el CSS)
+                <div className="perfil-turno-card" style={{
+                    '--bloque-color': bloque.color,
+                    '--bloque-borde': bloque.color + '40',
+                    '--bloque-fondo': bloque.bg,
+                }}>
+                    <span className="perfil-turno-label">TURNO ACTIVO</span>
+                    <p className="perfil-turno-puesto">{turnoActivo.puesto}</p>
+                    <p className="perfil-turno-bloque">{bloque.nombre} {bloque.codigo}</p>
+                    <p className="perfil-turno-horario">
                         {turnoActivo.turnoActual === 'diurno' ? '06:00 – 18:00' : '18:00 – 06:00'}
                     </p>
                 </div>
@@ -6666,23 +6365,16 @@ const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
 
 // ── Acceso restringido ────────────────────────────────────
 const AccesoRestringido = ({ label }) => (
-    <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', padding: '60px 24px', textAlign: 'center',
-    }}>
-        <div style={{
-            width: 56, height: 56, borderRadius: 16, marginBottom: 16,
-            background: 'rgba(239,159,39,0.10)', border: '1px solid rgba(239,159,39,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+    <div className="acceso-restringido">
+        <div className="acceso-restringido-icono">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
             </svg>
         </div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#f0f0f0', marginBottom: 8 }}>Acceso restringido</div>
-        <div style={{ fontSize: 13, color: '#888', lineHeight: 1.55, maxWidth: 280 }}>
-            No tienes permiso para acceder a <strong style={{ color: '#ccc' }}>{label}</strong>.
+        <div className="acceso-restringido-titulo">Acceso restringido</div>
+        <div className="acceso-restringido-texto">
+            No tienes permiso para acceder a <strong>{label}</strong>.
             Contacta al administrador para solicitar acceso.
         </div>
     </div>
@@ -6700,31 +6392,27 @@ const PANEL_LABELS = {
 };
 
 // ── Panel estado activación (para usuarios pendientes o con permisos parciales) ──
-const PanelActivacion = ({ user, permisosPanel, isPending }) => {
+const PanelActivacion = ({ permisosPanel, isPending }) => {
     const paneles = Object.entries(PANEL_LABELS);
+    const pasos = [
+        { label: 'Registro', done: true },
+        { label: 'Aprobación', done: !isPending },
+        { label: 'Acceso completo', done: !isPending && paneles.every(([id]) => permisosPanel.includes(id)) },
+    ];
     return (
-        <div style={{
-            margin: '12px 12px 4px', borderRadius: 14,
-            background: 'rgba(239,159,39,0.07)',
-            border: '1px solid rgba(239,159,39,0.25)',
-            padding: '14px 16px',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{
-                    width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                    background: 'rgba(239,159,39,0.15)', border: '1px solid rgba(239,159,39,0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
+        <div className="cuenta-panel">
+            <div className="cuenta-panel-header">
+                <div className="cuenta-panel-icono">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <circle cx="12" cy="12" r="10" stroke="#ef9f27" strokeWidth="2" />
                         <path d="M12 8v4M12 16h.01" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                 </div>
                 <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#f0f0f0' }}>
+                    <div className="cuenta-panel-titulo">
                         {isPending ? 'Cuenta pendiente de activación' : 'Acceso parcial'}
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#888' }}>
+                    <div className="cuenta-panel-texto">
                         {isPending
                             ? 'El administrador debe aprobar tu cuenta para habilitar los módulos.'
                             : 'Algunos módulos aún no están habilitados para tu cuenta.'}
@@ -6732,58 +6420,37 @@ const PanelActivacion = ({ user, permisosPanel, isPending }) => {
                 </div>
             </div>
 
-            {/* Pasos */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
-                {[
-                    { label: 'Registro', done: true },
-                    { label: 'Aprobación', done: !isPending },
-                    { label: 'Acceso completo', done: !isPending && paneles.every(([id]) => permisosPanel.includes(id)) },
-                ].map((step, i, arr) => (
-                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? 1 : undefined }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                            <div style={{
-                                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                                background: step.done ? 'rgba(40,201,151,0.2)' : 'rgba(239,159,39,0.15)',
-                                border: `1.5px solid ${step.done ? '#28c997' : 'rgba(239,159,39,0.5)'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
+            {/* Pasos: Registro → Aprobación → Acceso completo */}
+            <div className="cuenta-panel-pasos">
+                {pasos.map((step, i) => (
+                    <div key={step.label} className={`cuenta-panel-paso${step.done ? ' hecho' : ''}`}>
+                        <div className="cuenta-panel-paso-marca">
+                            <div className="cuenta-panel-paso-circulo">
                                 {step.done
                                     ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                    : <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef9f27', opacity: 0.7 }} />
+                                    : <div className="cuenta-panel-paso-punto" />
                                 }
                             </div>
-                            <span style={{ fontSize: 9.5, color: step.done ? '#28c997' : '#888', fontWeight: 600, whiteSpace: 'nowrap' }}>{step.label}</span>
+                            <span className="cuenta-panel-paso-label">{step.label}</span>
                         </div>
-                        {i < arr.length - 1 && (
-                            <div style={{ flex: 1, height: 1.5, background: step.done ? 'rgba(40,201,151,0.3)' : 'rgba(255,255,255,0.08)', margin: '0 6px', marginBottom: 14 }} />
-                        )}
+                        {i < pasos.length - 1 && <div className="cuenta-panel-paso-linea" />}
                     </div>
                 ))}
             </div>
 
-            {/* Módulos */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {/* Módulos habilitados y pendientes */}
+            <div className="cuenta-panel-modulos">
                 {paneles.map(([id, label]) => {
                     const granted = !isPending && permisosPanel.includes(id);
                     return (
-                        <div key={id} style={{
-                            display: 'flex', alignItems: 'center', gap: 7,
-                            background: granted ? 'rgba(40,201,151,0.07)' : 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${granted ? 'rgba(40,201,151,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                            borderRadius: 8, padding: '6px 8px',
-                        }}>
-                            <div style={{
-                                width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                                background: granted ? 'rgba(40,201,151,0.2)' : 'rgba(239,159,39,0.15)',
-                                border: `1px solid ${granted ? '#28c99766' : 'rgba(239,159,39,0.4)'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
+                        <div key={id} className={`cuenta-panel-modulo${granted ? ' habilitado' : ''}`}>
+                            <div className="cuenta-panel-modulo-icono">
                                 {granted
                                     ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                     : <svg width="7" height="7" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2.5" /><path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2.5" strokeLinecap="round" /></svg>
                                 }
                             </div>
-                            <span style={{ fontSize: 10.5, color: granted ? '#d4d4d4' : '#666', fontWeight: 600 }}>{label}</span>
+                            <span className="cuenta-panel-modulo-label">{label}</span>
                         </div>
                     );
                 })}
@@ -7527,7 +7194,7 @@ const WorkspacePage = () => {
                 <span className="ws-topbar-title">
                     {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
                 </span>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="ws-topbar-acciones">
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && tabActiva !== 'utilidades' && (
                         <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -7572,7 +7239,7 @@ const WorkspacePage = () => {
             {/* Barra de búsqueda (Movimientos) */}
             {showSearch && !isDrawerTab && (
                 <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -7588,7 +7255,7 @@ const WorkspacePage = () => {
             {/* Barra de búsqueda (Plataformas y Nominativos) */}
             {platSearchShow && tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && (
                 <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -7604,7 +7271,7 @@ const WorkspacePage = () => {
             {/* Barra de búsqueda (Flujos → General) */}
             {flujosBusquedaActiva && (
                 <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#555', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -7622,7 +7289,7 @@ const WorkspacePage = () => {
                 {tabActiva === 'inicio' && (
                     <>
                     {(isPending || (!isAdmin && permisosPanel.length < Object.keys(PANEL_LABELS).length)) && (
-                        <PanelActivacion user={user} permisosPanel={permisosPanel} isPending={isPending} />
+                        <PanelActivacion permisosPanel={permisosPanel} isPending={isPending} />
                     )}
                     <div className="ws-vista-tabs">
                         <button className={`ws-vista-tab${vistaInicio === 'movimientos' ? ' active' : ''}`}
@@ -7654,7 +7321,7 @@ const WorkspacePage = () => {
                             <div className="bit-toolbar">
                                 <span className="bit-toolbar-count">
                                     {searchQuery
-                                        ? <>{bitacoraFiltrada.length} <span style={{ color: '#818cf8' }}>de {bitacora.length}</span></>
+                                        ? <>{bitacoraFiltrada.length} <span className="ws-conteo-total">de {bitacora.length}</span></>
                                         : <>{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</>
                                     }
                                 </span>
@@ -7740,7 +7407,7 @@ const WorkspacePage = () => {
                                                     <div className="bit-card-r1-right">
                                                         {b.tipoVehiculo && <span className="bit-card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
                                                         <button className="bit-chevron-btn" onClick={e => { e.stopPropagation(); toggleBitCollapse(i); }}>
-                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s ease' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={`chevron-giro${isCollapsed ? '' : ' abierto'}`}>
                                                                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                                             </svg>
                                                         </button>
@@ -7750,7 +7417,7 @@ const WorkspacePage = () => {
                                                 {!isCollapsed && (
                                                     <div className="bit-card-r2">
                                                         <span className={`bit-card-conductor${b.conductorChanged ? ' changed' : ''}`}>
-                                                            {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                                            {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="icono-fijo"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                             {b.conductor || '—'}
                                                         </span>
                                                         {(b.destino || b.empresa) && (
@@ -7771,7 +7438,7 @@ const WorkspacePage = () => {
                             <div className="reg-toolbar">
                                 <span className="reg-count">
                                     {searchQuery
-                                        ? <>{sortedRegs.length} <span style={{ color: '#818cf8' }}>de {movimientos.length}</span></>
+                                        ? <>{sortedRegs.length} <span className="ws-conteo-total">de {movimientos.length}</span></>
                                         : <>{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</>
                                     }
                                 </span>
@@ -7903,8 +7570,8 @@ const WorkspacePage = () => {
                                     </div>
                                     <div className="ws-chart-card">
                                         <button className="ws-chart-toggle" onClick={() => setChartCollapsed(p => !p)}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: '#818cf8', flexShrink: 0 }}>
+                                            <div className="ws-chart-toggle-info">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-chart-toggle-icono">
                                                     <path d="M3 3h18v4H3zM3 10h12v4H3zM3 17h7v4H3z" fill="currentColor" opacity="0.8" />
                                                     <path d="M21 14l-4 4-4-4" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                     <path d="M17 18V10" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
@@ -7914,13 +7581,13 @@ const WorkspacePage = () => {
                                             </div>
                                             <svg
                                                 width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                style={{ transition: 'transform 0.25s', transform: chartCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: '#666', flexShrink: 0 }}
+                                                className={`ws-chart-toggle-flecha${chartCollapsed ? '' : ' abierta'}`}
                                             >
                                                 <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                         </button>
                                         {!chartCollapsed && (
-                                            <Suspense fallback={<div style={{ height: 220 }} />}>
+                                            <Suspense fallback={<div className="ws-chart-cargando" />}>
                                                 <StatsChart
                                                     data={stats?.grafico}
                                                     turno={turnoActivo?.turnoActual || 'diurno'}
@@ -7940,7 +7607,7 @@ const WorkspacePage = () => {
                                 <span>
                                     MOVIMIENTOS
                                     {(searchQuery || dashFiltro) && (
-                                        <span style={{ color: '#818cf8', marginLeft: 6, fontWeight: 700 }}>
+                                        <span className="ws-section-conteo">
                                             · {movsLista.length} resultado{movsLista.length !== 1 ? 's' : ''}
                                         </span>
                                     )}
@@ -7951,7 +7618,7 @@ const WorkspacePage = () => {
                                         </span>
                                     )}
                                 </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div className="ws-section-acciones">
                                     {!movCollapsed && movimientos.length > 0 && (
                                         <>
                                             <span
@@ -7976,12 +7643,12 @@ const WorkspacePage = () => {
                                             <label className="select-bar-label" onClick={selectAll}>
                                                 <input type="checkbox"
                                                     checked={selectedIds.size === movimientos.length && movimientos.length > 0}
-                                                    onChange={selectAll} style={{ accentColor: '#818cf8' }}
+                                                    onChange={selectAll} className="select-bar-check"
                                                     onClick={e => e.stopPropagation()} />
                                                 {selectedIds.size === movimientos.length ? 'Ninguno' : 'Todos'} ({selectedIds.size}/{movimientos.length})
                                             </label>
                                             {selectedIds.size > 0 && (
-                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                <div className="select-bar-acciones">
                                                     <button className="share-selected-btn"
                                                         onClick={() => handleShareMovs(movimientos.filter(m => selectedIds.has(m._id)))}>
                                                         Compartir {selectedIds.size}
@@ -8180,12 +7847,8 @@ const WorkspacePage = () => {
 
             {/* Banner cuenta pendiente */}
             {isPending && (
-                <div onClick={() => navigate('/cuenta-pendiente')} style={{
-                    background: 'rgba(239,159,39,0.12)', borderTop: '1px solid rgba(239,159,39,0.3)',
-                    padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
-                    fontSize: 12, color: '#ef9f27', cursor: 'pointer',
-                }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <div className="ws-banner-pendiente" onClick={() => navigate('/cuenta-pendiente')}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="icono-fijo">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
                         <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -8242,15 +7905,15 @@ const WorkspacePage = () => {
 
             {showExitConfirm && (
                 <div className="modal-overlay" onClick={() => setShowExitConfirm(false)}>
-                    <div className="modal-card" style={{ maxWidth: 320, gap: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto' }}>
+                    <div className="modal-card confirmar" onClick={e => e.stopPropagation()}>
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar-icono">
                             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        <p style={{ color: '#ddd', fontSize: 15, fontWeight: 600, lineHeight: 1.5, margin: 0 }}>¿Quieres salir de FLUJO?</p>
-                        <p style={{ color: '#888', fontSize: 12.5, lineHeight: 1.5, margin: '-12px 0 0' }}>Tu sesión y tu turno activo se mantienen guardados.</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
-                            <button onClick={() => setShowExitConfirm(false)} style={{ padding: '11px 0', borderRadius: 10, border: '1px solid #2e2e2e', background: '#1e1e1e', color: '#aaa', fontSize: 14, cursor: 'pointer' }}>Seguir aquí</button>
-                            <button onClick={confirmarSalida} style={{ padding: '11px 0', borderRadius: 10, border: 'none', background: '#6c63ff', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Salir</button>
+                        <p className="confirmar-mensaje">¿Quieres salir de FLUJO?</p>
+                        <p className="confirmar-detalle">Tu sesión y tu turno activo se mantienen guardados.</p>
+                        <div className="confirmar-botones">
+                            <button className="confirmar-cancelar" onClick={() => setShowExitConfirm(false)}>Seguir aquí</button>
+                            <button className="confirmar-eliminar confirmar-salir" onClick={confirmarSalida}>Salir</button>
                         </div>
                     </div>
                 </div>

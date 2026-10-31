@@ -73,7 +73,12 @@
     --borde-6: #c3cede;
     --borde-7: #b0bbd4;
 
-    /* Grupo 3 (acentos): pendiente, por ahora usa los valores del modo noche */
+    /* Grupo 3: acentos, más oscuros para que se lean sobre fondo claro */
+    --acento: #4f46e5;
+    --acento-suave: #4f46e5;
+    --peligro: #dc2626;
+    --exito: #059669;
+    --aviso: #d97706;
 
     --topbar-icon: #374151;
 }
