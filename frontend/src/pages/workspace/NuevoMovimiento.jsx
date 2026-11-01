@@ -553,7 +553,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                 </div>
                 <div className="modal__tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
-                        <button key={val} className={`modal__tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
+                        <button key={val} className={`modal__tipo-btn${form.tipo === val ? ' modal__tipo-btn--active-' + val : ''}`}
                             onClick={() => {
                                 const f = formRef.current;
                                 const next = {
