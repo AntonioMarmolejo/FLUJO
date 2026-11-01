@@ -137,11 +137,6 @@
     background: #2a2a2a;
 }
 
-.turno__option--selected.turno__option--diurno {
-    border-color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
-}
-
 /* Con :hover para que la opción elegida no pierda su color al pasar el mouse */
 .turno__option--selected,
 .turno__option--selected:hover {
