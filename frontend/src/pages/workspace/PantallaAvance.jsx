@@ -25,7 +25,7 @@ export const PantallaAvance = ({ turnoActivo, user }) => {
     }, [horaInicio]);
 
     if (!turnoActivo || !bloque) {
-        return <p className="ws-empty ws-empty-amplio">Sin turno activo</p>;
+        return <p className="ws__empty ws__empty--amplio">Sin turno activo</p>;
     }
 
     const progreso = Math.min(100, (transcurrido / duracion) * 100);
@@ -43,10 +43,10 @@ export const PantallaAvance = ({ turnoActivo, user }) => {
     return (
         <div className="avance">
             {/* Card turno activo: los colores cambian con .diurno / .nocturno */}
-            <div className={`avance-turno ${esDiurno ? 'diurno' : 'nocturno'}`}>
-                <div className="avance-turno-top">
-                    <div className="avance-turno-reloj">
-                        <div className="avance-turno-icono">
+            <div className={`avance__turno ${esDiurno ? 'avance__turno--diurno' : 'avance__turno--nocturno'}`}>
+                <div className="avance__turno-top">
+                    <div className="avance__turno-reloj">
+                        <div className="avance__turno-icono">
                             {esDiurno ? (
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                                     <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
@@ -59,47 +59,47 @@ export const PantallaAvance = ({ turnoActivo, user }) => {
                             )}
                         </div>
                         <div>
-                            <span className="avance-turno-badge">
+                            <span className="avance__turno-badge">
                                 Turno {esDiurno ? 'diurno' : 'nocturno'} activo
                             </span>
-                            <div className="avance-turno-tiempo">{hh}:{mm}:{ss}</div>
+                            <div className="avance__turno-tiempo">{hh}:{mm}:{ss}</div>
                         </div>
                     </div>
-                    <div className="avance-turno-fecha">
+                    <div className="avance__turno-fecha">
                         <div>{fecha}</div>
-                        <div className="avance-turno-horario">{esDiurno ? '06:00 – 18:00' : '18:00 – 06:00'}</div>
+                        <div className="avance__turno-horario">{esDiurno ? '06:00 – 18:00' : '18:00 – 06:00'}</div>
                     </div>
                 </div>
-                <div className="avance-progreso">
+                <div className="avance__progreso">
                     {/* El ancho avanza cada segundo: único estilo en línea */}
-                    <div className="avance-progreso-barra" style={{ width: `${progreso}%` }} />
+                    <div className="avance__progreso-barra" style={{ width: `${progreso}%` }} />
                 </div>
-                <div className="avance-progreso-escala">
+                <div className="avance__progreso-escala">
                     <span>{esDiurno ? '06:00' : '18:00'}</span>
-                    <span className="avance-restante">{hrRest}h {minRest}min restantes</span>
+                    <span className="avance__restante">{hrRest}h {minRest}min restantes</span>
                     <span>{esDiurno ? '18:00' : '06:00'}</span>
                 </div>
             </div>
 
             {/* Card guardia */}
-            <div className="avance-guardia">
-                <p className="avance-guardia-titulo">DATOS DEL GUARDIA</p>
-                <div className="avance-guardia-persona">
-                    <div className="avance-guardia-avatar">{iniciales}</div>
+            <div className="avance__guardia">
+                <p className="avance__guardia-titulo">DATOS DEL GUARDIA</p>
+                <div className="avance__guardia-persona">
+                    <div className="avance__guardia-avatar">{iniciales}</div>
                     <div>
-                        <p className="avance-guardia-nombre">{user?.name}</p>
-                        <p className="avance-guardia-email">{user?.email}</p>
+                        <p className="avance__guardia-nombre">{user?.name}</p>
+                        <p className="avance__guardia-email">{user?.email}</p>
                     </div>
                 </div>
-                <div className="avance-guardia-datos">
+                <div className="avance__guardia-datos">
                     {[
                         ['Puesto', turnoActivo.puesto],
                         ['Bloque', `${bloque.nombre} ${bloque.codigo}`],
                         ['Turno', esDiurno ? 'Diurno  06:00 – 18:00' : 'Nocturno  18:00 – 06:00'],
                     ].map(([label, val]) => (
-                        <div key={label} className="avance-guardia-dato">
-                            <span className="avance-guardia-label">{label}</span>
-                            <span className="avance-guardia-valor">{val}</span>
+                        <div key={label} className="avance__guardia-dato">
+                            <span className="avance__guardia-label">{label}</span>
+                            <span className="avance__guardia-valor">{val}</span>
                         </div>
                     ))}
                 </div>

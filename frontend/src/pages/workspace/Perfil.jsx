@@ -76,29 +76,29 @@ const DesbloqueoHuellaLocal = () => {
     if (!ready || !visible) return null;
 
     return (
-        <div className="perfil-bio-section">
-            <p className="perfil-bio-label">DESBLOQUEO RÁPIDO</p>
+        <div className="perfil__bio-section">
+            <p className="perfil__bio-label">DESBLOQUEO RÁPIDO</p>
             {enabled ? (
                 <>
-                    <p className="perfil-bio-success">✓ Huella activada para desbloquear la app en este dispositivo</p>
+                    <p className="perfil__bio-success">✓ Huella activada para desbloquear la app en este dispositivo</p>
                     <button className="pin__footer-link" onClick={handleDesactivar}>Desactivar</button>
                 </>
             ) : confirming ? (
                 <>
-                    <p className="perfil-install-note">Confirma tu PIN para activar la huella</p>
+                    <p className="perfil__install-note">Confirma tu PIN para activar la huella</p>
                     <PinPad length={6} value={pin} onDigit={handleDigit} onBackspace={handleBackspace}
                         error={!!error} shake={shake} disabled={busy} />
                     <p className="pin__error-msg">{error}</p>
                 </>
             ) : (
-                <button className="perfil-bio-btn" onClick={() => setConfirming(true)}>
+                <button className="perfil__bio-btn" onClick={() => setConfirming(true)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 1C8.5 1 5.5 2.5 3.5 5M12 1c3.5 0 6.5 1.5 8.5 4M3 9c-.3 1-.5 2-.5 3M21 9c.3 1 .5 2 .5 3M12 7c-2.8 0-5 2.2-5 5 0 1.5.3 2.9.8 4.1M12 7c2.8 0 5 2.2 5 5 0 1.5-.3 2.9-.8 4.1M12 11c-1.1 0-2 .9-2 2 0 1.5.4 2.9 1 4.1M12 11c1.1 0 2 .9 2 2 0 1.5-.4 2.9-1 4.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
                     Activar desbloqueo con huella
                 </button>
             )}
-            <p className="perfil-install-note perfil-install-note-junto">
+            <p className="perfil__install-note perfil__install-note--junto">
                 Esto solo desbloquea la app en este dispositivo — no reemplaza tu inicio de sesión.
             </p>
         </div>
@@ -151,36 +151,36 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
     };
 
     return (
-        <div className="perfil-wrapper">
-            <div className="perfil-avatar">{iniciales}</div>
-            <h2 className="perfil-nombre">{user?.name}</h2>
-            <p className="perfil-email">{user?.email}</p>
+        <div className="perfil__wrapper">
+            <div className="perfil__avatar">{iniciales}</div>
+            <h2 className="perfil__nombre">{user?.name}</h2>
+            <p className="perfil__email">{user?.email}</p>
             {turnoActivo && bloque && (
                 // Solo los colores del bloque van en línea, como variables CSS:
                 // cambian según el bloque del turno (ver .perfil-turno-* en el CSS)
-                <div className="perfil-turno-card" style={{
+                <div className="perfil__turno-card" style={{
                     '--bloque-color': bloque.color,
                     '--bloque-borde': bloque.color + '40',
                     '--bloque-fondo': bloque.bg,
                 }}>
-                    <span className="perfil-turno-label">TURNO ACTIVO</span>
-                    <p className="perfil-turno-puesto">{turnoActivo.puesto}</p>
-                    <p className="perfil-turno-bloque">{bloque.nombre} {bloque.codigo}</p>
-                    <p className="perfil-turno-horario">
+                    <span className="perfil__turno-label">TURNO ACTIVO</span>
+                    <p className="perfil__turno-puesto">{turnoActivo.puesto}</p>
+                    <p className="perfil__turno-bloque">{bloque.nombre} {bloque.codigo}</p>
+                    <p className="perfil__turno-horario">
                         {turnoActivo.turnoActual === 'diurno' ? '06:00 – 18:00' : '18:00 – 06:00'}
                     </p>
                 </div>
             )}
 
             {bioSupported && (
-                <div className="perfil-bio-section">
-                    <p className="perfil-bio-label">ACCESO BIOMÉTRICO</p>
+                <div className="perfil__bio-section">
+                    <p className="perfil__bio-label">ACCESO BIOMÉTRICO</p>
                     {bioStatus === 'ok' ? (
-                        <p className="perfil-bio-success">{bioMsg}</p>
+                        <p className="perfil__bio-success">{bioMsg}</p>
                     ) : (
                         <>
                             <button
-                                className="perfil-bio-btn"
+                                className="perfil__bio-btn"
                                 onClick={handleActivarHuella}
                                 disabled={bioStatus === 'loading'}
                             >
@@ -189,7 +189,7 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                                 </svg>
                                 {bioStatus === 'loading' ? 'Registrando…' : 'Activar huella / Face ID'}
                             </button>
-                            {bioStatus === 'error' && <p className="perfil-bio-error">{bioMsg}</p>}
+                            {bioStatus === 'error' && <p className="perfil__bio-error">{bioMsg}</p>}
                         </>
                     )}
                 </div>
@@ -198,27 +198,27 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             <DesbloqueoHuellaLocal />
 
             {!appInstalada && (puedeInstalar || esIOS) && (
-                <div className="perfil-bio-section">
-                    <p className="perfil-bio-label">APLICACIÓN</p>
+                <div className="perfil__bio-section">
+                    <p className="perfil__bio-label">APLICACIÓN</p>
                     {puedeInstalar ? (
-                        <button className="perfil-bio-btn" onClick={handleInstalar} disabled={instalando}>
+                        <button className="perfil__bio-btn" onClick={handleInstalar} disabled={instalando}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 3v12M7 10l5 5 5-5M5 21h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             {instalando ? 'Instalando…' : 'Instalar aplicación'}
                         </button>
                     ) : (
-                        <p className="perfil-install-note">
+                        <p className="perfil__install-note">
                             Para instalarla: toca <strong>Compartir</strong> en Safari y luego <strong>"Agregar a pantalla de inicio"</strong>
                         </p>
                     )}
                 </div>
             )}
             {appInstalada && (
-                <p className="perfil-bio-success">✓ Aplicación instalada en este dispositivo</p>
+                <p className="perfil__bio-success">✓ Aplicación instalada en este dispositivo</p>
             )}
 
-            <button className="perfil-logout" onClick={onLogout}>Cerrar sesión</button>
+            <button className="perfil__logout" onClick={onLogout}>Cerrar sesión</button>
         </div>
     );
 };

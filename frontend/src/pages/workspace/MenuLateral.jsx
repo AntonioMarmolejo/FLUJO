@@ -42,27 +42,27 @@ export const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, onComentarios, a
         return !isPending && hasPermiso(perm);
     };
     return (
-    <div className="drawer-overlay" onClick={onClose}>
-        <div className="drawer-panel" onClick={e => e.stopPropagation()}>
-            <div className="drawer-header">
-                <span className="drawer-brand">FLUJO</span>
-                <button className="drawer-close-btn" onClick={onClose}>✕</button>
+    <div className="drawer__overlay" onClick={onClose}>
+        <div className="drawer__panel" onClick={e => e.stopPropagation()}>
+            <div className="drawer__header">
+                <span className="drawer__brand">FLUJO</span>
+                <button className="drawer__close-btn" onClick={onClose}>✕</button>
             </div>
-            <div className="drawer-nav">
+            <div className="drawer__nav">
                 {DRAWER_ITEMS.map(item => {
                     const ok = canAccess(item.tab);
                     return (
                     <button key={item.tab}
-                        className={`drawer-item ${item.tab === activeTab ? 'drawer-item-active' : ''}`}
+                        className={`drawer__item ${item.tab === activeTab ? 'drawer__item--active' : ''}`}
                         data-bloqueado={!ok || undefined}
                         onClick={() => {
                             if (!ok) return;
                             onNavigate(item.tab); onClose();
                         }}>
-                        <span className="drawer-item-icon">{item.icon}</span>
-                        <span className="drawer-item-label">{item.label}</span>
+                        <span className="drawer__item-icon">{item.icon}</span>
+                        <span className="drawer__item-label">{item.label}</span>
                         {ok ? <IconChevronRight /> : (
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="drawer-item-candado">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="drawer__item-candado">
                                 <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
                                 <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
@@ -70,22 +70,22 @@ export const DrawerMenu = ({ onClose, onNavigate, onNuevoFlujo, onComentarios, a
                     </button>
                     );
                 })}
-                <div className="drawer-divider" />
-                <button className="drawer-item drawer-item-flujo" onClick={() => { onNuevoFlujo(); onClose(); }}>
-                    <span className="drawer-item-icon"><IconBolt /></span>
-                    <span className="drawer-item-label">Crear nuevo flujo</span>
+                <div className="drawer__divider" />
+                <button className="drawer__item drawer__item--flujo" onClick={() => { onNuevoFlujo(); onClose(); }}>
+                    <span className="drawer__item-icon"><IconBolt /></span>
+                    <span className="drawer__item-label">Crear nuevo flujo</span>
                 </button>
-                <button className="drawer-item" onClick={() => { onComentarios(); onClose(); }}>
-                    <span className="drawer-item-icon"><IconChat /></span>
-                    <span className="drawer-item-label">Enviar comentarios</span>
+                <button className="drawer__item" onClick={() => { onComentarios(); onClose(); }}>
+                    <span className="drawer__item-icon"><IconChat /></span>
+                    <span className="drawer__item-label">Enviar comentarios</span>
                     <IconChevronRight />
                 </button>
                 {isAdmin && (
                     <>
-                        <div className="drawer-divider" />
-                        <button className="drawer-item" onClick={() => { onNavigate('admin'); onClose(); }}>
-                            <span className="drawer-item-icon"><IconShield /></span>
-                            <span className="drawer-item-label">Administración</span>
+                        <div className="drawer__divider" />
+                        <button className="drawer__item" onClick={() => { onNavigate('admin'); onClose(); }}>
+                            <span className="drawer__item-icon"><IconShield /></span>
+                            <span className="drawer__item-label">Administración</span>
                             <IconChevronRight />
                         </button>
                     </>
@@ -134,32 +134,32 @@ export const ModalComentario = ({ onClose }) => {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__card" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
                     <h3>Enviar comentarios</h3>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
 
                 {enviado ? (
-                    <div className="coment-gracias">
-                        <div className="coment-gracias-icon">✓</div>
+                    <div className="coment__gracias">
+                        <div className="coment__gracias-icon">✓</div>
                         <strong>¡Gracias por tu comentario!</strong>
                         <p>{enviado === 'offline'
                             ? 'Quedó guardado en tu dispositivo y se enviará cuando vuelva la conexión.'
                             : 'Lo revisaremos para seguir mejorando FLUJO.'}</p>
-                        <button className="modal-btn active" onClick={onClose}>Cerrar</button>
+                        <button className="modal__btn modal__btn--active" onClick={onClose}>Cerrar</button>
                     </div>
                 ) : (
                     <>
-                        <p className="coment-intro">Cuéntanos qué te parece la aplicación, qué mejorarías o si encontraste algún problema.</p>
+                        <p className="coment__intro">Cuéntanos qué te parece la aplicación, qué mejorarías o si encontraste algún problema.</p>
 
-                        <div className="modal-field">
+                        <div className="modal__field">
                             <label>TIPO</label>
-                            <div className="coment-tipos">
+                            <div className="coment__tipos">
                                 {TIPOS_COMENTARIO.map(t => (
                                     <button key={t.id} type="button"
-                                        className={`coment-tipo${tipo === t.id ? ' active' : ''}`}
+                                        className={`coment__tipo${tipo === t.id ? ' coment__tipo--active' : ''}`}
                                         onClick={() => setTipo(t.id)}>
                                         {t.label}
                                     </button>
@@ -167,12 +167,12 @@ export const ModalComentario = ({ onClose }) => {
                             </div>
                         </div>
 
-                        <div className="modal-field">
+                        <div className="modal__field">
                             <label>¿CÓMO CALIFICAS LA APLICACIÓN? (OPCIONAL)</label>
-                            <div className="coment-estrellas">
+                            <div className="coment__estrellas">
                                 {[1, 2, 3, 4, 5].map(n => (
                                     <button key={n} type="button" title={`${n} de 5`}
-                                        className={`coment-estrella${n <= calificacion ? ' active' : ''}`}
+                                        className={`coment__estrella${n <= calificacion ? ' coment__estrella--active' : ''}`}
                                         onClick={() => setCalificacion(c => (c === n ? 0 : n))}>
                                         ★
                                     </button>
@@ -180,19 +180,19 @@ export const ModalComentario = ({ onClose }) => {
                             </div>
                         </div>
 
-                        <div className="modal-field">
+                        <div className="modal__field">
                             <label>COMENTARIO</label>
-                            <textarea className="modal-textarea" rows={5} maxLength={2000}
+                            <textarea className="modal__textarea" rows={5} maxLength={2000}
                                 placeholder={tipo === 'error'
                                     ? 'Describe qué pasó y en qué pantalla estabas...'
                                     : 'Escribe aquí tu opinión...'}
                                 value={mensaje}
                                 onChange={e => { setMensaje(e.target.value); setError(''); }} />
-                            <span className="coment-contador">{mensaje.length} / 2000</span>
+                            <span className="coment__contador">{mensaje.length} / 2000</span>
                         </div>
 
-                        {error && <p className="modal-error">{error}</p>}
-                        <button className={`modal-btn ${mensaje.trim() ? 'active' : ''}`} onClick={handleEnviar} disabled={enviando}>
+                        {error && <p className="modal__error">{error}</p>}
+                        <button className={`modal__btn${mensaje.trim() ? ' modal__btn--active' : ''}`} onClick={handleEnviar} disabled={enviando}>
                             {enviando ? 'Enviando...' : 'Enviar comentario'}
                         </button>
                     </>

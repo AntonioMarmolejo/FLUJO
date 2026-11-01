@@ -300,7 +300,7 @@ const WorkspacePage = () => {
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
     return (
-        <div className="ws-wrapper">
+        <div className="ws__wrapper">
 
             {showDrawer && (
                 <DrawerMenu
@@ -340,9 +340,9 @@ const WorkspacePage = () => {
             {/* Top bar + barra de búsqueda: envueltos juntos para que, con la
                 búsqueda activa, la fila de íconos se pueda ocultar al bajar
                 sin que la barra de búsqueda deje de estar fija arriba. */}
-            <div className={`ws-topbar-wrap${searchBarActive && !isDrawerTab ? ' ws-topbar-wrap-searching' : ''}`}>
-            <div className={`ws-topbar${topbarIconsHidden && searchBarActive && !isDrawerTab ? ' ws-topbar-collapsed' : ''}`}>
-                <button className="ws-topbar-btn"
+            <div className={`ws__topbar-wrap${searchBarActive && !isDrawerTab ? ' ws__topbar-wrap--searching' : ''}`}>
+            <div className={`ws__topbar${topbarIconsHidden && searchBarActive && !isDrawerTab ? ' ws__topbar--collapsed' : ''}`}>
+                <button className="ws__topbar-btn"
                     onClick={isDrawerTab ? () => { handleTabChange('inicio'); setShowDrawer(true); } : () => setShowDrawer(true)}>
                     {isDrawerTab ? <IconArrowLeft /> : (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -350,12 +350,12 @@ const WorkspacePage = () => {
                         </svg>
                     )}
                 </button>
-                <span className="ws-topbar-title">
+                <span className="ws__topbar-title">
                     {isDrawerTab ? DRAWER_TITLES[tabActiva] : 'FLUJO'}
                 </span>
-                <div className="ws-topbar-acciones">
+                <div className="ws__topbar-acciones">
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'perfil' && tabActiva !== 'utilidades' && (
-                        <button className="ws-topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
+                        <button className="ws__topbar-btn" onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                 <circle cx="11" cy="11" r="8" stroke={showSearch ? '#818cf8' : 'var(--topbar-icon)' } strokeWidth="2" />
                                 <path d="M21 21l-4.35-4.35" stroke={showSearch ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" strokeLinecap="round" />
@@ -364,7 +364,7 @@ const WorkspacePage = () => {
                     )}
                     {tabActiva === 'utilidades' && utilidadActiva === 'plataformas' ? (
                         /* En Plataformas y Nominativos este espacio es solo la lupa de su propia búsqueda */
-                        <button className="ws-topbar-btn" onClick={() => { setPlatSearchShow(s => !s); setPlatSearchQuery(''); }}>
+                        <button className="ws__topbar-btn" onClick={() => { setPlatSearchShow(s => !s); setPlatSearchQuery(''); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                 <circle cx="11" cy="11" r="8" stroke={platSearchShow ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" />
                                 <path d="M21 21l-4.35-4.35" stroke={platSearchShow ? '#818cf8' : 'var(--topbar-icon)'} strokeWidth="2" strokeLinecap="round" />
@@ -372,7 +372,7 @@ const WorkspacePage = () => {
                         </button>
                     ) : (
                         /* Toggle tema día / noche */
-                        <button className="ws-topbar-btn ws-theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}>
+                        <button className="ws__topbar-btn ws__theme-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}>
                             {theme === 'dark' ? (
                                 /* Sol — modo día */
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--topbar-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -388,7 +388,7 @@ const WorkspacePage = () => {
                         </button>
                     )}
                     {!isDrawerTab && tabActiva !== 'flujos' && tabActiva !== 'utilidades' && (
-                        <button className="ws-topbar-btn" onClick={() => handleTabChange(tabActiva === 'perfil' ? 'inicio' : 'perfil')}>
+                        <button className="ws__topbar-btn" onClick={() => handleTabChange(tabActiva === 'perfil' ? 'inicio' : 'perfil')}>
                             <IconUserCircle active={tabActiva === 'perfil'} />
                         </button>
                     )}
@@ -397,68 +397,68 @@ const WorkspacePage = () => {
 
             {/* Barra de búsqueda (Movimientos) */}
             {showSearch && !isDrawerTab && (
-                <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
+                <div className="ws__search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws__search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <input className="ws-search-input" type="text"
+                    <input className="ws__search-input" type="text"
                         placeholder="Buscar por placa, conductor, empresa, destino o actividad..."
                         value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus />
                     {searchQuery && (
-                        <button className="ws-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+                        <button className="ws__search-clear" onClick={() => setSearchQuery('')}>✕</button>
                     )}
                 </div>
             )}
 
             {/* Barra de búsqueda (Plataformas y Nominativos) */}
             {platSearchShow && tabActiva === 'utilidades' && utilidadActiva === 'plataformas' && (
-                <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
+                <div className="ws__search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws__search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <input className="ws-search-input" type="text"
+                    <input className="ws__search-input" type="text"
                         placeholder="Buscar puesto, PAD o nominativo..."
                         value={platSearchQuery} onChange={e => setPlatSearchQuery(e.target.value)} autoFocus />
                     {platSearchQuery && (
-                        <button className="ws-search-clear" onClick={() => setPlatSearchQuery('')}>✕</button>
+                        <button className="ws__search-clear" onClick={() => setPlatSearchQuery('')}>✕</button>
                     )}
                 </div>
             )}
 
             {/* Barra de búsqueda (Flujos → General) */}
             {flujosBusquedaActiva && (
-                <div className="ws-search-bar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
+                <div className="ws__search-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws__search-lupa">
                         <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                     </svg>
-                    <input className="ws-search-input" type="text"
+                    <input className="ws__search-input" type="text"
                         placeholder={`Buscar por ${flujosGenCampo === 'todos' ? 'cualquier campo' : flujosGenCampo}…`}
                         value={flujosGenQuery} onChange={e => setFlujosGenQuery(e.target.value)} />
                     {flujosGenQuery && (
-                        <button className="ws-search-clear" onClick={() => setFlujosGenQuery('')}>✕</button>
+                        <button className="ws__search-clear" onClick={() => setFlujosGenQuery('')}>✕</button>
                     )}
                 </div>
             )}
             </div>
 
-            <div className="ws-body">
+            <div className="ws__body">
                 {tabActiva === 'inicio' && (
                     <>
                     {(isPending || (!isAdmin && permisosPanel.length < Object.keys(PANEL_LABELS).length)) && (
                         <PanelActivacion permisosPanel={permisosPanel} isPending={isPending} />
                     )}
-                    <div className="ws-vista-tabs">
-                        <button className={`ws-vista-tab${vistaInicio === 'movimientos' ? ' active' : ''}`}
+                    <div className="ws__vista-tabs">
+                        <button className={`ws__vista-tab${vistaInicio === 'movimientos' ? ' ws__vista-tab--active' : ''}`}
                             onClick={() => setVistaInicio('movimientos')}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                 <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                             Movimientos
                         </button>
-                        <button className={`ws-vista-tab${vistaInicio === 'bitacora' ? ' active' : ''}`}
+                        <button className={`ws__vista-tab${vistaInicio === 'bitacora' ? ' ws__vista-tab--active' : ''}`}
                             onClick={() => setVistaInicio('bitacora')}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                 <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -466,7 +466,7 @@ const WorkspacePage = () => {
                             </svg>
                             Bitácora
                         </button>
-                        <button className={`ws-vista-tab${vistaInicio === 'registro' ? ' active' : ''}`}
+                        <button className={`ws__vista-tab${vistaInicio === 'registro' ? ' ws__vista-tab--active' : ''}`}
                             onClick={() => setVistaInicio('registro')}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
@@ -566,8 +566,8 @@ const WorkspacePage = () => {
             {tabActiva === 'inicio' && vistaInicio === 'movimientos' && !selectMode && (
                 <>
                     {fabOpen && showShareMenu && (
-                        <div className="share-menu">
-                            <div className="export-menu-item"
+                        <div className="share__menu">
+                            <div className="export__menu-item"
                                 onClick={() => handleShareMovs(movimientos)}>
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                                     <circle cx="6" cy="12" r="2.2" stroke="#818cf8" strokeWidth="2"/>
@@ -580,20 +580,20 @@ const WorkspacePage = () => {
                         </div>
                     )}
                     {fabOpen && showExportMenu && (
-                        <div className="export-menu">
-                            <div className="export-menu-item" onClick={() => exportData('xls')}>
+                        <div className="export__menu">
+                            <div className="export__menu-item" onClick={() => exportData('xls')}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2"/><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2"/><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/></svg>
                                 Excel (.xls)
                             </div>
-                            <div className="export-menu-item" onClick={() => exportData('csv')}>
+                            <div className="export__menu-item" onClick={() => exportData('csv')}>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round"/></svg>
                                 CSV (.csv)
                             </div>
                         </div>
                     )}
-                    <div className="ws-speed-dial">
-                        <div className={`ws-dial-items${fabOpen ? ' open' : ''}`}>
-                            <button className="ws-dial-item ws-dial-share"
+                    <div className="ws__speed-dial">
+                        <div className={`ws__dial-items${fabOpen ? ' ws__dial-items--open' : ''}`}>
+                            <button className="ws__dial-item ws__dial-share"
                                 onClick={() => { setShowShareMenu(s => !s); setShowExportMenu(false); }}
                                 title="Compartir movimientos">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -603,7 +603,7 @@ const WorkspacePage = () => {
                                     <path d="M8.3 10.8l5.4-3M8.3 13.2l5.4 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                 </svg>
                             </button>
-                            <button className="ws-dial-item ws-dial-export"
+                            <button className="ws__dial-item ws__dial-export"
                                 onClick={() => { setShowExportMenu(s => !s); setShowShareMenu(false); }}
                                 title="Exportar movimientos">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -612,14 +612,14 @@ const WorkspacePage = () => {
                             </button>
                             {/* Registrar exige el panel "movimientos" y el bloque del turno aprobado */}
                             {(isAdmin || (!isPending && hasPermiso('movimientos') && tieneBloque(turnoActivo?.bloque))) && (
-                                <button className="ws-dial-item ws-dial-add"
+                                <button className="ws__dial-item ws__dial-add"
                                     onClick={() => { setShowModal(true); setFabOpen(false); setShowShareMenu(false); setShowExportMenu(false); }}
                                     title="Nuevo movimiento">
                                     +
                                 </button>
                             )}
                         </div>
-                        <button className={`ws-dial-trigger${fabOpen ? ' open' : ''}`}
+                        <button className={`ws__dial-trigger${fabOpen ? ' ws__dial-trigger--open' : ''}`}
                             onClick={() => { setFabOpen(s => !s); setShowShareMenu(false); setShowExportMenu(false); }}>
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
@@ -698,7 +698,7 @@ const WorkspacePage = () => {
 
             {/* Banner cuenta pendiente */}
             {isPending && (
-                <div className="ws-banner-pendiente" onClick={() => navigate('/cuenta-pendiente')}>
+                <div className="ws__banner-pendiente" onClick={() => navigate('/cuenta-pendiente')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="icono-fijo">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
                         <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -716,7 +716,7 @@ const WorkspacePage = () => {
             )}
 
             {/* Bottom nav */}
-            <nav className="ws-navbar">
+            <nav className="ws__navbar">
                 {[
                     {
                         id: 'inicio', label: 'Inicio', icon: (
@@ -745,26 +745,26 @@ const WorkspacePage = () => {
                     }] : []),
                 ].map(tab => (
                     <button key={tab.id}
-                        className={`ws-nav-btn ${tabActiva === tab.id ? 'active' : ''}`}
+                        className={`ws__nav-btn${tabActiva === tab.id ? ' ws__nav-btn--active' : ''}`}
                         onClick={() => handleTabChange(tab.id)}>
                         {tab.icon}
                         <span>{tab.label}</span>
-                        {tabActiva === tab.id && <div className="ws-nav-dot" />}
+                        {tabActiva === tab.id && <div className="ws__nav-dot" />}
                     </button>
                 ))}
             </nav>
 
             {showExitConfirm && (
-                <div className="modal-overlay" onClick={() => setShowExitConfirm(false)}>
-                    <div className="modal-card confirmar" onClick={e => e.stopPropagation()}>
-                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar-icono">
+                <div className="modal__overlay" onClick={() => setShowExitConfirm(false)}>
+                    <div className="modal__card modal__card--confirmar" onClick={e => e.stopPropagation()}>
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar__icono">
                             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        <p className="confirmar-mensaje">¿Quieres salir de FLUJO?</p>
-                        <p className="confirmar-detalle">Tu sesión y tu turno activo se mantienen guardados.</p>
-                        <div className="confirmar-botones">
-                            <button className="confirmar-cancelar" onClick={() => setShowExitConfirm(false)}>Seguir aquí</button>
-                            <button className="confirmar-eliminar confirmar-salir" onClick={confirmarSalida}>Salir</button>
+                        <p className="confirmar__mensaje">¿Quieres salir de FLUJO?</p>
+                        <p className="confirmar__detalle">Tu sesión y tu turno activo se mantienen guardados.</p>
+                        <div className="confirmar__botones">
+                            <button className="confirmar__cancelar" onClick={() => setShowExitConfirm(false)}>Seguir aquí</button>
+                            <button className="confirmar__eliminar confirmar__eliminar--salir" onClick={confirmarSalida}>Salir</button>
                         </div>
                     </div>
                 </div>

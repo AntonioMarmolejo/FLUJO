@@ -20,23 +20,23 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
     ].filter(c => c.valor);
 
     const actBtn = (title, onClick, svg) => (
-        <button key={title} title={title} onClick={onClick} className="movdet-act-btn"
+        <button key={title} title={title} onClick={onClick} className="movdet__act-btn"
             dangerouslySetInnerHTML={{ __html: svg }} />
     );
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="movdet-card detalle-arriba-movil" onClick={e => e.stopPropagation()}>
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="movdet__card detalle__arriba-movil" onClick={e => e.stopPropagation()}>
                 {/* ── Cabecera: hora · badge · placa + cerrar ── */}
-                <div className="movdet-header">
-                    <div className="movdet-header-info">
-                        <span className="movdet-hora">{mov.hora}</span>
-                        <span className={`movdet-tipo ${isIngreso ? 'movdet-tipo-ingreso' : 'movdet-tipo-salida'}`}>
+                <div className="movdet__header">
+                    <div className="movdet__header-info">
+                        <span className="movdet__hora">{mov.hora}</span>
+                        <span className={`movdet__tipo ${isIngreso ? 'movdet__tipo--ingreso' : 'movdet__tipo--salida'}`}>
                             {isIngreso ? 'INGRESO' : 'SALIDA'}
                         </span>
-                        <span className="movdet-placa">{mov.placa}</span>
+                        <span className="movdet__placa">{mov.placa}</span>
                     </div>
-                    <button className="movdet-cerrar" onClick={onClose}>
+                    <button className="movdet__cerrar" onClick={onClose}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                             <path d="M18 6 6 18M6 6l12 12" />
                         </svg>
@@ -44,30 +44,30 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                 </div>
 
                 {/* ── Fecha ── */}
-                <div className="movdet-fecha-row">
-                    <span className="movdet-fecha">{mov.fecha}</span>
+                <div className="movdet__fecha-row">
+                    <span className="movdet__fecha">{mov.fecha}</span>
                 </div>
 
                 {/* ── Grid de campos ── */}
                 {campos.length > 0 && (
-                    <div className="movdet-campos">
+                    <div className="movdet__campos">
                         {campos.map(c => (
-                            <div key={c.label} className={c.span ? 'movdet-campo-ancho' : undefined}>
-                                <div className="movdet-label">{c.label}</div>
-                                <div className="movdet-valor">{c.valor}</div>
+                            <div key={c.label} className={c.span ? 'movdet__campo-ancho' : undefined}>
+                                <div className="movdet__label">{c.label}</div>
+                                <div className="movdet__valor">{c.valor}</div>
                             </div>
                         ))}
                     </div>
                 )}
 
                 {/* ── Caja actividad ── */}
-                <div className="movdet-actividad-box">
-                    <div className="movdet-label">Actividad / Obs.</div>
-                    <div className="movdet-actividad">{mov.actividad || '—'}</div>
+                <div className="movdet__actividad-box">
+                    <div className="movdet__label">Actividad / Obs.</div>
+                    <div className="movdet__actividad">{mov.actividad || '—'}</div>
                 </div>
 
                 {/* ── Acciones ── */}
-                <div className="movdet-acciones">
+                <div className="movdet__acciones">
                     {onEdit   && actBtn('Editar',    () => { onEdit(mov); onClose(); },
                         `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`)}
                     {onCopy   && actBtn('Copiar',    () => onCopy(mov),
@@ -80,14 +80,14 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
 
                 {/* ── Navegación anterior / siguiente ── */}
                 {(hasPrev || hasNext || counter) && (
-                    <div className="movdet-nav">
-                        <button className="movdet-nav-btn" onClick={onPrev} disabled={!hasPrev}>
+                    <div className="movdet__nav">
+                        <button className="movdet__nav-btn" onClick={onPrev} disabled={!hasPrev}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M15 6c-2 2-5.5 4.5-8 6 2.5 1.5 6 4 8 6" />
                             </svg>
                         </button>
-                        <span className="movdet-contador">{counter}</span>
-                        <button className="movdet-nav-btn" onClick={onNext} disabled={!hasNext}>
+                        <span className="movdet__contador">{counter}</span>
+                        <button className="movdet__nav-btn" onClick={onNext} disabled={!hasNext}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 6c2 2 5.5 4.5 8 6-2.5 1.5-6 4-8 6" />
                             </svg>
@@ -103,20 +103,20 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
 export const ModalEditHora = ({ mov, onClose, onSave }) => {
     const [hora, setHora] = useState(mov.hora);
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card modal-angosto" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <span className="modal-titulo-chico">Editar hora · {mov.placa}</span>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__card modal__card--angosto" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
+                    <span className="modal__titulo-chico">Editar hora · {mov.placa}</span>
+                    <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
-                <div className="modal-cuerpo">
+                <div className="modal__cuerpo">
                     <input
                         type="time"
                         value={hora}
                         onChange={e => setHora(e.target.value)}
-                        className="hora-grande"
+                        className="hora__grande"
                     />
-                    <button className="modal-btn active" onClick={() => hora && onSave(mov._id, hora)}>
+                    <button className="modal__btn modal__btn--active" onClick={() => hora && onSave(mov._id, hora)}>
                         Guardar
                     </button>
                 </div>
@@ -204,20 +204,20 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
     // Listas de sugerencias: funciones (no componentes) para que no se
     // vuelvan a montar en cada render
     const listaPersonas = items => !items.length ? null : (
-        <div className="ingbit-sugs">
+        <div className="ingbit__sugs">
             {items.map((p, i) => (
-                <div key={i} className="ingbit-sug" onClick={() => selectPersona(p)}>
-                    <div className="ingbit-sug-nombre">{p.nombres}</div>
-                    {p.cedula && <div className="ingbit-sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
+                <div key={i} className="ingbit__sug" onClick={() => selectPersona(p)}>
+                    <div className="ingbit__sug-nombre">{p.nombres}</div>
+                    {p.cedula && <div className="ingbit__sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
                 </div>
             ))}
         </div>
     );
 
     const listaTextos = (items, onSel) => !items.length ? null : (
-        <div className="ingbit-sugs">
+        <div className="ingbit__sugs">
             {items.map((s, i) => (
-                <div key={i} className="ingbit-sug ingbit-sug-texto" onClick={() => onSel(s)}>{s}</div>
+                <div key={i} className="ingbit__sug ingbit__sug--texto" onClick={() => onSel(s)}>{s}</div>
             ))}
         </div>
     );
@@ -225,10 +225,10 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
     // Agrega la ✕ para limpiar un campo. Es una función y no un componente
     // para que el input no se vuelva a montar (y pierda el foco) al escribir.
     const conLimpiar = (input, value, onClear) => (
-        <div className="ingbit-limpiable">
+        <div className="ingbit__limpiable">
             {input}
             {value && (
-                <button className="field-clear-btn" type="button" title="Limpiar" onMouseDown={e => {
+                <button className="field__clear-btn" type="button" title="Limpiar" onMouseDown={e => {
                     e.preventDefault();
                     e.currentTarget.parentElement.querySelector('input')?.focus();
                     onClear();
@@ -238,37 +238,37 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
     );
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="ingbit-card" onClick={e => e.stopPropagation()}>
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="ingbit__card" onClick={e => e.stopPropagation()}>
                 {/* Cabecera */}
-                <div className="ingbit-header">
-                    <div className="ingbit-header-info">
-                        <span className="ingbit-badge">
+                <div className="ingbit__header">
+                    <div className="ingbit__header-info">
+                        <span className="ingbit__badge">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
                             </svg>
                             INGRESO
                         </span>
-                        <span className="ingbit-placa">{b.placa}</span>
-                        {b.tipoVehiculo && <span className="ingbit-tipo">{b.tipoVehiculo}</span>}
+                        <span className="ingbit__placa">{b.placa}</span>
+                        {b.tipoVehiculo && <span className="ingbit__tipo">{b.tipoVehiculo}</span>}
                     </div>
-                    <button className="ingbit-cerrar" onClick={onClose}>
+                    <button className="ingbit__cerrar" onClick={onClose}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
 
-                <div className="ingbit-cuerpo">
+                <div className="ingbit__cuerpo">
                     {/* Hora */}
                     <div>
-                        <div className="ingbit-label">Hora de retorno</div>
-                        <input type="time" className="ingbit-input ingbit-hora" value={hora} onChange={e => setHora(e.target.value)} autoFocus />
+                        <div className="ingbit__label">Hora de retorno</div>
+                        <input type="time" className="ingbit__input ingbit__hora" value={hora} onChange={e => setHora(e.target.value)} autoFocus />
                     </div>
 
                     {/* Conductor */}
-                    <div className="ingbit-campo">
-                        <div className="ingbit-label">Conductor de retorno</div>
+                    <div className="ingbit__campo">
+                        <div className="ingbit__label">Conductor de retorno</div>
                         {conLimpiar(
-                            <input type="text" className="ingbit-input" placeholder="Nombre del conductor..." value={conductor}
+                            <input type="text" className="ingbit__input" placeholder="Nombre del conductor..." value={conductor}
                                 onChange={e => handleConductorChange(e.target.value)}
                                 onBlur={() => setTimeout(() => setConductorSugs([]), 150)} />,
                             conductor, () => { setConductor(''); setConductorSugs([]); setPersonaNotFound(false); }
@@ -277,25 +277,25 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
                     </div>
 
                     {/* Cédula */}
-                    <div className="ingbit-campo">
-                        <div className="ingbit-label">Cédula</div>
+                    <div className="ingbit__campo">
+                        <div className="ingbit__label">Cédula</div>
                         {conLimpiar(
-                            <input type="text" className="ingbit-input" placeholder="Nro. de cédula..." value={cedula}
+                            <input type="text" className="ingbit__input" placeholder="Nro. de cédula..." value={cedula}
                                 onChange={e => handleCedulaChange(e.target.value)}
                                 onBlur={() => setTimeout(() => setCedulaSugs([]), 150)} />,
                             cedula, () => { setCedula(''); setCedulaSugs([]); setPersonaNotFound(false); }
                         )}
                         {listaPersonas(cedulaSugs)}
                         {personaNotFound && cedula.length >= 3 && (
-                            <div className="ingbit-aviso">⚠️ Persona no encontrada — se guardará automáticamente</div>
+                            <div className="ingbit__aviso">⚠️ Persona no encontrada — se guardará automáticamente</div>
                         )}
                     </div>
 
                     {/* Actividad */}
-                    <div className="ingbit-campo">
-                        <div className="ingbit-label">Actividad / Observación</div>
+                    <div className="ingbit__campo">
+                        <div className="ingbit__label">Actividad / Observación</div>
                         {conLimpiar(
-                            <input type="text" className="ingbit-input" placeholder="Descripción de la actividad..." value={actividad}
+                            <input type="text" className="ingbit__input" placeholder="Descripción de la actividad..." value={actividad}
                                 onChange={e => { setActividad(e.target.value); setActividadSugs(e.target.value.length >= 1 ? recentUniq('actividad', e.target.value) : []); }}
                                 onBlur={() => setTimeout(() => setActividadSugs([]), 150)} />,
                             actividad, () => { setActividad(''); setActividadSugs([]); }
@@ -304,10 +304,10 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
                     </div>
 
                     {/* Destino */}
-                    <div className="ingbit-campo">
-                        <div className="ingbit-label">Destino</div>
+                    <div className="ingbit__campo">
+                        <div className="ingbit__label">Destino</div>
                         {conLimpiar(
-                            <input type="text" className="ingbit-input" placeholder="Área o lugar..." value={destino}
+                            <input type="text" className="ingbit__input" placeholder="Área o lugar..." value={destino}
                                 onChange={e => { setDestino(e.target.value); setDestinoSugs(e.target.value.length >= 1 ? recentUniq('destino', e.target.value) : []); }}
                                 onBlur={() => setTimeout(() => setDestinoSugs([]), 150)} />,
                             destino, () => { setDestino(''); setDestinoSugs([]); }
@@ -316,7 +316,7 @@ export const ModalRegistrarIngreso = ({ b, movimientos, ubiIngreso = 'EPF', onCl
                     </div>
 
                     {/* Botón guardar (se habilita con la hora) */}
-                    <button className="ingbit-guardar" onClick={handleSubmit} disabled={!hora}>
+                    <button className="ingbit__guardar" onClick={handleSubmit} disabled={!hora}>
                         {isNew ? 'Registrar ingreso' : 'Guardar cambios'}
                     </button>
                 </div>
@@ -358,35 +358,35 @@ export const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditM
             else if (onEditMov) { onEditMov(mov); }
         };
         return (
-            <div className={`bit-det-section bit-det-${color}`}>
-                <div className="bit-det-section-header">
-                    <span className="bit-det-section-label">{label} · {color === 'salida' ? b.horaS : b.horaI}</span>
-                    <button className="bit-det-edit-btn" onClick={handleEditClick}>
+            <div className={`bit__det-section bit__det-section--${color}`}>
+                <div className="bit__det-section-header">
+                    <span className="bit__det-section-label">{label} · {color === 'salida' ? b.horaS : b.horaI}</span>
+                    <button className="bit__det-edit-btn" onClick={handleEditClick}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         Editar
                     </button>
                 </div>
-                {mov.conductor && <div className="bit-det-row"><span className="bit-det-lbl">Conductor</span><span className="bit-det-val">{mov.conductor}{mov.cedula ? ' · ' + mov.cedula : ''}</span></div>}
-                {mov.empresa && <div className="bit-det-row"><span className="bit-det-lbl">Empresa</span><span className="bit-det-val">{mov.empresa}</span></div>}
-                {mov.destino && <div className="bit-det-row"><span className="bit-det-lbl">Destino</span><span className="bit-det-val">{mov.destino}</span></div>}
-                {mov.actividad && <div className="bit-det-row"><span className="bit-det-lbl">Actividad</span><span className="bit-det-val">{mov.actividad}</span></div>}
+                {mov.conductor && <div className="bit__det-row"><span className="bit__det-lbl">Conductor</span><span className="bit__det-val">{mov.conductor}{mov.cedula ? ' · ' + mov.cedula : ''}</span></div>}
+                {mov.empresa && <div className="bit__det-row"><span className="bit__det-lbl">Empresa</span><span className="bit__det-val">{mov.empresa}</span></div>}
+                {mov.destino && <div className="bit__det-row"><span className="bit__det-lbl">Destino</span><span className="bit__det-val">{mov.destino}</span></div>}
+                {mov.actividad && <div className="bit__det-row"><span className="bit__det-lbl">Actividad</span><span className="bit__det-val">{mov.actividad}</span></div>}
             </div>
         );
     };
 
     return (
-        <div className="modal-overlay bit-det-overlay" onClick={onClose}>
-            <div className="modal-card bit-det-card" onClick={e => e.stopPropagation()}>
+        <div className="modal__overlay modal__overlay--bit-det" onClick={onClose}>
+            <div className="modal__card bit__det-card" onClick={e => e.stopPropagation()}>
                 {/* Header */}
-                <div className="bit-det-header">
-                    <div className="bit-det-placa-row">
-                        <span className="bit-placa">{b.placa}</span>
-                        {b.tipoVehiculo && <span className="bit-tipo">{b.tipoVehiculo}</span>}
-                        <span className={`bit-badge bit-badge-${b.status}`}>
+                <div className="bit__det-header">
+                    <div className="bit__det-placa-row">
+                        <span className="bit__placa">{b.placa}</span>
+                        {b.tipoVehiculo && <span className="bit__tipo">{b.tipoVehiculo}</span>}
+                        <span className={`bit__badge bit__badge--${b.status}`}>
                             {b.status === 'completo' ? 'Completado' : b.status === 'en-campo' ? 'En campo' : 'Solo ingreso'}
                         </span>
                     </div>
-                    <span className="bit-det-counter">{idx + 1} / {total}</span>
+                    <span className="bit__det-counter">{idx + 1} / {total}</span>
                 </div>
 
                 {/* Sections */}
@@ -394,18 +394,18 @@ export const ModalBitacoraDetalle = ({ bitacora, idx, onClose, onChange, onEditM
                 <MovSection mov={b.ingreso} label="↓ INGRESO" color="ingreso" />
 
                 {/* Actions */}
-                <div className="bit-det-actions">
-                    <button className="bit-det-act-btn" onClick={handleCopy} title="Copiar"><IconCopy /></button>
-                    <button className="bit-det-act-btn" onClick={handleShare} title="Compartir"><IconShare /></button>
-                    <button className="bit-det-act-btn danger" onClick={() => onDeletePair(b, idx)} title="Eliminar">
+                <div className="bit__det-actions">
+                    <button className="bit__det-act-btn" onClick={handleCopy} title="Copiar"><IconCopy /></button>
+                    <button className="bit__det-act-btn" onClick={handleShare} title="Compartir"><IconShare /></button>
+                    <button className="bit__det-act-btn bit__det-act-btn--danger" onClick={() => onDeletePair(b, idx)} title="Eliminar">
                         <IconMinus />
                     </button>
                 </div>
 
                 {/* Navigation */}
-                <div className="bit-det-nav">
-                    <button className="bit-det-nav-btn" onClick={() => onChange(idx - 1)} disabled={!hasPrev}>← Anterior</button>
-                    <button className="bit-det-nav-btn" onClick={() => onChange(idx + 1)} disabled={!hasNext}>Siguiente →</button>
+                <div className="bit__det-nav">
+                    <button className="bit__det-nav-btn" onClick={() => onChange(idx - 1)} disabled={!hasPrev}>← Anterior</button>
+                    <button className="bit__det-nav-btn" onClick={() => onChange(idx + 1)} disabled={!hasNext}>Siguiente →</button>
                 </div>
             </div>
         </div>
@@ -419,33 +419,33 @@ export const ModalRegistroConfig = ({ config, onSave, onClose }) => {
         <ModalField name={k} label={label} placeholder={placeholder} value={local[k]} autoFilled={false} onChange={f(k)} />
     );
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <span className="modal-titulo-chico">Configurar Narrativa</span>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="modal__card" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
+                    <span className="modal__titulo-chico">Configurar Narrativa</span>
+                    <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
-                <div className="modal-cuerpo modal-cuerpo-junto">
-                    <p className="config-seccion">DESTINO / UBICACIÓN</p>
+                <div className="modal__cuerpo modal__cuerpo--junto">
+                    <p className="config__seccion">DESTINO / UBICACIÓN</p>
                     <Row k="ubicacion"   label="NOMBRE DEL LUGAR (para ingresos)"  placeholder="EPF" />
                     <Row k="conSalida"   label="CONECTOR SALIDA"                    placeholder="Sale al" />
                     <Row k="conIngreso"  label="CONECTOR INGRESO"                   placeholder="Ingresa al" />
-                    <p className="config-seccion">CONDUCTOR</p>
+                    <p className="config__seccion">CONDUCTOR</p>
                     <Row k="conTitHombre" label="TÍTULO MASCULINO"                  placeholder="el Sr." />
                     <Row k="conTitMujer"  label="TÍTULO FEMENINO"                   placeholder="la Srta." />
-                    <p className="config-seccion">OTROS CONECTORES</p>
+                    <p className="config__seccion">OTROS CONECTORES</p>
                     <Row k="conCedula"   label="PREFIJO CÉDULA"                     placeholder="cc:" />
                     <Row k="conEmpresa"  label="PREFIJO EMPRESA"                    placeholder="de" />
                     <Row k="conVehiculo" label="ACCIÓN VEHÍCULO (vacío = auto)"     placeholder="conduciendo el / conduciendo la" />
                     <Row k="conPlaca"    label="PREFIJO PLACA"                       placeholder="de Placas" />
-                    <p className="config-seccion">EXCEL / WORD</p>
+                    <p className="config__seccion">EXCEL / WORD</p>
                     <Row k="empresaAutoriza" label="EMPRESA AUTORIZANTE (default)"  placeholder="EP Petroecuador" />
-                    <p className="config-nota">
+                    <p className="config__nota">
                         Deja "Acción vehículo" vacío para detectar el/la automáticamente según el tipo.
                     </p>
                 </div>
-                <div className="modal-pie">
-                    <button className="modal-btn active" onClick={() => { onSave(local); onClose(); }}>
+                <div className="modal__pie">
+                    <button className="modal__btn modal__btn--active" onClick={() => { onSave(local); onClose(); }}>
                         Guardar configuración
                     </button>
                 </div>
@@ -459,17 +459,17 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
     const isSwiped = swipedMovId === m._id;
     const [collapsed, setCollapsed] = useState(true);
     return (
-        <div className={`mov-item${selected ? ' mov-selected' : ''}${m._pending ? ' mov-pending' : ''}`} data-movid={m._id}>
+        <div className={`mov__item${selected ? ' mov__item--selected' : ''}${m._pending ? ' mov__item--pending' : ''}`} data-movid={m._id}>
             {!selectMode && !m._pending && (
-                <div className="mov-actions" onClick={e => e.stopPropagation()}>
-                    <button className="mov-act-btn danger" title="Eliminar" onClick={() => { onDelete(m._id); setSwipedMovId(null); }}><IconMinus /></button>
-                    <button className="mov-act-btn" title="Editar" onClick={() => { onEdit(m); setSwipedMovId(null); }}><IconPencil /></button>
-                    <button className="mov-act-btn" title="Copiar" onClick={() => { onCopy(m); setSwipedMovId(null); }}><IconCopy /></button>
-                    <button className="mov-act-btn" title="Compartir" onClick={() => { onShare(m); setSwipedMovId(null); }}><IconShare /></button>
+                <div className="mov__actions" onClick={e => e.stopPropagation()}>
+                    <button className="mov__act-btn mov__act-btn--danger" title="Eliminar" onClick={() => { onDelete(m._id); setSwipedMovId(null); }}><IconMinus /></button>
+                    <button className="mov__act-btn" title="Editar" onClick={() => { onEdit(m); setSwipedMovId(null); }}><IconPencil /></button>
+                    <button className="mov__act-btn" title="Copiar" onClick={() => { onCopy(m); setSwipedMovId(null); }}><IconCopy /></button>
+                    <button className="mov__act-btn" title="Compartir" onClick={() => { onShare(m); setSwipedMovId(null); }}><IconShare /></button>
                 </div>
             )}
             <div
-                className={`mov-item-inner ${m.tipo}${isSwiped ? ' mov-item-swiped' : ''}`}
+                className={`mov__item-inner mov__item-inner--${m.tipo}${isSwiped ? ' mov__item-inner--swiped' : ''}`}
                 onTouchStart={e => {
                     movSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false };
                 }}
@@ -507,61 +507,61 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                     selectMode ? onToggleSelect(m._id) : onOpenDetail(m);
                 }}
             >
-                <div className="mov-card-body">
+                <div className="mov__card-body">
                     {selectMode && (
-                        <input type="checkbox" className="mov-check" checked={selected}
+                        <input type="checkbox" className="mov__check" checked={selected}
                             onChange={() => onToggleSelect(m._id)} onClick={e => e.stopPropagation()} />
                     )}
                     {/* Badge izquierdo */}
-                    <div className={`mov-icon ${m.tipo}${collapsed ? ' mov-icon-sm' : ''}`}>
+                    <div className={`mov__icon mov__icon--${m.tipo}${collapsed ? ' mov__icon--sm' : ''}`}>
                         {!selectMode && !m._pending && (
-                            <button className="mov-hora-edit-btn" title="Editar hora"
+                            <button className="mov__hora-edit-btn" title="Editar hora"
                                 onClick={e => { e.stopPropagation(); onEditHora(m._id); }}>
                                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                                 </svg>
                             </button>
                         )}
-                        {!collapsed && <span className="mov-count">{count}</span>}
-                        <span className="mov-hora-small">{m.hora}</span>
+                        {!collapsed && <span className="mov__count">{count}</span>}
+                        <span className="mov__hora-small">{m.hora}</span>
                     </div>
                     {/* Info central */}
-                    <div className="mov-info">
+                    <div className="mov__info">
                         {collapsed ? (
-                            <div className={`mov-info-r1 ${m.tipo}`}>
-                                <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                            <div className={`mov__info-r1 mov__info-r1--${m.tipo}`}>
+                                <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                 {' · '}
-                                <span className="mov-placa-code">{m.placa}</span>
+                                <span className="mov__placa-code">{m.placa}</span>
                                 {(m.conductor || m.cedula) && (
-                                    <>{' · '}<span className="mov-coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
+                                    <>{' · '}<span className="mov__coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
                                 )}
                             </div>
                         ) : (
                             <>
-                                <div className={`mov-info-r1 ${m.tipo}`}>
-                                    <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                                <div className={`mov__info-r1 mov__info-r1--${m.tipo}`}>
+                                    <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                     {' · '}
-                                    <span className="mov-placa-code">{m.placa}</span>
-                                    {m.empresa && <>{' · '}<span className="mov-empresa-r1">{m.empresa}</span></>}
+                                    <span className="mov__placa-code">{m.placa}</span>
+                                    {m.empresa && <>{' · '}<span className="mov__empresa-r1">{m.empresa}</span></>}
                                 </div>
-                                <div className="mov-info-r2">
-                                    <span className="mov-conductor-ci">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span>
-                                    {m.destino && <span className="mov-destino-r2">{m.destino.toUpperCase()}</span>}
+                                <div className="mov__info-r2">
+                                    <span className="mov__conductor-ci">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span>
+                                    {m.destino && <span className="mov__destino-r2">{m.destino.toUpperCase()}</span>}
                                 </div>
                             </>
                         )}
                     </div>
                     {/* Chevron */}
-                    <button className="mov-chevron-btn" onClick={e => { e.stopPropagation(); setCollapsed(c => !c); }}>
+                    <button className="mov__chevron-btn" onClick={e => { e.stopPropagation(); setCollapsed(c => !c); }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                             className={`chevron-giro${collapsed ? '' : ' abierto'}`}>
+                             className={`chevron-giro${collapsed ? '' : ' chevron-giro--abierto'}`}>
                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                     </button>
-                    {m._pending && <span className="mov-pending-dot mov-pending-dot-fin" title="Sin conexión — se sincronizará al reconectar" />}
+                    {m._pending && <span className="mov__pending-dot mov__pending-dot--fin" title="Sin conexión — se sincronizará al reconectar" />}
                 </div>
                 {!collapsed && m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
-                    <div className="mov-actividad">{m.actividad}</div>
+                    <div className="mov__actividad">{m.actividad}</div>
                 )}
             </div>
         </div>

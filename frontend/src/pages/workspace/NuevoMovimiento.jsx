@@ -100,10 +100,10 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="qr-scanner-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <div className="modal-titulo-icono">
+        <div className="modal__overlay" onClick={onClose}>
+            <div className="qr__scanner-card" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
+                    <div className="modal__titulo-icono">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="#818cf8" strokeWidth="2"/>
@@ -115,28 +115,28 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
                         </svg>
                         <h3 className="sin-margen">Escanear QR</h3>
                     </div>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
                 {camError
-                    ? <p className="modal-error qr-error">{camError}</p>
+                    ? <p className="modal__error modal__error--qr">{camError}</p>
                     : (
                         <>
-                            <p className="qr-hint">
+                            <p className="qr__hint">
                                 {hint || 'Iniciando cámara...'}
                             </p>
-                            <div className="qr-video-wrap">
-                                <video ref={videoRef} className="qr-video" playsInline muted />
-                                <div className="qr-frame" />
+                            <div className="qr__video-wrap">
+                                <video ref={videoRef} className="qr__video" playsInline muted />
+                                <div className="qr__frame" />
                             </div>
-                            <p className="qr-nota">
+                            <p className="qr__nota">
                                 Funciona con QR de vehículos y tarjetas de personas
                             </p>
                         </>
                     )
                 }
                 <canvas ref={canvasRef} hidden />
-                <div className="qr-img-divider">— o selecciona una imagen —</div>
-                <button className="qr-img-btn" onClick={() => fileInputRef.current.click()}>
+                <div className="qr__img-divider">— o selecciona una imagen —</div>
+                <button className="qr__img-btn" onClick={() => fileInputRef.current.click()}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
                         <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="2"/>
@@ -145,7 +145,7 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
                     Elegir imagen
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageFile} />
-                {imgError && <p className="qr-img-error">{imgError}</p>}
+                {imgError && <p className="qr__img-error">{imgError}</p>}
             </div>
         </div>
     );
@@ -533,7 +533,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
     const fp = { onChange: handleChange, autoFilled };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal__overlay" onClick={onClose}>
             {showScanner && (
                 <ModalEscanerQR
                     onScanned={handleQRScanned}
@@ -546,14 +546,14 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                     onClose={() => setShowPersonaScanner(false)}
                 />
             )}
-            <div className="modal-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
+            <div className="modal__card" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
                     <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
-                    <button className="modal-close" onClick={onClose}>✕</button>
+                    <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
-                <div className="modal-tipo">
+                <div className="modal__tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
-                        <button key={val} className={`modal-tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
+                        <button key={val} className={`modal__tipo-btn ${form.tipo === val ? 'active-' + val : ''}`}
                             onClick={() => {
                                 const f = formRef.current;
                                 const next = {
@@ -570,8 +570,8 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         </button>
                     ))}
                 </div>
-                <div className="modal-fields">
-                    <div className={`modal-field ${autoFilled ? 'modal-field-autofilled' : ''}`}>
+                <div className="modal__fields">
+                    <div className={`modal__field ${autoFilled ? 'modal__field--autofilled' : ''}`}>
                         <label>
                             <span>PLACAS <span className="campo-obligatorio">*</span></span>
                             <span className="label-acciones">
@@ -579,14 +579,14 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                     <input
                                         ref={horaInputRef}
                                         type="time"
-                                        className="hora-manual-input"
+                                        className="hora__manual-input"
                                         value={horaManual}
                                         onChange={e => setHoraManual(e.target.value)}
                                         onBlur={() => { if (!horaManual) setShowHoraInput(false); }}
                                         autoFocus
                                     />
                                 ) : (
-                                    <button className="activ-add-tag-btn" onClick={() => {
+                                    <button className="activ__add-tag-btn" onClick={() => {
                                         setShowHoraInput(true);
                                         setTimeout(() => horaInputRef.current?.showPicker?.(), 50);
                                     }}>
@@ -595,11 +595,11 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                     </button>
                                 )}
                                 {horaManual && (
-                                    <button className="activ-add-tag-btn activ-add-tag-btn-quitar" onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
+                                    <button className="activ__add-tag-btn activ__add-tag-btn--quitar" onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
                                 )}
                             </span>
                             {!editData && (
-                                <button className="qr-field-btn" title="Escanear QR vehículo" onClick={() => setShowScanner(true)}>
+                                <button className="qr__field-btn" title="Escanear QR vehículo" onClick={() => setShowScanner(true)}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                         <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
                                         <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
@@ -612,19 +612,19 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                 </button>
                             )}
                         </label>
-                        <div className="placa-wrapper">
+                        <div className="placa__wrapper">
                             <input type="text" name="placa" placeholder="Ej: ABC-1234"
                                 value={form.placa} onChange={handlePlacaChange} autoComplete="off"
                                 onBlur={() => setTimeout(() => setSuggestions([]), 150)} />
                             {suggestions.length > 0 && (
-                                <div className="placa-suggestions">
+                                <div className="placa__suggestions">
                                     {suggestions.map((v, i) => (
-                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectSuggestion(v); }}>
+                                        <div key={i} className="placa__suggestion-item" onMouseDown={e => { e.preventDefault(); selectSuggestion(v); }}>
                                             <div>
-                                                <div className="placa-suggestion-placa">{v.placa}</div>
-                                                <div className="placa-suggestion-info">{formatMov(v)}</div>
+                                                <div className="placa__suggestion-placa">{v.placa}</div>
+                                                <div className="placa__suggestion-info">{formatMov(v)}</div>
                                             </div>
-                                            <span className={`placa-suggestion-badge ${v._source}`}>
+                                            <span className={`placa__suggestion-badge placa__suggestion-badge--${v._source}`}>
                                                 {v._source === 'hoy' ? 'Hoy' : 'BD'}
                                             </span>
                                         </div>
@@ -634,11 +634,11 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         </div>
                     </div>
                     {placaNotFound && form.placa.length >= 3 && (
-                        <div className="quick-info-banner">
+                        <div className="quick__info-banner">
                             Placa <strong>{form.placa}</strong> no está en la BD — se registrará al guardar
                         </div>
                     )}
-                    <div className="modal-fields-row">
+                    <div className="modal__fields-row">
                         <TextSugField name="marca" label="MARCA" placeholder="Toyota"
                             value={form.marca} onChange={handleMarcaChange}
                             onFocus={() => setMarcaSugs(recentUnique('marca', form.marca))}
@@ -650,7 +650,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                             onClearSugs={() => setColorSugs([])}
                             suggestions={colorSugs} onSelect={s => { setForm(f => ({ ...f, color: s })); setColorSugs([]); }} />
                     </div>
-                    <div className="modal-fields-row">
+                    <div className="modal__fields-row">
                         <TextSugField name="tipoVehiculo" label="TIPO" placeholder="SUV, Sedán..."
                             value={form.tipoVehiculo} onChange={handleTipoVehChange}
                             onFocus={() => setTipoSugs(TIPO_VEHICULO_OPTS.filter(o => !form.tipoVehiculo || o.toLowerCase().includes(form.tipoVehiculo.toLowerCase())))}
@@ -671,10 +671,10 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         onClear={() => { setForm(f => ({ ...f, conductor: '' })); setConductorSugs([]); setAutoFilled(false); }}
                         labelAction={
                             <span className="label-acciones">
-                                <button className={`genero-toggle-btn${form.genero === 'm' ? ' active' : ''}`} title="Masculino" onClick={() => setForm(f => ({ ...f, genero: 'm' }))}>♂</button>
-                                <button className={`genero-toggle-btn${form.genero === 'f' ? ' active-f' : ''}`} title="Femenino" onClick={() => setForm(f => ({ ...f, genero: 'f' }))}>♀</button>
+                                <button className={`genero-toggle-btn${form.genero === 'm' ? ' genero-toggle-btn--active' : ''}`} title="Masculino" onClick={() => setForm(f => ({ ...f, genero: 'm' }))}>♂</button>
+                                <button className={`genero-toggle-btn${form.genero === 'f' ? ' genero-toggle-btn--active-f' : ''}`} title="Femenino" onClick={() => setForm(f => ({ ...f, genero: 'f' }))}>♀</button>
                                 {!editData && (
-                                    <button className="qr-field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
+                                    <button className="qr__field-btn" title="Escanear QR persona" onClick={() => setShowPersonaScanner(true)}>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
                                             <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
@@ -694,7 +694,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         onClearSugs={() => setCedulaSugs([])}
                         onClear={() => { setForm(f => ({ ...f, cedula: '' })); setCedulaSugs([]); setAutoFilled(false); }} />
                     {personaNotFound && (
-                        <div className="quick-info-banner">
+                        <div className="quick__info-banner">
                             Persona no encontrada en la BD — se registrará al guardar
                         </div>
                     )}
@@ -704,9 +704,9 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         onClearSugs={() => setDestinoSugs([])}
                         onClear={() => { setForm(f => ({ ...f, destino: '' })); setDestinoSugs([]); }}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
-                    <div className="modal-field">
+                    <div className="modal__field">
                         <label>ACTIVIDAD / OBSERVACIÓN</label>
-                        <div className="placa-wrapper">
+                        <div className="placa__wrapper">
                             <textarea
                                 ref={actividadRef}
                                 name="actividad"
@@ -717,10 +717,10 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                 onBlur={() => setTimeout(() => setActividadSugs([]), 200)}
                                 autoComplete="off"
                                 rows={3}
-                                className="modal-textarea modal-textarea-clearable"
+                                className="modal__textarea modal__textarea--clearable"
                             />
                             {form.actividad && (
-                                <button className="field-clear-btn field-clear-btn-top" type="button" title="Limpiar" onMouseDown={e => {
+                                <button className="field__clear-btn field__clear-btn--top" type="button" title="Limpiar" onMouseDown={e => {
                                     e.preventDefault();
                                     setForm(f => ({ ...f, actividad: '' }));
                                     setActividadSugs([]);
@@ -728,11 +728,11 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                 }}>✕</button>
                             )}
                             {actividadSugs.length > 0 && (
-                                <div className="placa-suggestions">
+                                <div className="placa__suggestions">
                                     {actividadSugs.map((s, i) => (
-                                        <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}>
-                                            <div className="placa-suggestion-placa">{s}</div>
-                                            <span className="placa-suggestion-badge hoy">Reciente</span>
+                                        <div key={i} className="placa__suggestion-item" onMouseDown={e => { e.preventDefault(); setForm(f => ({ ...f, actividad: s })); setActividadSugs([]); }}>
+                                            <div className="placa__suggestion-placa">{s}</div>
+                                            <span className="placa__suggestion-badge placa__suggestion-badge--hoy">Reciente</span>
                                         </div>
                                     ))}
                                 </div>
@@ -745,41 +745,41 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                 {historialInfo.fecha && ` (${historialInfo.fecha.split('-').reverse().slice(0, 2).join('/')})`}
                             </div>
                         )}
-                        <div className="activ-tags-row">
+                        <div className="activ__tags-row">
                             {personasTags.map((p, i) => (
-                                <span key={i} className="activ-persona-tag">
+                                <span key={i} className="activ__persona-tag">
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                     {p.nombres}{p.cedula ? ` · ${p.cedula}` : ''}
-                                    <button className="activ-tag-remove" onMouseDown={e => { e.preventDefault(); setPersonasTags(t => t.filter((_, j) => j !== i)); }}>×</button>
+                                    <button className="activ__tag-remove" onMouseDown={e => { e.preventDefault(); setPersonasTags(t => t.filter((_, j) => j !== i)); }}>×</button>
                                 </span>
                             ))}
                             {personasTags.length < 10 && (
                                 showTagInput ? (
-                                    <div className="activ-tag-input-wrap">
+                                    <div className="activ__tag-input-wrap">
                                         <input
                                             autoFocus
-                                            className="activ-tag-input"
+                                            className="activ__tag-input"
                                             placeholder="Nombre o cédula..."
                                             value={tagQuery}
                                             onChange={e => handleTagSearch(e.target.value)}
                                             onBlur={() => setTimeout(() => { setShowTagInput(false); setTagQuery(''); setTagSugs([]); }, 200)}
                                         />
                                         {tagSugs.length > 0 && (
-                                            <div className="placa-suggestions activ-tag-sugs">
+                                            <div className="placa__suggestions activ__tag-sugs">
                                                 {tagSugs.map((pg, i) => (
-                                                    <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); selectTag(pg); }}>
+                                                    <div key={i} className="placa__suggestion-item" onMouseDown={e => { e.preventDefault(); selectTag(pg); }}>
                                                         <div>
-                                                            <div className="placa-suggestion-placa">{pg.nombres}</div>
-                                                            <div className="placa-suggestion-info">{[pg.cedula, pg.empresa].filter(Boolean).join(' · ')}</div>
+                                                            <div className="placa__suggestion-placa">{pg.nombres}</div>
+                                                            <div className="placa__suggestion-info">{[pg.cedula, pg.empresa].filter(Boolean).join(' · ')}</div>
                                                         </div>
-                                                        <span className="placa-suggestion-badge db">BD</span>
+                                                        <span className="placa__suggestion-badge placa__suggestion-badge--db">BD</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
                                 ) : (
-                                    <button className="activ-add-tag-btn" onClick={() => setShowTagInput(true)}>
+                                    <button className="activ__add-tag-btn" onClick={() => setShowTagInput(true)}>
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
                                         persona
                                     </button>
@@ -788,13 +788,13 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         </div>
                     </div>
                 </div>
-                {error && <p className="modal-error">{error}</p>}
+                {error && <p className="modal__error">{error}</p>}
                 {guardado && (
-                    <div className="mov-guardado">
+                    <div className="mov__guardado">
                         ✓ Movimiento registrado
                     </div>
                 )}
-                <button className={`modal-btn ${form.placa ? 'active' : ''}`} onClick={handleSubmit} disabled={loading}>
+                <button className={`modal__btn${form.placa ? ' modal__btn--active' : ''}`} onClick={handleSubmit} disabled={loading}>
                     {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar movimiento'}
                 </button>
             </div>

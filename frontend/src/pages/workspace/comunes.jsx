@@ -4,12 +4,12 @@ import { PANEL_LABELS, formatRelativeTime } from './helpers';
 // Marca de un registro hecho sin conexión que todavía no se sube. Si el
 // servidor lo rechazó, muestra el motivo y permite descartarlo.
 export const PendienteBadge = ({ error, onDescartar }) => (
-    <span className={`pendiente-badge${error ? ' pendiente-badge-error' : ''}`}
+    <span className={`pendiente__badge${error ? ' pendiente__badge--error' : ''}`}
         title={error || 'Guardado en el dispositivo; se subirá al volver la conexión'}
         onClick={e => e.stopPropagation()}>
         {error ? 'No se pudo subir' : 'Pendiente'}
         {/* span y no button: la marca puede ir dentro de una tarjeta que ya es un botón */}
-        {error && <span role="button" tabIndex={0} className="pendiente-descartar" onClick={onDescartar}>Descartar</span>}
+        {error && <span role="button" tabIndex={0} className="pendiente__descartar" onClick={onDescartar}>Descartar</span>}
     </span>
 );
 
@@ -105,7 +105,7 @@ export const ScrollTopButton = ({ opciones, onTap }) => {
     return (
         <>
             <button
-                className={`scroll-top-btn${menu ? ' scroll-top-btn-gesto' : ''}`}
+                className={`scroll__top-btn${menu ? ' scroll__top-btn--gesto' : ''}`}
                 title="Volver arriba · mantén presionado y arrastra para más opciones"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -119,11 +119,11 @@ export const ScrollTopButton = ({ opciones, onTap }) => {
                 </svg>
             </button>
             {menu && (
-                <div className="scroll-gesto-capa">
+                <div className="scroll__gesto-capa">
                     {opciones.map(o => (
                         <span key={o.dir} style={posicion(o.dir)}
-                            className={`scroll-gesto-op${activa === o.dir ? ' activa' : ''}`}>
-                            <span className="scroll-gesto-flecha">{GESTO_FLECHA[o.dir]}</span>
+                            className={`scroll__gesto-op${activa === o.dir ? ' scroll__gesto-op--activa' : ''}`}>
+                            <span className="scroll__gesto-flecha">{GESTO_FLECHA[o.dir]}</span>
                             {o.label}
                         </span>
                     ))}
@@ -135,14 +135,14 @@ export const ScrollTopButton = ({ opciones, onTap }) => {
 
 // ── Campos del formulario ────────────────────────────────
 export const ModalField = ({ name, label, placeholder, required, value, onChange, autoFilled }) => (
-    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+    <div className={`modal__field ${autoFilled && value ? 'modal__field--autofilled' : ''}`}>
         <label>{label}{required && <span className="campo-obligatorio"> *</span>}</label>
         <input type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} />
     </div>
 );
 
 const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFilled }) => (
-    <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+    <div className={`modal__field ${autoFilled && value ? 'modal__field--autofilled' : ''}`}>
         <label>{label}</label>
         <input type="text" name={name} list={`combo-${name}`} placeholder={placeholder || ''} value={value} onChange={onChange} />
         <datalist id={`combo-${name}`}>
@@ -154,29 +154,29 @@ const ModalCombo = ({ name, label, options, placeholder, value, onChange, autoFi
 export const SuggestionField = ({ name, label, required, placeholder, value, onChange, onClear, autoFilled, suggestions, onSelect, onClearSugs, labelAction }) => {
     const inputRef = useRef(null);
     return (
-        <div className={`modal-field ${autoFilled && value ? 'modal-field-autofilled' : ''}`}>
+        <div className={`modal__field ${autoFilled && value ? 'modal__field--autofilled' : ''}`}>
             <label>{label}{required && <span className="campo-obligatorio"> *</span>}{labelAction}</label>
-            <div className="placa-wrapper">
+            <div className="placa__wrapper">
                 <input ref={inputRef} type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} autoComplete="off"
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} />
                 {value && onClear && (
-                    <button className="field-clear-btn" type="button" onMouseDown={e => {
+                    <button className="field__clear-btn" type="button" onMouseDown={e => {
                         e.preventDefault();
                         onClear();
                         setTimeout(() => inputRef.current?.focus(), 0);
                     }}>✕</button>
                 )}
                 {suggestions.length > 0 && (
-                    <div className="placa-suggestions">
+                    <div className="placa__suggestions">
                         {suggestions.map((s, i) => (
-                            <div key={i} className="placa-suggestion-item" onMouseDown={e => { e.preventDefault(); onSelect(s); }}>
+                            <div key={i} className="placa__suggestion-item" onMouseDown={e => { e.preventDefault(); onSelect(s); }}>
                                 <div>
-                                    <div className="placa-suggestion-placa">{s.nombres || s.cedula}</div>
-                                    <div className="placa-suggestion-info">
+                                    <div className="placa__suggestion-placa">{s.nombres || s.cedula}</div>
+                                    <div className="placa__suggestion-info">
                                         {[s.cedula, s.empresa].filter(Boolean).join(' · ') || '—'}
                                     </div>
                                 </div>
-                                <span className={`placa-suggestion-badge ${s._source}`}>
+                                <span className={`placa__suggestion-badge placa__suggestion-badge--${s._source}`}>
                                     {s._source === 'hoy' ? 'Hoy' : 'BD'}
                                 </span>
                             </div>
@@ -191,30 +191,30 @@ export const SuggestionField = ({ name, label, required, placeholder, value, onC
 export const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, onClear, suggestions, onSelect, multiline }) => {
     const inputRef = useRef(null);
     return (
-    <div className="modal-field">
+    <div className="modal__field">
         <label>{label}</label>
-        <div className="placa-wrapper">
+        <div className="placa__wrapper">
             {multiline ? (
                 <textarea name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off"
-                    rows={3} className="modal-textarea" />
+                    rows={3} className="modal__textarea" />
             ) : (
                 <input ref={inputRef} type="text" name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}
                     onBlur={() => setTimeout(() => onClearSugs?.(), 150)} autoComplete="off" />
             )}
             {value && onClear && !multiline && (
-                <button className="field-clear-btn" type="button" title="Limpiar" onMouseDown={e => {
+                <button className="field__clear-btn" type="button" title="Limpiar" onMouseDown={e => {
                     e.preventDefault();
                     onClear();
                     setTimeout(() => inputRef.current?.focus(), 0);
                 }}>✕</button>
             )}
             {suggestions.length > 0 && (
-                <div className="placa-suggestions">
+                <div className="placa__suggestions">
                     {suggestions.map((s, i) => (
-                        <div key={i} className="placa-suggestion-item" onClick={() => onSelect(s)}>
-                            <div className="placa-suggestion-placa">{s}</div>
-                            <span className="placa-suggestion-badge hoy">Hoy</span>
+                        <div key={i} className="placa__suggestion-item" onClick={() => onSelect(s)}>
+                            <div className="placa__suggestion-placa">{s}</div>
+                            <span className="placa__suggestion-badge placa__suggestion-badge--hoy">Hoy</span>
                         </div>
                     ))}
                 </div>
@@ -227,20 +227,20 @@ export const TextSugField = ({ name, label, placeholder, value, onChange, onFocu
 // ── Modal detalle ─────────────────────────────────────────
 const DetalleRow = ({ label, value, full }) =>
     value ? (
-        <div className={`detalle-field${full ? ' detalle-field-full' : ''}`}>
-            <span className="detalle-label">{label}</span>
-            <span className="detalle-value">{value}</span>
+        <div className={`detalle__field${full ? ' detalle__field--full' : ''}`}>
+            <span className="detalle__label">{label}</span>
+            <span className="detalle__value">{value}</span>
         </div>
     ) : null;
 
 // Aviso reutilizable de "datos cargados desde caché offline" con su antigüedad
 // (vigencia tipo Netflix: cachedAt/expiresAt guardado por catálogo en Dexie).
 export const CacheFreshnessBadge = ({ cachedAt, onRefresh }) => (
-    <div className="cache-aviso">
-        <span className="cache-aviso-texto">
+    <div className="cache__aviso">
+        <span className="cache__aviso-texto">
             📴 Datos guardados localmente{cachedAt ? ` · ${formatRelativeTime(cachedAt)}` : ''}
         </span>
-        <button className="cache-aviso-btn" onClick={onRefresh}>
+        <button className="cache__aviso-btn" onClick={onRefresh}>
             Actualizar
         </button>
     </div>
@@ -248,16 +248,16 @@ export const CacheFreshnessBadge = ({ cachedAt, onRefresh }) => (
 
 // ── Modal confirmación genérico ───────────────────────────
 export const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
-    <div className="modal-overlay" onClick={onCancel}>
-        <div className="modal-card confirmar" onClick={e => e.stopPropagation()}>
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar-icono">
+    <div className="modal__overlay" onClick={onCancel}>
+        <div className="modal__card modal__card--confirmar" onClick={e => e.stopPropagation()}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar__icono">
                 <circle cx="12" cy="12" r="10" stroke="#f87171" strokeWidth="2" />
                 <path d="M12 8v4M12 16h.01" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <p className="confirmar-mensaje">{mensaje}</p>
-            <div className="confirmar-botones">
-                <button className="confirmar-cancelar" onClick={onCancel}>Cancelar</button>
-                <button className="confirmar-eliminar" onClick={onConfirm}>Eliminar</button>
+            <p className="confirmar__mensaje">{mensaje}</p>
+            <div className="confirmar__botones">
+                <button className="confirmar__cancelar" onClick={onCancel}>Cancelar</button>
+                <button className="confirmar__eliminar" onClick={onConfirm}>Eliminar</button>
             </div>
         </div>
     </div>
@@ -270,12 +270,12 @@ export const PersonaSugMini = ({ items, onSel }) => !items.length ? null : (
     // onBlur del input puede cerrar la lista al tocar fuera o cambiar de
     // campo, sin romper la selección por click/tap.
     <div
-        className="ingbit-sugs"
+        className="ingbit__sugs"
         onMouseDown={e => e.preventDefault()}>
         {items.map((p, i) => (
-            <div key={i} className="ingbit-sug" onClick={() => onSel(p)}>
-                <div className="ingbit-sug-nombre">{p.nombres}</div>
-                {p.cedula && <div className="ingbit-sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
+            <div key={i} className="ingbit__sug" onClick={() => onSel(p)}>
+                <div className="ingbit__sug-nombre">{p.nombres}</div>
+                {p.cedula && <div className="ingbit__sug-info">CI: {p.cedula}{p.empresa ? ' · ' + p.empresa : ''}</div>}
             </div>
         ))}
     </div>
@@ -283,23 +283,23 @@ export const PersonaSugMini = ({ items, onSel }) => !items.length ? null : (
 
 // ── Pantalla stub ─────────────────────────────────────────
 export const PantallaStub = ({ title }) => (
-    <div className="ws-section-content ws-stub">
-        <h3 className="ws-sub-title">{title}</h3>
-        <p className="ws-empty">Próximamente</p>
+    <div className="ws__section-content ws__section-content--stub">
+        <h3 className="ws__sub-title">{title}</h3>
+        <p className="ws__empty">Próximamente</p>
     </div>
 );
 
 // ── Acceso restringido ────────────────────────────────────
 export const AccesoRestringido = ({ label }) => (
-    <div className="acceso-restringido">
-        <div className="acceso-restringido-icono">
+    <div className="acceso__restringido">
+        <div className="acceso__restringido-icono">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
             </svg>
         </div>
-        <div className="acceso-restringido-titulo">Acceso restringido</div>
-        <div className="acceso-restringido-texto">
+        <div className="acceso__restringido-titulo">Acceso restringido</div>
+        <div className="acceso__restringido-texto">
             No tienes permiso para acceder a <strong>{label}</strong>.
             Contacta al administrador para solicitar acceso.
         </div>
@@ -315,19 +315,19 @@ export const PanelActivacion = ({ permisosPanel, isPending }) => {
         { label: 'Acceso completo', done: !isPending && paneles.every(([id]) => permisosPanel.includes(id)) },
     ];
     return (
-        <div className="cuenta-panel">
-            <div className="cuenta-panel-header">
-                <div className="cuenta-panel-icono">
+        <div className="cuenta__panel">
+            <div className="cuenta__panel-header">
+                <div className="cuenta__panel-icono">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <circle cx="12" cy="12" r="10" stroke="#ef9f27" strokeWidth="2" />
                         <path d="M12 8v4M12 16h.01" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                 </div>
                 <div>
-                    <div className="cuenta-panel-titulo">
+                    <div className="cuenta__panel-titulo">
                         {isPending ? 'Cuenta pendiente de activación' : 'Acceso parcial'}
                     </div>
-                    <div className="cuenta-panel-texto">
+                    <div className="cuenta__panel-texto">
                         {isPending
                             ? 'El administrador debe aprobar tu cuenta para habilitar los módulos.'
                             : 'Algunos módulos aún no están habilitados para tu cuenta.'}
@@ -336,36 +336,36 @@ export const PanelActivacion = ({ permisosPanel, isPending }) => {
             </div>
 
             {/* Pasos: Registro → Aprobación → Acceso completo */}
-            <div className="cuenta-panel-pasos">
+            <div className="cuenta__panel-pasos">
                 {pasos.map((step, i) => (
-                    <div key={step.label} className={`cuenta-panel-paso${step.done ? ' hecho' : ''}`}>
-                        <div className="cuenta-panel-paso-marca">
-                            <div className="cuenta-panel-paso-circulo">
+                    <div key={step.label} className={`cuenta__panel-paso${step.done ? ' cuenta__panel-paso--hecho' : ''}`}>
+                        <div className="cuenta__panel-paso-marca">
+                            <div className="cuenta__panel-paso-circulo">
                                 {step.done
                                     ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                    : <div className="cuenta-panel-paso-punto" />
+                                    : <div className="cuenta__panel-paso-punto" />
                                 }
                             </div>
-                            <span className="cuenta-panel-paso-label">{step.label}</span>
+                            <span className="cuenta__panel-paso-label">{step.label}</span>
                         </div>
-                        {i < pasos.length - 1 && <div className="cuenta-panel-paso-linea" />}
+                        {i < pasos.length - 1 && <div className="cuenta__panel-paso-linea" />}
                     </div>
                 ))}
             </div>
 
             {/* Módulos habilitados y pendientes */}
-            <div className="cuenta-panel-modulos">
+            <div className="cuenta__panel-modulos">
                 {paneles.map(([id, label]) => {
                     const granted = !isPending && permisosPanel.includes(id);
                     return (
-                        <div key={id} className={`cuenta-panel-modulo${granted ? ' habilitado' : ''}`}>
-                            <div className="cuenta-panel-modulo-icono">
+                        <div key={id} className={`cuenta__panel-modulo${granted ? ' cuenta__panel-modulo--habilitado' : ''}`}>
+                            <div className="cuenta__panel-modulo-icono">
                                 {granted
                                     ? <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#28c997" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                     : <svg width="7" height="7" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#ef9f27" strokeWidth="2.5" /><path d="M7 11V7a5 5 0 0110 0v4" stroke="#ef9f27" strokeWidth="2.5" strokeLinecap="round" /></svg>
                                 }
                             </div>
-                            <span className="cuenta-panel-modulo-label">{label}</span>
+                            <span className="cuenta__panel-modulo-label">{label}</span>
                         </div>
                     );
                 })}

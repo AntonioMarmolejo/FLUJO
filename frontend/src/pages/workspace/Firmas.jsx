@@ -62,25 +62,25 @@ const CapturaFirma = ({ onCapturada, onCancelar }) => {
     };
 
     return (
-        <div className="modal-overlay" onClick={onCancelar}>
-            <div className="firma-captura-card" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
+        <div className="modal__overlay" onClick={onCancelar}>
+            <div className="firma__captura-card" onClick={e => e.stopPropagation()}>
+                <div className="modal__header">
                     <h3 className="sin-margen">Capturar firma</h3>
-                    <button className="modal-close" onClick={onCancelar}>✕</button>
+                    <button className="modal__close" onClick={onCancelar}>✕</button>
                 </div>
                 {camError
-                    ? <p className="modal-error firma-captura-error">{camError}</p>
+                    ? <p className="modal__error modal__error--firma-captura">{camError}</p>
                     : (
-                        <div className="qr-video-wrap">
-                            <video ref={videoRef} className="qr-video" playsInline muted />
+                        <div className="qr__video-wrap">
+                            <video ref={videoRef} className="qr__video" playsInline muted />
                         </div>
                     )}
                 <canvas ref={canvasRef} hidden />
-                <div className="firma-captura-botones">
-                    <button className="firma-btn-primary" onClick={handleTomarFoto} disabled={!activa}>
+                <div className="firma__captura-botones">
+                    <button className="firma__btn-primary" onClick={handleTomarFoto} disabled={!activa}>
                         Tomar foto
                     </button>
-                    <button className="firma-btn-secondary" onClick={() => fileInputRef.current.click()}>
+                    <button className="firma__btn-secondary" onClick={() => fileInputRef.current.click()}>
                         Subir imagen
                     </button>
                 </div>
@@ -149,23 +149,23 @@ const RecortarFirma = ({ src, onAplicar, onCancelar }) => {
     };
 
     return (
-        <div className="modal-overlay firma-crop-overlay">
-            <div className="firma-crop-container"
+        <div className="modal__overlay firma__crop-overlay">
+            <div className="firma__crop-container"
                 onPointerMove={onPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}>
-                <img ref={imgRef} src={src} alt="" className="firma-crop-img" onLoad={onImgLoad} draggable={false} />
+                <img ref={imgRef} src={src} alt="" className="firma__crop-img" onLoad={onImgLoad} draggable={false} />
                 {crop && (
-                    <div className="firma-crop-box" style={{ left: crop.x, top: crop.y, width: crop.w, height: crop.h }}
+                    <div className="firma__crop-box" style={{ left: crop.x, top: crop.y, width: crop.w, height: crop.h }}
                         onPointerDown={startDrag('move')}>
-                        <span className="firma-crop-handle firma-crop-handle-nw" onPointerDown={startDrag('nw')} />
-                        <span className="firma-crop-handle firma-crop-handle-ne" onPointerDown={startDrag('ne')} />
-                        <span className="firma-crop-handle firma-crop-handle-sw" onPointerDown={startDrag('sw')} />
-                        <span className="firma-crop-handle firma-crop-handle-se" onPointerDown={startDrag('se')} />
+                        <span className="firma__crop-handle firma__crop-handle--nw" onPointerDown={startDrag('nw')} />
+                        <span className="firma__crop-handle firma__crop-handle--ne" onPointerDown={startDrag('ne')} />
+                        <span className="firma__crop-handle firma__crop-handle--sw" onPointerDown={startDrag('sw')} />
+                        <span className="firma__crop-handle firma__crop-handle--se" onPointerDown={startDrag('se')} />
                     </div>
                 )}
             </div>
-            <div className="firma-crop-actions">
-                <button className="firma-btn-secondary" onClick={onCancelar}>Cancelar</button>
-                <button className="firma-btn-primary" onClick={handleAplicar}>Aplicar recorte</button>
+            <div className="firma__crop-actions">
+                <button className="firma__btn-secondary" onClick={onCancelar}>Cancelar</button>
+                <button className="firma__btn-primary" onClick={handleAplicar}>Aplicar recorte</button>
             </div>
         </div>
     );
@@ -334,112 +334,112 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
     };
 
     return (
-        <div className="firma-form">
-            <div className="firma-section-card">
-                <div className="firma-section-head">
-                    <span className="firma-section-num">1</span>
-                    <span className="firma-section-title">Firma</span>
-                    <span className="firma-section-tag">Obligatorio</span>
+        <div className="firma__form">
+            <div className="firma__section-card">
+                <div className="firma__section-head">
+                    <span className="firma__section-num">1</span>
+                    <span className="firma__section-title">Firma</span>
+                    <span className="firma__section-tag">Obligatorio</span>
                 </div>
                 {!imagen ? (
-                    <div className="firma-upload-empty">
-                        <div className="firma-upload-icon">
+                    <div className="firma__upload-empty">
+                        <div className="firma__upload-icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M17 3a2.828 2.828 0 114 4L8 20l-5 1 1-5L17 3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </div>
-                        <div className="firma-upload-title">Sube o toma una foto de la firma</div>
-                        <p className="firma-upload-text">Fotografía la firma sobre papel claro, con buena luz y sin sombras. PNG o JPG.</p>
-                        <div className="firma-upload-actions">
-                            <button className="firma-btn-primary" onClick={() => setCapturaAbierta(true)}>Tomar foto</button>
-                            <button className="firma-btn-secondary" onClick={() => fileInputRef.current.click()}>Subir imagen</button>
+                        <div className="firma__upload-title">Sube o toma una foto de la firma</div>
+                        <p className="firma__upload-text">Fotografía la firma sobre papel claro, con buena luz y sin sombras. PNG o JPG.</p>
+                        <div className="firma__upload-actions">
+                            <button className="firma__btn-primary" onClick={() => setCapturaAbierta(true)}>Tomar foto</button>
+                            <button className="firma__btn-secondary" onClick={() => fileInputRef.current.click()}>Subir imagen</button>
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleArchivoDirecto} />
                     </div>
                 ) : (
                     <>
-                        <span className="firma-preview-badge">✓ Vista previa</span>
-                        <div className="firma-preview-wrap">
-                            <img src={imagen} alt="Firma" className="firma-preview-img" />
+                        <span className="firma__preview-badge">✓ Vista previa</span>
+                        <div className="firma__preview-wrap">
+                            <img src={imagen} alt="Firma" className="firma__preview-img" />
                         </div>
-                        <div className="firma-preview-actions">
-                            <button className="firma-tool-btn" onClick={() => setRecortando(true)}>Recortar</button>
-                            <button className="firma-tool-btn" onClick={handleGirar}>Girar</button>
-                            <button className="firma-tool-btn" onClick={() => setCapturaAbierta(true)}>Reemplazar</button>
+                        <div className="firma__preview-actions">
+                            <button className="firma__tool-btn" onClick={() => setRecortando(true)}>Recortar</button>
+                            <button className="firma__tool-btn" onClick={handleGirar}>Girar</button>
+                            <button className="firma__tool-btn" onClick={() => setCapturaAbierta(true)}>Reemplazar</button>
                         </div>
                     </>
                 )}
             </div>
 
-            <div className="firma-section-card">
-                <div className="firma-section-head">
-                    <span className="firma-section-num">2</span>
-                    <span className="firma-section-title">Datos del funcionario</span>
-                    {matchEstado === 'cargado' && <span className="firma-badge firma-badge-verde">Datos cargados desde la base</span>}
-                    {matchEstado === 'no-autorizado' && <span className="firma-badge firma-badge-rojo">No autorizada</span>}
-                    {matchEstado === 'no-encontrado' && <span className="firma-badge firma-badge-violeta">No registrada</span>}
+            <div className="firma__section-card">
+                <div className="firma__section-head">
+                    <span className="firma__section-num">2</span>
+                    <span className="firma__section-title">Datos del funcionario</span>
+                    {matchEstado === 'cargado' && <span className="firma__badge firma__badge--verde">Datos cargados desde la base</span>}
+                    {matchEstado === 'no-autorizado' && <span className="firma__badge firma__badge--rojo">No autorizada</span>}
+                    {matchEstado === 'no-encontrado' && <span className="firma__badge firma__badge--violeta">No registrada</span>}
                 </div>
 
-                <div className="firma-field">
+                <div className="firma__field">
                     <label>Nombres y apellidos</label>
-                    <div className="firma-input-wrap">
+                    <div className="firma__input-wrap">
                         <input value={nombres} onChange={e => handleNombresChange(e.target.value)} onBlur={() => setSugsNombres([])} placeholder="Busca o escribe el nombre completo" />
                         <PersonaSugMini items={sugsNombres} onSel={seleccionarPersona} />
                     </div>
                 </div>
 
-                <div className="firma-field">
+                <div className="firma__field">
                     <label>Cédula</label>
-                    <div className="firma-input-wrap">
+                    <div className="firma__input-wrap">
                         <input value={cedula} onChange={e => handleCedulaChange(e.target.value)} onBlur={() => setSugsCedula([])} placeholder="10 dígitos" inputMode="numeric" maxLength={10} />
                         <PersonaSugMini items={sugsCedula} onSel={seleccionarPersona} />
                     </div>
                 </div>
 
                 {matchEstado === 'no-encontrado' && (
-                    <div className="firma-hint-box firma-hint-violeta">
+                    <div className="firma__hint-box firma__hint-violeta">
                         <strong>Persona no registrada</strong>
                         <p>Pide a un administrador que la registre en Personas y la autorice para firmas.</p>
                     </div>
                 )}
 
                 {matchEstado === 'no-autorizado' && (
-                    <div className="firma-hint-box firma-hint-rojo">
+                    <div className="firma__hint-box firma__hint-rojo">
                         <strong>Persona no autorizada para firmar</strong>
                         <p>Existe en Personas pero no está autorizada. Pide a un administrador que la autorice.</p>
                     </div>
                 )}
 
                 {avisoExistente && !reemplazaA && (
-                    <div className="firma-hint-box firma-hint-amarillo">
+                    <div className="firma__hint-box firma__hint-amarillo">
                         <strong>Esta persona ya tiene una firma registrada</strong>
                         <p>Registrada el {fmtFechaCorta(avisoExistente.createdAt)}{avisoExistente.puesto ? ` en ${avisoExistente.puesto}` : ''}.</p>
-                        <div className="firma-hint-actions">
+                        <div className="firma__hint-actions">
                             <button type="button" onClick={() => setVerFirmaExistente(true)}>Ver firma</button>
                             <button type="button" onClick={() => setReemplazaA(avisoExistente._id)}>+ Agregar otra</button>
                         </div>
                     </div>
                 )}
 
-                <div className="firma-field">
+                <div className="firma__field">
                     <label>Empresa</label>
                     <input value={empresa} onChange={e => setEmpresa(e.target.value)} placeholder="Ej. Andina Logística S.A." />
                 </div>
-                <div className="firma-field-row">
-                    <div className="firma-field">
+                <div className="firma__field-row">
+                    <div className="firma__field">
                         <label>Departamento</label>
                         <input value={departamento} onChange={e => setDepartamento(e.target.value)} placeholder="Ej. Bodega" />
                     </div>
-                    <div className="firma-field">
+                    <div className="firma__field">
                         <label>Cargo</label>
                         <input value={cargo} onChange={e => setCargo(e.target.value)} placeholder="Ej. Jefe de Bodega" />
                     </div>
                 </div>
             </div>
 
-            {error && <p className="modal-error firma-form-error">{error}</p>}
-            <p className="firma-footer-hint">{footerHint}</p>
-            <div className="firma-footer-actions">
-                <button className="firma-btn-secondary" onClick={onCancelar} disabled={guardando}>Cancelar</button>
-                <button className="firma-btn-primary" disabled={!puedeGuardar || guardando} onClick={handleGuardar}>
+            {error && <p className="modal__error modal__error--firma-form">{error}</p>}
+            <p className="firma__footer-hint">{footerHint}</p>
+            <div className="firma__footer-actions">
+                <button className="firma__btn-secondary" onClick={onCancelar} disabled={guardando}>Cancelar</button>
+                <button className="firma__btn-primary" disabled={!puedeGuardar || guardando} onClick={handleGuardar}>
                     {guardando ? 'Guardando…' : '✓ Guardar'}
                 </button>
             </div>
@@ -447,10 +447,10 @@ const FirmaForm = ({ turnoActivo, editando, onCancelar, onGuardada, onReemplazo 
             {capturaAbierta && <CapturaFirma onCapturada={handleCapturada} onCancelar={() => setCapturaAbierta(false)} />}
             {recortando && <RecortarFirma src={imagen} onAplicar={dataUrl => { setImagen(dataUrl); setRecortando(false); }} onCancelar={() => setRecortando(false)} />}
             {verFirmaExistente && avisoExistente && (
-                <div className="modal-overlay" onClick={() => setVerFirmaExistente(false)}>
-                    <div className="firma-ver-existente-card" onClick={e => e.stopPropagation()}>
+                <div className="modal__overlay" onClick={() => setVerFirmaExistente(false)}>
+                    <div className="firma__ver-existente-card" onClick={e => e.stopPropagation()}>
                         <img src={avisoExistente.imagen} alt="Firma existente" />
-                        <button className="firma-btn-secondary" onClick={() => setVerFirmaExistente(false)}>Cerrar</button>
+                        <button className="firma__btn-secondary" onClick={() => setVerFirmaExistente(false)}>Cerrar</button>
                     </div>
                 </div>
             )}
@@ -577,39 +577,39 @@ export const PantallaFirmas = ({ turnoActivo }) => {
     if (vista === 'detalle' && firmaSel) {
         const iniciales = (firmaSel.nombres || '').split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase();
         return (
-            <div className="firma-detalle">
-                <div className="firma-detalle-header">
-                    <button className="util-back-btn util-back-btn-junto" onClick={() => { setVista('galeria'); setFirmaSel(null); }}>
+            <div className="firma__detalle">
+                <div className="firma__detalle-header">
+                    <button className="util__back-btn util__back-btn--junto" onClick={() => { setVista('galeria'); setFirmaSel(null); }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <div>
-                        <div className="firma-detalle-titulo">Detalle de firma</div>
-                        <div className="firma-detalle-subtitulo">Firmas Funcionarios</div>
+                        <div className="firma__detalle-titulo">Detalle de firma</div>
+                        <div className="firma__detalle-subtitulo">Firmas Funcionarios</div>
                     </div>
                 </div>
-                <div className="firma-detalle-img-wrap">
+                <div className="firma__detalle-img-wrap">
                     {firmaSel._pendiente
-                        ? <span className={`firma-badge-registrada ${firmaSel._error ? 'firma-badge-error' : 'firma-badge-pendiente'}`}>
+                        ? <span className={`firma__badge-registrada ${firmaSel._error ? 'firma__badge-registrada--error' : 'firma__badge-registrada--pendiente'}`}>
                             {firmaSel._error ? `No se pudo subir: ${firmaSel._error}` : 'Pendiente de subir · guardada en el dispositivo'}
                         </span>
-                        : <span className="firma-badge-registrada">Firma registrada</span>}
-                    <div className="firma-zoom-marco">
+                        : <span className="firma__badge-registrada">Firma registrada</span>}
+                    <div className="firma__zoom-marco">
                         {/* La escala cambia con los botones de zoom: único estilo en línea */}
-                        <img src={firmaSel.imagen} alt="" className="firma-zoom-img" style={{ transform: `scale(${zoom})` }} />
+                        <img src={firmaSel.imagen} alt="" className="firma__zoom-img" style={{ transform: `scale(${zoom})` }} />
                     </div>
                 </div>
-                <div className="firma-zoom-controls">
+                <div className="firma__zoom-controls">
                     <button onClick={() => setZoom(z => Math.max(1, +(z - 0.2).toFixed(1)))}>−</button>
                     <span>{Math.round(zoom * 100)}%</span>
                     <button onClick={() => setZoom(z => Math.min(3, +(z + 0.2).toFixed(1)))}>+</button>
                 </div>
-                <p className="firma-detalle-hint">Compara los trazos con la firma del documento. Usa el zoom para revisar inicio, cierre y rúbrica.</p>
-                <div className="firma-detalle-info">
-                    <div className="firma-detalle-persona">
-                        <div className="firma-avatar">{iniciales}</div>
+                <p className="firma__detalle-hint">Compara los trazos con la firma del documento. Usa el zoom para revisar inicio, cierre y rúbrica.</p>
+                <div className="firma__detalle-info">
+                    <div className="firma__detalle-persona">
+                        <div className="firma__avatar">{iniciales}</div>
                         <div>
-                            <div className="firma-detalle-nombre">{firmaSel.nombres}</div>
-                            {firmaSel.cargo && <span className="firma-pill">{firmaSel.cargo}</span>}
+                            <div className="firma__detalle-nombre">{firmaSel.nombres}</div>
+                            {firmaSel.cargo && <span className="firma__pill">{firmaSel.cargo}</span>}
                         </div>
                     </div>
                     {[
@@ -619,19 +619,19 @@ export const PantallaFirmas = ({ turnoActivo }) => {
                         ['Cargo', firmaSel.cargo || '—'],
                         ['Registrada', `${fmtFechaCorta(firmaSel.createdAt)}${firmaSel.puesto ? ' · ' + firmaSel.puesto : ''}`],
                     ].map(([label, val]) => (
-                        <div className="firma-detalle-row" key={label}>
-                            <span className="firma-detalle-row-label">{label}</span>
-                            <span className="firma-detalle-row-val">{val}</span>
+                        <div className="firma__detalle-row" key={label}>
+                            <span className="firma__detalle-row-label">{label}</span>
+                            <span className="firma__detalle-row-val">{val}</span>
                         </div>
                     ))}
                 </div>
-                <div className="firma-detalle-acciones">
+                <div className="firma__detalle-acciones">
                     {firmaSel._pendiente ? (
-                        <button className="firma-btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Descartar</button>
+                        <button className="firma__btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Descartar</button>
                     ) : (
                         <>
-                            <button className="firma-btn-secondary" onClick={() => { setEditando(firmaSel); setVista('form'); }}>Editar</button>
-                            <button className="firma-btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Eliminar</button>
+                            <button className="firma__btn-secondary" onClick={() => { setEditando(firmaSel); setVista('form'); }}>Editar</button>
+                            <button className="firma__btn-danger" onClick={() => setConfirmarEliminar(firmaSel)}>Eliminar</button>
                         </>
                     )}
                 </div>
@@ -648,58 +648,58 @@ export const PantallaFirmas = ({ turnoActivo }) => {
 
     // ── Vista: Galería ──
     return (
-        <div className="firma-galeria">
-            <div className="firma-galeria-header">
+        <div className="firma__galeria">
+            <div className="firma__galeria-header">
                 <div>
-                    <div className="firma-galeria-titulo">Firmas Funcionarios</div>
-                    <div className="firma-galeria-subtitulo">
+                    <div className="firma__galeria-titulo">Firmas Funcionarios</div>
+                    <div className="firma__galeria-subtitulo">
                         {loading ? 'Cargando registro...' : firmas.length === 0 ? 'Sin firmas registradas' : `${firmas.length} firma${firmas.length !== 1 ? 's' : ''} registrada${firmas.length !== 1 ? 's' : ''}`}
                     </div>
                 </div>
-                <button className="firma-btn-primary" onClick={abrirNueva}>+ Nueva firma</button>
+                <button className="firma__btn-primary" onClick={abrirNueva}>+ Nueva firma</button>
             </div>
 
-            <div className="ws-search-bar firma-search-bar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws-search-lupa">
+            <div className="ws__search-bar ws__search-bar--firma">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ws__search-lupa">
                     <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
                     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
-                <input className="ws-search-input" type="text" placeholder="Buscar por nombre, cédula, empresa o cargo"
+                <input className="ws__search-input" type="text" placeholder="Buscar por nombre, cédula, empresa o cargo"
                     value={search} onChange={e => setSearch(e.target.value)} />
-                {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                {search && <button className="ws__search-clear" onClick={() => setSearch('')}>✕</button>}
             </div>
 
             {!loading && firmas.length > 0 && (
                 <>
                     {empresas.length > 0 && (
-                        <div className="firma-chip-row">
-                            <span className="firma-chip-label">EMPRESA</span>
-                            <div className="firma-chip-scroll">
-                                <button className={`firma-chip${filtroEmpresa === 'todas' ? ' active' : ''}`} onClick={() => setFiltroEmpresa('todas')}>Todas</button>
+                        <div className="firma__chip-row">
+                            <span className="firma__chip-label">EMPRESA</span>
+                            <div className="firma__chip-scroll">
+                                <button className={`firma__chip${filtroEmpresa === 'todas' ? ' firma__chip--active' : ''}`} onClick={() => setFiltroEmpresa('todas')}>Todas</button>
                                 {empresas.map(e => (
-                                    <button key={e} className={`firma-chip${filtroEmpresa === e ? ' active' : ''}`} onClick={() => setFiltroEmpresa(e)}>{e}</button>
+                                    <button key={e} className={`firma__chip${filtroEmpresa === e ? ' firma__chip--active' : ''}`} onClick={() => setFiltroEmpresa(e)}>{e}</button>
                                 ))}
                             </div>
                         </div>
                     )}
                     {departamentos.length > 0 && (
-                        <div className="firma-chip-row">
-                            <span className="firma-chip-label">DEPARTAMENTO</span>
-                            <div className="firma-chip-scroll">
-                                <button className={`firma-chip${filtroDepto === 'todos' ? ' active' : ''}`} onClick={() => setFiltroDepto('todos')}>Todos</button>
+                        <div className="firma__chip-row">
+                            <span className="firma__chip-label">DEPARTAMENTO</span>
+                            <div className="firma__chip-scroll">
+                                <button className={`firma__chip${filtroDepto === 'todos' ? ' firma__chip--active' : ''}`} onClick={() => setFiltroDepto('todos')}>Todos</button>
                                 {departamentos.map(d => (
-                                    <button key={d} className={`firma-chip${filtroDepto === d ? ' active' : ''}`} onClick={() => setFiltroDepto(d)}>{d}</button>
+                                    <button key={d} className={`firma__chip${filtroDepto === d ? ' firma__chip--active' : ''}`} onClick={() => setFiltroDepto(d)}>{d}</button>
                                 ))}
                             </div>
                         </div>
                     )}
-                    <div className="firma-toolbar">
-                        <span className="firma-toolbar-count">Mostrando {filtradas.length} de {firmas.length}</span>
-                        <div className="firma-view-toggle">
-                            <button className={vistaGrid ? 'active' : ''} onClick={() => setVistaGrid(true)} title="Vista cuadrícula">
+                    <div className="firma__toolbar">
+                        <span className="firma__toolbar-count">Mostrando {filtradas.length} de {firmas.length}</span>
+                        <div className="firma__view-toggle">
+                            <button className={`firma__view-toggle-btn${vistaGrid ? ' firma__view-toggle-btn--active' : ''}`} onClick={() => setVistaGrid(true)} title="Vista cuadrícula">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="2"/></svg>
                             </button>
-                            <button className={!vistaGrid ? 'active' : ''} onClick={() => setVistaGrid(false)} title="Vista lista">
+                            <button className={`firma__view-toggle-btn${!vistaGrid ? ' firma__view-toggle-btn--active' : ''}`} onClick={() => setVistaGrid(false)} title="Vista lista">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                             </button>
                         </div>
@@ -710,43 +710,43 @@ export const PantallaFirmas = ({ turnoActivo }) => {
             {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {loading ? (
-                <div className="firma-grid firma-grid-cargando">
-                    {Array.from({ length: 6 }).map((_, i) => <div key={i} className="firma-skeleton" />)}
+                <div className="firma__grid firma__grid--cargando">
+                    {Array.from({ length: 6 }).map((_, i) => <div key={i} className="firma__skeleton" />)}
                 </div>
             ) : firmas.length === 0 ? (
-                <div className="firma-empty">
-                    <div className="firma-empty-icon">
+                <div className="firma__empty">
+                    <div className="firma__empty-icon">
                         <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M17 3a2.828 2.828 0 114 4L8 20l-5 1 1-5L17 3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
-                    <div className="firma-empty-title">Aún no hay firmas registradas</div>
-                    <p className="firma-empty-text">Registra la firma de cada funcionario para que la guardia pueda identificar quién firmó pases, salidas y órdenes.</p>
-                    <button className="firma-btn-primary" onClick={abrirNueva}>+ Registrar primera firma</button>
+                    <div className="firma__empty-title">Aún no hay firmas registradas</div>
+                    <p className="firma__empty-text">Registra la firma de cada funcionario para que la guardia pueda identificar quién firmó pases, salidas y órdenes.</p>
+                    <button className="firma__btn-primary" onClick={abrirNueva}>+ Registrar primera firma</button>
                 </div>
             ) : filtradas.length === 0 ? (
-                <p className="ws-empty">Sin resultados para "{search}"</p>
+                <p className="ws__empty">Sin resultados para "{search}"</p>
             ) : vistaGrid ? (
-                <div className="firma-grid firma-coleccion">
+                <div className="firma__grid firma__coleccion">
                     {filtradas.map(f => (
-                        <button key={f._id} className="firma-card" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
-                            <img src={f.imagen} alt="" className="firma-card-img" />
-                            <div className="firma-card-nombre">{f.nombres}</div>
+                        <button key={f._id} className="firma__card" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
+                            <img src={f.imagen} alt="" className="firma__card-img" />
+                            <div className="firma__card-nombre">{f.nombres}</div>
                             {f._pendiente && <PendienteBadge error={f._error} onDescartar={() => handleEliminar(f._id)} />}
-                            {f.cargo && <span className="firma-pill">{f.cargo}</span>}
-                            {f.empresa && <div className="firma-card-meta">{f.empresa}</div>}
-                            {f.departamento && <div className="firma-card-meta firma-card-meta-dim">{f.departamento}</div>}
+                            {f.cargo && <span className="firma__pill">{f.cargo}</span>}
+                            {f.empresa && <div className="firma__card-meta">{f.empresa}</div>}
+                            {f.departamento && <div className="firma__card-meta firma__card-meta--dim">{f.departamento}</div>}
                         </button>
                     ))}
                 </div>
             ) : (
-                <div className="firma-list firma-coleccion">
+                <div className="firma__list firma__coleccion">
                     {filtradas.map(f => (
-                        <button key={f._id} className="firma-list-row" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
-                            <img src={f.imagen} alt="" className="firma-list-thumb" />
-                            <div className="firma-list-info">
-                                <div className="firma-card-nombre">{f.nombres}</div>
+                        <button key={f._id} className="firma__list-row" onClick={() => { setFirmaSel(f); setVista('detalle'); setZoom(1); }}>
+                            <img src={f.imagen} alt="" className="firma__list-thumb" />
+                            <div className="firma__list-info">
+                                <div className="firma__card-nombre">{f.nombres}</div>
                                 {f._pendiente && <PendienteBadge error={f._error} onDescartar={() => handleEliminar(f._id)} />}
-                                {f.cargo && <span className="firma-pill">{f.cargo}</span>}
-                                <div className="firma-card-meta">{f.empresa}{f.departamento ? ' · ' + f.departamento : ''}</div>
+                                {f.cargo && <span className="firma__pill">{f.cargo}</span>}
+                                <div className="firma__card-meta">{f.empresa}{f.departamento ? ' · ' + f.departamento : ''}</div>
                             </div>
                             <IconChevronRight />
                         </button>

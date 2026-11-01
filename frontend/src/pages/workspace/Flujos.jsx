@@ -135,13 +135,13 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
     return (
         <div className="flujodia">
             {/* Cabecera */}
-            <div className="flujodia-header">
-                <button className="ws-topbar-btn flujodia-volver" onClick={onBack}><IconArrowLeft /></button>
-                <div className="flujodia-titulo">
-                    <div className="flujodia-fecha">{fechaLarga}</div>
-                    <div className="flujodia-resumen">{movs.length} mov. · {bitacora.length} en bitácora</div>
+            <div className="flujodia__header">
+                <button className="ws__topbar-btn ws__topbar-btn--flujodia-volver" onClick={onBack}><IconArrowLeft /></button>
+                <div className="flujodia__titulo">
+                    <div className="flujodia__fecha">{fechaLarga}</div>
+                    <div className="flujodia__resumen">{movs.length} mov. · {bitacora.length} en bitácora</div>
                 </div>
-                <button className="ws-topbar-btn flujodia-compartir" onClick={handleShareFlujo} title="Compartir">
+                <button className="ws__topbar-btn ws__topbar-btn--flujodia-compartir" onClick={handleShareFlujo} title="Compartir">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <circle cx="6" cy="12" r="2.2" stroke="currentColor" strokeWidth="2"/>
                         <circle cx="17" cy="6" r="2.2" stroke="currentColor" strokeWidth="2"/>
@@ -149,7 +149,7 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                         <path d="M8 11l7-3.5M8 13l7 3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
                 </button>
-                <button className="ws-topbar-btn flujodia-exportar" onClick={() => setShowExport(s => !s)} title="Exportar">
+                <button className="ws__topbar-btn ws__topbar-btn--flujodia-exportar" onClick={() => setShowExport(s => !s)} title="Exportar">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -158,18 +158,18 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Menú exportar */}
             {showExport && (
-                <div className="flujodia-export-menu">
+                <div className="flujodia__export-menu">
                     {vista === 'movimientos' ? (<>
-                        <div className="export-menu-item" onClick={() => doExport('xls')}>
+                        <div className="export__menu-item" onClick={() => doExport('xls')}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /><path d="M12 8l3 4-3 4M15 12h6" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" /></svg>
                             Excel (.xls)
                         </div>
-                        <div className="export-menu-item" onClick={() => doExport('csv')}>
+                        <div className="export__menu-item" onClick={() => doExport('csv')}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#818cf8" strokeWidth="2" /><path d="M14 2v6h6M8 13h8M8 17h5" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" /></svg>
                             CSV (.csv)
                         </div>
                     </>) : (
-                        <div className="export-menu-item" onClick={() => doExport('bitacora')}>
+                        <div className="export__menu-item" onClick={() => doExport('bitacora')}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#4ade80" strokeWidth="2" /><path d="M9 3v18M3 9h6M3 15h6" stroke="#4ade80" strokeWidth="2" /></svg>
                             Exportar Bitácora (.xlsx)
                         </div>
@@ -178,24 +178,24 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
             )}
 
             {/* Contadores */}
-            <div className="flujodia-contadores">
-                <div className="ws-counter-card">
-                    <span className="ws-counter-val">{contratistas}</span>
-                    <span className="ws-counter-label">CONTRATISTAS</span>
+            <div className="flujodia__contadores">
+                <div className="ws__counter-card">
+                    <span className="ws__counter-val">{contratistas}</span>
+                    <span className="ws__counter-label">CONTRATISTAS</span>
                 </div>
-                <div className="ws-counter-card">
-                    <span className="ws-counter-val">{petroecuador}</span>
-                    <span className="ws-counter-label">EP PETRO.</span>
+                <div className="ws__counter-card">
+                    <span className="ws__counter-val">{petroecuador}</span>
+                    <span className="ws__counter-label">EP PETRO.</span>
                 </div>
             </div>
 
             {/* Tabs Movimientos / Bitácora */}
-            <div className="flujodia-tabs">
-                <button className={`ws-vista-tab${vista === 'movimientos' ? ' active' : ''}`}
+            <div className="flujodia__tabs">
+                <button className={`ws__vista-tab${vista === 'movimientos' ? ' ws__vista-tab--active' : ''}`}
                     onClick={() => setVista('movimientos')}>
                     Movimientos
                 </button>
-                <button className={`ws-vista-tab${vista === 'bitacora' ? ' active' : ''}`}
+                <button className={`ws__vista-tab${vista === 'bitacora' ? ' ws__vista-tab--active' : ''}`}
                     onClick={() => setVista('bitacora')}>
                     Bitácora
                 </button>
@@ -203,20 +203,20 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Búsqueda + ordenamiento (solo movimientos) */}
             {vista === 'movimientos' && (
-                <div className="flujodia-busqueda">
-                    <div className="ws-search-bar flujodia-search-bar">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="flujodia-lupa">
+                <div className="flujodia__busqueda">
+                    <div className="ws__search-bar ws__search-bar--flujodia">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="flujodia__lupa">
                             <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                             <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                         </svg>
-                        <input className="ws-search-input" type="text" placeholder="Buscar por placa, conductor, empresa, destino o actividad..."
+                        <input className="ws__search-input" type="text" placeholder="Buscar por placa, conductor, empresa, destino o actividad..."
                             value={search} onChange={e => setSearch(e.target.value)} />
-                        {search && <button className="ws-search-clear" onClick={() => setSearch('')}>✕</button>}
+                        {search && <button className="ws__search-clear" onClick={() => setSearch('')}>✕</button>}
                     </div>
                     <button
                         onClick={() => setSortDesc(d => !d)}
                         title={sortDesc ? 'Más reciente primero' : 'Más antiguo primero'}
-                        className="flujodia-orden"
+                        className="flujodia__orden"
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                             {sortDesc ? (
@@ -235,62 +235,62 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Lista de movimientos */}
             {vista === 'movimientos' && (
-                <div className="flujodia-lista">
+                <div className="flujodia__lista">
                     {movsOrdered.length === 0
-                        ? <p className="ws-empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
+                        ? <p className="ws__empty">{search ? `Sin resultados para "${search}"` : 'Sin movimientos'}</p>
                         : (() => {
                             const counts = {};
                             filtrados.forEach(m => { counts[m.placa] = (counts[m.placa] || 0) + 1; });
                             return movsOrdered.map((m, idx) => {
                                 const isCollapsed = !expandedMovSet.has(idx);
                                 return (
-                                    <div key={m._id} className="mov-item">
+                                    <div key={m._id} className="mov__item">
                                         <div
-                                            className={`mov-item-inner ${m.tipo}`}
+                                            className={`mov__item-inner mov__item-inner--${m.tipo}`}
                                             onClick={() => setDetailIdx(idx)}
                                         >
-                                            <div className="mov-card-body">
+                                            <div className="mov__card-body">
                                                 {/* Badge */}
-                                                <div className={`mov-icon ${m.tipo}${isCollapsed ? ' mov-icon-sm' : ''}`}>
-                                                    {!isCollapsed && <span className="mov-count">{counts[m.placa] || 1}</span>}
-                                                    <span className="mov-hora-small">{m.hora}</span>
+                                                <div className={`mov__icon mov__icon--${m.tipo}${isCollapsed ? ' mov__icon--sm' : ''}`}>
+                                                    {!isCollapsed && <span className="mov__count">{counts[m.placa] || 1}</span>}
+                                                    <span className="mov__hora-small">{m.hora}</span>
                                                 </div>
                                                 {/* Info */}
-                                                <div className="mov-info">
+                                                <div className="mov__info">
                                                     {isCollapsed ? (
-                                                        <div className={`mov-info-r1 ${m.tipo}`}>
-                                                            <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                                                        <div className={`mov__info-r1 mov__info-r1--${m.tipo}`}>
+                                                            <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                                             {' · '}
-                                                            <span className="mov-placa-code">{m.placa}</span>
+                                                            <span className="mov__placa-code">{m.placa}</span>
                                                             {(m.conductor || m.cedula) && (
-                                                                <>{' · '}<span className="mov-coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
+                                                                <>{' · '}<span className="mov__coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
                                                             )}
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div className={`mov-info-r1 ${m.tipo}`}>
-                                                                <span className="mov-tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
+                                                            <div className={`mov__info-r1 mov__info-r1--${m.tipo}`}>
+                                                                <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                                                 {' · '}
-                                                                <span className="mov-placa-code">{m.placa}</span>
-                                                                {m.empresa && <>{' · '}<span className="mov-empresa-r1">{m.empresa}</span></>}
+                                                                <span className="mov__placa-code">{m.placa}</span>
+                                                                {m.empresa && <>{' · '}<span className="mov__empresa-r1">{m.empresa}</span></>}
                                                             </div>
-                                                            <div className="mov-info-r2">
-                                                                <span className="mov-conductor-ci">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span>
-                                                                {m.destino && <span className="mov-destino-r2">{m.destino.toUpperCase()}</span>}
+                                                            <div className="mov__info-r2">
+                                                                <span className="mov__conductor-ci">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span>
+                                                                {m.destino && <span className="mov__destino-r2">{m.destino.toUpperCase()}</span>}
                                                             </div>
                                                         </>
                                                     )}
                                                 </div>
                                                 {/* Chevron */}
-                                                <button className="mov-chevron-btn" onClick={e => { e.stopPropagation(); toggleMovCollapse(idx); }}>
+                                                <button className="mov__chevron-btn" onClick={e => { e.stopPropagation(); toggleMovCollapse(idx); }}>
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                                         className={`chevron-giro${isCollapsed ? '' : ' abierto'}`}>
+                                                         className={`chevron-giro${isCollapsed ? '' : ' chevron-giro--abierto'}`}>
                                                         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                                     </svg>
                                                 </button>
                                             </div>
                                             {!isCollapsed && m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
-                                                <div className="mov-actividad">{m.actividad}</div>
+                                                <div className="mov__actividad">{m.actividad}</div>
                                             )}
                                         </div>
                                     </div>
@@ -302,26 +302,26 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
 
             {/* Bitácora */}
             {vista === 'bitacora' && (
-                <div className="ws-bitacora">
-                    <div className="bit-toolbar">
-                        <span className="bit-toolbar-count">{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</span>
+                <div className="ws__bitacora">
+                    <div className="bit__toolbar">
+                        <span className="bit__toolbar-count">{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</span>
                     </div>
                     {bitacora.length === 0 ? (
-                        <p className="ws-empty">Sin movimientos para consolidar</p>
+                        <p className="ws__empty">Sin movimientos para consolidar</p>
                     ) : (
-                        <div className="bit-list-wrap">
+                        <div className="bit__list-wrap">
                             {bitacora.map((b, i) => {
                                 const bText = [`Bitácora: ${b.placa}${b.tipoVehiculo ? ' · ' + b.tipoVehiculo : ''}`, `Conductor: ${b.conductor}`, b.destino && `Destino: ${b.destino}`, `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`].filter(Boolean).join('\n');
                                 const isSwiped = swipedBitIdx === i;
                                 const isCollapsed = !expandedBitFlujoSet.has(i);
                                 return (
-                                    <div key={i} className="bit-item">
-                                        <div className="bit-actions" onClick={e => e.stopPropagation()}>
-                                            <button className="bit-act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconCopy /></button>
-                                            <button className="bit-act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconShare /></button>
+                                    <div key={i} className="bit__item">
+                                        <div className="bit__actions" onClick={e => e.stopPropagation()}>
+                                            <button className="bit__act-btn" title="Copiar" onClick={() => { navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconCopy /></button>
+                                            <button className="bit__act-btn" title="Compartir" onClick={async () => { if (navigator.share) { await navigator.share({ title: 'Bitácora FLUJO', text: bText }).catch(() => {}); } else navigator.clipboard?.writeText(bText); setSwipedBitIdx(null); }}><IconShare /></button>
                                         </div>
                                         <div
-                                            className={`bit-card bit-${b.status}${isSwiped ? ' bit-row-swiped' : ''}`}
+                                            className={`bit__card bit__card--${b.status}${isSwiped ? ' bit__card--row-swiped' : ''}`}
                                             onTouchStart={e => { bitSwipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
                                             onTouchMove={e => {
                                                 const dx = e.touches[0].clientX - bitSwipeRef.current.startX;
@@ -346,25 +346,25 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                             onClick={() => { if (bitSwipeRef.current?.didDrag) { bitSwipeRef.current.didDrag = false; return; } if (isSwiped) { setSwipedBitIdx(null); return; } setBitDetailIdx(i); }}
                                         >
                                             {/* Fila 1: horas + placa | tipo vehículo + chevron */}
-                                            <div className="bit-card-r1">
-                                                <div className="bit-card-horas">
-                                                    <span className="bit-card-hora-grp">
-                                                        {!isCollapsed && <span className="bit-card-hora-lbl">INGRESO</span>}
-                                                        <span className="bit-hora-i">{b.horaI || '—'}</span>
+                                            <div className="bit__card-r1">
+                                                <div className="bit__card-horas">
+                                                    <span className="bit__card-hora-grp">
+                                                        {!isCollapsed && <span className="bit__card-hora-lbl">INGRESO</span>}
+                                                        <span className="bit__hora-i">{b.horaI || '—'}</span>
                                                     </span>
-                                                    <span className="bit-card-sep"> — </span>
-                                                    <span className="bit-card-hora-grp">
-                                                        {!isCollapsed && <span className="bit-card-hora-lbl">SALIDA</span>}
-                                                        <span className="bit-hora-s">{b.horaS || '—'}</span>
+                                                    <span className="bit__card-sep"> — </span>
+                                                    <span className="bit__card-hora-grp">
+                                                        {!isCollapsed && <span className="bit__card-hora-lbl">SALIDA</span>}
+                                                        <span className="bit__hora-s">{b.horaS || '—'}</span>
                                                     </span>
-                                                    <span className="bit-card-sep"> · </span>
-                                                    <span className="bit-card-placa">{b.placa}</span>
+                                                    <span className="bit__card-sep"> · </span>
+                                                    <span className="bit__card-placa">{b.placa}</span>
                                                 </div>
-                                                <div className="bit-card-r1-right">
-                                                    {b.tipoVehiculo && <span className="bit-card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
-                                                    <button className="bit-chevron-btn" onClick={e => { e.stopPropagation(); toggleBitFlujoCollapse(i); }}>
+                                                <div className="bit__card-r1-right">
+                                                    {b.tipoVehiculo && <span className="bit__card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
+                                                    <button className="bit__chevron-btn" onClick={e => { e.stopPropagation(); toggleBitFlujoCollapse(i); }}>
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                                             className={`chevron-giro${isCollapsed ? '' : ' abierto'}`}>
+                                                             className={`chevron-giro${isCollapsed ? '' : ' chevron-giro--abierto'}`}>
                                                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                                         </svg>
                                                     </button>
@@ -372,13 +372,13 @@ const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
                                             </div>
                                             {/* Fila 2: conductor | destino — solo expandida */}
                                             {!isCollapsed && (
-                                                <div className="bit-card-r2">
-                                                    <span className={`bit-card-conductor${b.conductorChanged ? ' changed' : ''}`}>
+                                                <div className="bit__card-r2">
+                                                    <span className={`bit__card-conductor${b.conductorChanged ? ' bit__card-conductor--changed' : ''}`}>
                                                         {b.conductorChanged && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="icono-fijo"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                         {b.conductor || '—'}
                                                     </span>
                                                     {(b.destino || b.empresa) && (
-                                                        <span className="bit-card-dest">{b.destino || b.empresa}</span>
+                                                        <span className="bit__card-dest">{b.destino || b.empresa}</span>
                                                     )}
                                                 </div>
                                             )}
@@ -606,24 +606,24 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
         });
         const abrir = onAbrir || (() => { returnTabRef.current = vistaFlujos; setFlujoSeleccionado(d.fecha); });
         return (
-            <div key={d.fecha} className="flujo-card" onClick={abrir}>
-                <div className="flujo-card-info">
-                    <div className="flujo-fecha">
-                        <span className={`flujo-turno-icono${d.isDiurno ? ' diurno' : ''}`}>
+            <div key={d.fecha} className="flujo__card" onClick={abrir}>
+                <div className="flujo__card-info">
+                    <div className="flujo__fecha">
+                        <span className={`flujo__turno-icono${d.isDiurno ? ' flujo__turno-icono--diurno' : ''}`}>
                             {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
                         </span>
                         {fechaLarga}
                     </div>
-                    <div className="flujo-stats">
-                        <span className="flujo-stat-ingresos">{d.ingresos} ing.</span>
-                        <span className="flujo-stat-sep"> · </span>
-                        <span className="flujo-stat-salidas">{d.salidas} sal.</span>
-                        {d.petro > 0 && <><span className="flujo-stat-sep"> · </span><span className="flujo-stat-ep">{d.petro} EP</span></>}
+                    <div className="flujo__stats">
+                        <span className="flujo__stat-ingresos">{d.ingresos} ing.</span>
+                        <span className="flujo__stat-sep"> · </span>
+                        <span className="flujo__stat-salidas">{d.salidas} sal.</span>
+                        {d.petro > 0 && <><span className="flujo__stat-sep"> · </span><span className="flujo__stat-ep">{d.petro} EP</span></>}
                     </div>
                 </div>
                 {conBorrar && (
                     <button
-                        className="flujo-delete-btn"
+                        className="flujo__delete-btn"
                         title="Eliminar flujo"
                         onClick={e => { e.stopPropagation(); setConfirmarFlujo({ fecha: d.fecha, fechaLarga, total: d.ingresos + d.salidas }); }}
                     >
@@ -636,13 +636,13 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
     };
 
     if (!puesto || !bloque) {
-        return <p className="ws-empty ws-empty-amplio">Sin turno activo</p>;
+        return <p className="ws__empty ws__empty--amplio">Sin turno activo</p>;
     }
 
     // Nivel 4: detalle de un día — se carga justo al entrar, y solo ese día
     if (flujoSeleccionado) {
         return loadingDia
-            ? <p className="ws-empty ws-empty-amplio">Cargando...</p>
+            ? <p className="ws__empty ws__empty--amplio">Cargando...</p>
             : <PantallaFlujoDetalle
                 fecha={flujoSeleccionado}
                 movs={diaMovs}
@@ -654,7 +654,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
     // movimientos de TODOS los usuarios que registraron en ese puesto/bloque.
     if (puestoFlujoSeleccionado) {
         return loadingDiaP
-            ? <p className="ws-empty ws-empty-amplio">Cargando...</p>
+            ? <p className="ws__empty ws__empty--amplio">Cargando...</p>
             : <PantallaFlujoDetalle
                 fecha={puestoFlujoSeleccionado}
                 movs={diaMovsP}
@@ -665,48 +665,48 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
     return (
         <>
         {/* Pestañas Archivo / General / Puestos */}
-        <div className="flujos-tabs">
-            <button className={`ws-vista-tab${vistaFlujos === 'archivo' ? ' active' : ''}`}
+        <div className="flujos__tabs">
+            <button className={`ws__vista-tab${vistaFlujos === 'archivo' ? ' ws__vista-tab--active' : ''}`}
                 onClick={() => setVistaFlujos('archivo')}>Archivo</button>
-            <button className={`ws-vista-tab${vistaFlujos === 'general' ? ' active' : ''}`}
+            <button className={`ws__vista-tab${vistaFlujos === 'general' ? ' ws__vista-tab--active' : ''}`}
                 onClick={() => setVistaFlujos('general')}>General</button>
-            <button className={`ws-vista-tab${vistaFlujos === 'puestos' ? ' active' : ''}`}
+            <button className={`ws__vista-tab${vistaFlujos === 'puestos' ? ' ws__vista-tab--active' : ''}`}
                 onClick={() => setVistaFlujos('puestos')}>Puestos</button>
         </div>
 
         {/* ── TAB ARCHIVO: años → meses (calendario) → días ── */}
         {vistaFlujos === 'archivo' && (
-            <div className="flujos-panel">
+            <div className="flujos__panel">
                 {!anioSel ? (
                     loadingAnios
-                        ? <p className="ws-empty">Cargando...</p>
+                        ? <p className="ws__empty">Cargando...</p>
                         : anios.length === 0
-                            ? <p className="ws-empty">No hay flujos registrados aún</p>
-                            : <div className="flujo-tags-row">
+                            ? <p className="ws__empty">No hay flujos registrados aún</p>
+                            : <div className="flujo__tags-row">
                                 {anios.map(a => (
-                                    <button key={a.anio} className="flujo-tag" onClick={() => setAnioSel(a.anio)}>
-                                        <span className="flujo-tag-label">{a.anio}</span>
-                                        <span className="flujo-tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
+                                    <button key={a.anio} className="flujo__tag" onClick={() => setAnioSel(a.anio)}>
+                                        <span className="flujo__tag-label">{a.anio}</span>
+                                        <span className="flujo__tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
                                     </button>
                                 ))}
                             </div>
                 ) : !mesSel ? (
                     <>
-                        <button className="flujo-back-btn" onClick={() => setAnioSel(null)}>
+                        <button className="flujo__back-btn" onClick={() => setAnioSel(null)}>
                             <IconArrowLeft /> <span>{anioSel}</span>
                         </button>
-                        {loadingMeses ? <p className="ws-empty">Cargando...</p> : (
-                            <div className="flujo-mes-grid">
+                        {loadingMeses ? <p className="ws__empty">Cargando...</p> : (
+                            <div className="flujo__mes-grid">
                                 {MESES_ES.map((nombre, i) => {
                                     const mm = String(i + 1).padStart(2, '0');
                                     const info = meses.find(m => m.mes === mm);
                                     const activo = !!info;
                                     return (
-                                        <button key={mm} className={`flujo-mes-tile${activo ? ' activo' : ''}`}
+                                        <button key={mm} className={`flujo__mes-tile${activo ? ' flujo__mes-tile--activo' : ''}`}
                                             disabled={!activo}
                                             onClick={() => activo && setMesSel(mm)}>
-                                            <span className="flujo-mes-nombre">{nombre.slice(0, 3)}</span>
-                                            {activo && <span className="flujo-mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
+                                            <span className="flujo__mes-nombre">{nombre.slice(0, 3)}</span>
+                                            {activo && <span className="flujo__mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
                                         </button>
                                     );
                                 })}
@@ -715,14 +715,14 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                     </>
                 ) : (
                     <>
-                        <button className="flujo-back-btn" onClick={() => setMesSel(null)}>
+                        <button className="flujo__back-btn" onClick={() => setMesSel(null)}>
                             <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSel, 10) - 1]} {anioSel}</span>
                         </button>
                         {loadingDias
-                            ? <p className="ws-empty">Cargando...</p>
+                            ? <p className="ws__empty">Cargando...</p>
                             : dias.length === 0
-                                ? <p className="ws-empty">Sin días registrados</p>
-                                : <div className="flujos-dias">
+                                ? <p className="ws__empty">Sin días registrados</p>
+                                : <div className="flujos__dias">
                                     {dias.map(renderDiaTag)}
                                 </div>
                         }
@@ -733,9 +733,9 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
 
         {/* ── TAB GENERAL ── */}
         {vistaFlujos === 'general' && (
-            <div className="flujos-panel flujos-general">
+            <div className="flujos__panel flujos__general">
                 {/* Chips de filtro */}
-                <div className="flujos-chips">
+                <div className="flujos__chips">
                     {[
                         { id: 'todos',      label: 'Todos' },
                         { id: 'placa',      label: 'Placa' },
@@ -743,7 +743,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                         { id: 'empresa',    label: 'Empresa' },
                         { id: 'actividad',  label: 'Actividad' },
                     ].map(f => (
-                        <button key={f.id} onClick={() => setGenCampo(f.id)} className={`gen-chip${genCampo === f.id ? ' active' : ''}`}>
+                        <button key={f.id} onClick={() => setGenCampo(f.id)} className={`gen-chip${genCampo === f.id ? ' gen-chip--active' : ''}`}>
                             {f.label}
                         </button>
                     ))}
@@ -753,14 +753,14 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
 
                 {/* Resultados */}
                 {!genQuery.trim() ? (
-                    <p className="ws-empty flujos-general-aviso">Escribe algo para buscar en todos los registros</p>
+                    <p className="ws__empty ws__empty--flujos-general-aviso">Escribe algo para buscar en todos los registros</p>
                 ) : genLoading ? (
-                    <p className="ws-empty flujos-general-aviso">Buscando...</p>
+                    <p className="ws__empty ws__empty--flujos-general-aviso">Buscando...</p>
                 ) : genResultados.length === 0 ? (
-                    <p className="ws-empty flujos-general-aviso">Sin resultados para "{genQuery}"</p>
+                    <p className="ws__empty ws__empty--flujos-general-aviso">Sin resultados para "{genQuery}"</p>
                 ) : (
-                    <div className="flujos-resultados">
-                        <p className="flujos-resultados-total">
+                    <div className="flujos__resultados">
+                        <p className="flujos__resultados-total">
                             {genResultados.length} resultado{genResultados.length !== 1 ? 's' : ''}
                         </p>
                         {genResultados.map(m => {
@@ -768,24 +768,24 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                                 day: 'numeric', month: 'short', year: 'numeric',
                             });
                             return (
-                                <div key={m._id} className="mov-item flujos-resultado"
+                                <div key={m._id} className="mov__item mov__item--flujos-resultado"
                                     onClick={() => { returnTabRef.current = 'general'; setFlujoSeleccionado(m.fecha); }}>
-                                    <div className="mov-item-inner">
-                                        <div className={`mov-icon ${m.tipo}`}>
-                                            <span className="mov-hora-small">{m.hora}</span>
+                                    <div className="mov__item-inner">
+                                        <div className={`mov__icon mov__icon--${m.tipo}`}>
+                                            <span className="mov__hora-small">{m.hora}</span>
                                         </div>
-                                        <div className="mov-info">
-                                            <span className={`mov-tipo ${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
-                                            <span className="mov-detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
+                                        <div className="mov__info">
+                                            <span className={`mov__tipo mov__tipo--${m.tipo}`}>{m.tipo === 'ingreso' ? 'Ingreso' : 'Salida'} · {m.placa}</span>
+                                            <span className="mov__detalle">{m.conductor || '—'}{m.cedula ? ' · ' + m.cedula : ''}</span>
                                             {(m.empresa || m.destino) && (
-                                                <span className="mov-detalle mov-detalle-chico">
+                                                <span className="mov__detalle mov__detalle--chico">
                                                     {[m.empresa, m.destino].filter(Boolean).join(' · ')}
                                                 </span>
                                             )}
                                             {m.actividad && !/^vac[ií]o$/i.test(m.actividad.trim()) && (
-                                                <span className="mov-actividad">{m.actividad}</span>
+                                                <span className="mov__actividad">{m.actividad}</span>
                                             )}
-                                            <span className="flujos-resultado-fecha">{fechaCorta}</span>
+                                            <span className="flujos__resultado-fecha">{fechaCorta}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -801,37 +801,37 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
             !puedeVerPuestos ? (
                 <AccesoRestringido label="Puestos del Bloque" />
             ) : (
-                <div className="flujos-panel">
+                <div className="flujos__panel">
                     {!puestoSel ? (
                         loadingPuestos
-                            ? <p className="ws-empty">Cargando...</p>
+                            ? <p className="ws__empty">Cargando...</p>
                             : !BLOQUES_DATA[bloque]
-                                ? <p className="ws-empty">Sin bloque activo</p>
-                                : <div className="flujo-tags-row">
+                                ? <p className="ws__empty">Sin bloque activo</p>
+                                : <div className="flujo__tags-row">
                                     {BLOQUES_DATA[bloque].puestos.map(p => {
                                         const info = puestosGaleria.find(x => x.puesto === p);
                                         return (
-                                            <button key={p} className="flujo-tag" onClick={() => setPuestoSel(p)}>
-                                                <span className="flujo-tag-label">{p}</span>
-                                                <span className="flujo-tag-count">{info ? `${info.dias} día${info.dias !== 1 ? 's' : ''}` : 'Sin registros'}</span>
+                                            <button key={p} className="flujo__tag" onClick={() => setPuestoSel(p)}>
+                                                <span className="flujo__tag-label">{p}</span>
+                                                <span className="flujo__tag-count">{info ? `${info.dias} día${info.dias !== 1 ? 's' : ''}` : 'Sin registros'}</span>
                                             </button>
                                         );
                                     })}
                                 </div>
                     ) : !anioSelP ? (
                         <>
-                            <button className="flujo-back-btn" onClick={() => setPuestoSel(null)}>
+                            <button className="flujo__back-btn" onClick={() => setPuestoSel(null)}>
                                 <IconArrowLeft /> <span>{puestoSel}</span>
                             </button>
                             {loadingAniosP
-                                ? <p className="ws-empty">Cargando...</p>
+                                ? <p className="ws__empty">Cargando...</p>
                                 : aniosP.length === 0
-                                    ? <p className="ws-empty">No hay flujos registrados en este puesto</p>
-                                    : <div className="flujo-tags-row">
+                                    ? <p className="ws__empty">No hay flujos registrados en este puesto</p>
+                                    : <div className="flujo__tags-row">
                                         {aniosP.map(a => (
-                                            <button key={a.anio} className="flujo-tag" onClick={() => setAnioSelP(a.anio)}>
-                                                <span className="flujo-tag-label">{a.anio}</span>
-                                                <span className="flujo-tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
+                                            <button key={a.anio} className="flujo__tag" onClick={() => setAnioSelP(a.anio)}>
+                                                <span className="flujo__tag-label">{a.anio}</span>
+                                                <span className="flujo__tag-count">{a.dias} día{a.dias !== 1 ? 's' : ''}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -839,21 +839,21 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                         </>
                     ) : !mesSelP ? (
                         <>
-                            <button className="flujo-back-btn" onClick={() => setAnioSelP(null)}>
+                            <button className="flujo__back-btn" onClick={() => setAnioSelP(null)}>
                                 <IconArrowLeft /> <span>{anioSelP}</span>
                             </button>
-                            {loadingMesesP ? <p className="ws-empty">Cargando...</p> : (
-                                <div className="flujo-mes-grid">
+                            {loadingMesesP ? <p className="ws__empty">Cargando...</p> : (
+                                <div className="flujo__mes-grid">
                                     {MESES_ES.map((nombre, i) => {
                                         const mm = String(i + 1).padStart(2, '0');
                                         const info = mesesP.find(m => m.mes === mm);
                                         const activo = !!info;
                                         return (
-                                            <button key={mm} className={`flujo-mes-tile${activo ? ' activo' : ''}`}
+                                            <button key={mm} className={`flujo__mes-tile${activo ? ' flujo__mes-tile--activo' : ''}`}
                                                 disabled={!activo}
                                                 onClick={() => activo && setMesSelP(mm)}>
-                                                <span className="flujo-mes-nombre">{nombre.slice(0, 3)}</span>
-                                                {activo && <span className="flujo-mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
+                                                <span className="flujo__mes-nombre">{nombre.slice(0, 3)}</span>
+                                                {activo && <span className="flujo__mes-dias">{info.dias} día{info.dias !== 1 ? 's' : ''}</span>}
                                             </button>
                                         );
                                     })}
@@ -862,14 +862,14 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                         </>
                     ) : (
                         <>
-                            <button className="flujo-back-btn" onClick={() => setMesSelP(null)}>
+                            <button className="flujo__back-btn" onClick={() => setMesSelP(null)}>
                                 <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSelP, 10) - 1]} {anioSelP}</span>
                             </button>
                             {loadingDiasP
-                                ? <p className="ws-empty">Cargando...</p>
+                                ? <p className="ws__empty">Cargando...</p>
                                 : diasP.length === 0
-                                    ? <p className="ws-empty">Sin días registrados</p>
-                                    : <div className="flujos-dias">
+                                    ? <p className="ws__empty">Sin días registrados</p>
+                                    : <div className="flujos__dias">
                                         {diasP.map(d => renderDiaTag(d, { onAbrir: () => setPuestoFlujoSeleccionado(d.fecha), conBorrar: false }))}
                                     </div>
                             }

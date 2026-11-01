@@ -52,8 +52,8 @@ export const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQue
 
     if (detalle) {
         return (
-            <div className="util-detalle">
-                <button className="util-back-btn" onClick={() => setDetalle(null)}>
+            <div className="util__detalle">
+                <button className="util__back-btn" onClick={() => setDetalle(null)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
@@ -65,9 +65,9 @@ export const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQue
                     <PantallaPlataformas turnoActivo={turnoActivo} search={platSearchQuery} />
                 ) : (
                     <>
-                        <h2 className="util-detalle-titulo">{detalle.label.replace('\n', ' ')}</h2>
-                        <div className="util-detalle-contenido">
-                            <p className="ws-empty">Próximamente</p>
+                        <h2 className="util__detalle-titulo">{detalle.label.replace('\n', ' ')}</h2>
+                        <div className="util__detalle-contenido">
+                            <p className="ws__empty">Próximamente</p>
                         </div>
                     </>
                 )}
@@ -76,11 +76,11 @@ export const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQue
     }
 
     return (
-        <div className="util-grid">
+        <div className="util__grid">
             {UTIL_ITEMS.map(u => (
-                <button key={u.id} className="util-tile" onClick={() => setDetalle(u)}>
-                    <div className="util-tile-icon">{u.icon}</div>
-                    <span className="util-tile-label">{u.label}</span>
+                <button key={u.id} className="util__tile" onClick={() => setDetalle(u)}>
+                    <div className="util__tile-icon">{u.icon}</div>
+                    <span className="util__tile-label">{u.label}</span>
                 </button>
             ))}
         </div>
