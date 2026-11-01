@@ -91,10 +91,10 @@ function DayCell({ day, shiftId, isToday, paintMode, onClick, shifts }) {
     const shift = shiftId ? shifts.find(s => s.id === shiftId) : null;
     return (
         <div onClick={onClick} style={turnoVars(shift)}
-            className={['cal-dia', shift && 'con-turno', isToday && 'hoy', paintMode && 'pintable'].filter(Boolean).join(' ')}>
-            {isToday && <div className="cal-dia-punto" />}
-            <span className="cal-dia-num">{day}</span>
-            {shift && <span className="cal-dia-turno">{shift.time || shift.short}</span>}
+            className={['cal__dia', shift && 'cal__dia--con-turno', isToday && 'cal__dia--hoy', paintMode && 'cal__dia--pintable'].filter(Boolean).join(' ')}>
+            {isToday && <div className="cal__dia-punto" />}
+            <span className="cal__dia-num">{day}</span>
+            {shift && <span className="cal__dia-turno">{shift.time || shift.short}</span>}
         </div>
     );
 }
@@ -108,12 +108,12 @@ function MonthGrid({ year, month, dias, paintMode, selectedShift, onDayTap, shif
     while (cells.length % 7 !== 0) cells.push(null);
     return (
         <div>
-            <div className="cal-semana">
-                {DAYS_H.map(d => <div key={d} className="cal-semana-dia">{d}</div>)}
+            <div className="cal__semana">
+                {DAYS_H.map(d => <div key={d} className="cal__semana-dia">{d}</div>)}
             </div>
-            <div className="cal-mes-grid">
+            <div className="cal__mes-grid">
                 {cells.map((day, idx) => {
-                    if (!day) return <div key={idx} className="cal-dia-vacio" />;
+                    if (!day) return <div key={idx} className="cal__dia-vacio" />;
                     const iso = isoDate(year, month, day);
                     return (
                         <DayCell key={idx} day={day} shiftId={dias[iso]||null}
@@ -134,19 +134,19 @@ function MiniMonth({ year, month, dias, shifts }) {
     const cells = [...Array(startDay).fill(null), ...Array.from({length:numDays},(_,i)=>i+1)];
     while (cells.length % 7 !== 0) cells.push(null);
     return (
-        <div className="cal-mini">
-            <div className="cal-mini-titulo">{MONTHS_S[month].toUpperCase()}</div>
-            <div className="cal-mini-semana">
-                {DAYS_H.map(d => <div key={d} className="cal-mini-semana-dia">{d}</div>)}
+        <div className="cal__mini">
+            <div className="cal__mini-titulo">{MONTHS_S[month].toUpperCase()}</div>
+            <div className="cal__mini-semana">
+                {DAYS_H.map(d => <div key={d} className="cal__mini-semana-dia">{d}</div>)}
             </div>
-            <div className="cal-mini-grid">
+            <div className="cal__mini-grid">
                 {cells.map((day, idx) => {
-                    if (!day) return <div key={idx} className="cal-mini-vacio" />;
+                    if (!day) return <div key={idx} className="cal__mini-vacio" />;
                     const iso = isoDate(year, month, day);
                     const s = dias[iso] ? shifts.find(sh => sh.id === dias[iso]) : null;
                     return (
-                        <div key={idx} className={`cal-mini-dia${s ? ' con-turno' : ''}`} style={turnoVars(s, '88')}>
-                            <span className="cal-mini-num">{day}</span>
+                        <div key={idx} className={`cal__mini-dia${s ? ' cal__mini-dia--con-turno' : ''}`} style={turnoVars(s, '88')}>
+                            <span className="cal__mini-num">{day}</span>
                         </div>
                     );
                 })}
@@ -181,44 +181,44 @@ function StatsView({ dias, shifts, C }) {
     const periodLabel = period==='mes' ? `${MONTHS[month]} ${year}` : `${year}`;
 
     return (
-        <div className="cal-stats">
-            <div className="cal-periodo">
+        <div className="cal__stats">
+            <div className="cal__periodo">
                 {[['mes','Mes'],['año','Año']].map(([id,lbl])=>(
-                    <button key={id} className={`cal-periodo-btn${period===id ? ' activo' : ''}`} onClick={()=>setPeriod(id)}>{lbl}</button>
+                    <button key={id} className={`cal__periodo-btn${period===id ? ' cal__periodo-btn--activo' : ''}`} onClick={()=>setPeriod(id)}>{lbl}</button>
                 ))}
             </div>
-            <div className="cal-periodo-nav">
-                <button className="cal-nav-btn" onClick={prevPeriod}>{Ico.left(C.text)}</button>
-                <span className="cal-periodo-label">{periodLabel}</span>
-                <button className="cal-nav-btn" onClick={nextPeriod}>{Ico.right(C.text)}</button>
+            <div className="cal__periodo-nav">
+                <button className="cal__nav-btn" onClick={prevPeriod}>{Ico.left(C.text)}</button>
+                <span className="cal__periodo-label">{periodLabel}</span>
+                <button className="cal__nav-btn" onClick={nextPeriod}>{Ico.right(C.text)}</button>
             </div>
-            <div className="cal-tabla">
-                <div className="cal-tabla-fila cal-tabla-head">
-                    <span className="cal-tabla-th cal-tabla-th-primera">TURNO</span>
-                    <span className="cal-tabla-th">DÍAS</span>
-                    <span className="cal-tabla-th">HORAS</span>
+            <div className="cal__tabla">
+                <div className="cal__tabla-fila cal__tabla-head">
+                    <span className="cal__tabla-th cal__tabla-th--primera">TURNO</span>
+                    <span className="cal__tabla-th">DÍAS</span>
+                    <span className="cal__tabla-th">HORAS</span>
                 </div>
                 {shifts.map(s => {
                     const cnt = stats[s.id] || 0;
                     const hrs = cnt * s.hours;
                     return (
-                        <div key={s.id} className="cal-tabla-fila" style={turnoVars(s)}>
-                            <div className="cal-tabla-turno">
-                                <div className="cal-turno-chip"><span className="cal-turno-chip-txt">{s.short}</span></div>
+                        <div key={s.id} className="cal__tabla-fila" style={turnoVars(s)}>
+                            <div className="cal__tabla-turno">
+                                <div className="cal__turno-chip"><span className="cal__turno-chip-txt">{s.short}</span></div>
                                 <div>
-                                    <div className="cal-turno-nombre">{s.label}</div>
-                                    {s.time && <div className="cal-turno-hora">{s.time}</div>}
+                                    <div className="cal__turno-nombre">{s.label}</div>
+                                    {s.time && <div className="cal__turno-hora">{s.time}</div>}
                                 </div>
                             </div>
-                            <span className={`cal-tabla-dias${cnt>0 ? '' : ' cero'}`}>{cnt}</span>
-                            <span className={`cal-tabla-horas${cnt>0 ? '' : ' cero'}`}>{hrs>0?`${hrs}h`:'—'}</span>
+                            <span className={`cal__tabla-dias${cnt>0 ? '' : ' cal__tabla-dias--cero'}`}>{cnt}</span>
+                            <span className={`cal__tabla-horas${cnt>0 ? '' : ' cal__tabla-horas--cero'}`}>{hrs>0?`${hrs}h`:'—'}</span>
                         </div>
                     );
                 })}
-                <div className="cal-tabla-fila cal-tabla-total">
-                    <span className="cal-tabla-total-label">TOTAL</span>
-                    <span className="cal-tabla-total-num">{totalDias}</span>
-                    <span className="cal-tabla-total-num">{totalHoras}h</span>
+                <div className="cal__tabla-fila cal__tabla-total">
+                    <span className="cal__tabla-total-label">TOTAL</span>
+                    <span className="cal__tabla-total-num">{totalDias}</span>
+                    <span className="cal__tabla-total-num">{totalHoras}h</span>
                 </div>
             </div>
         </div>
@@ -232,26 +232,26 @@ function GroupModal({ open, editing, onClose, onSave, onDelete }) {
     useEffect(() => { if(open){ setName(editing?editing.nombre:''); setConfirmDel(false); } }, [open, editing]);
     if (!open) return null;
     return (
-        <div className="cal-modal cal-paleta-fija">
-            <div className="cal-modal-fondo" onClick={onClose} />
-            <div className="cal-modal-caja">
-                <div className="cal-modal-top">
-                    <div className="cal-modal-titulo-fila">{Ico.cal(C.violet,18)}<span className="cal-modal-titulo">{editing?'Editar grupo':'Nuevo grupo'}</span></div>
-                    <button className="cal-cerrar" onClick={onClose}>{Ico.close()}</button>
+        <div className="cal__modal cal__modal--paleta-fija">
+            <div className="cal__modal-fondo" onClick={onClose} />
+            <div className="cal__modal-caja">
+                <div className="cal__modal-top">
+                    <div className="cal__modal-titulo-fila">{Ico.cal(C.violet,18)}<span className="cal__modal-titulo">{editing?'Editar grupo':'Nuevo grupo'}</span></div>
+                    <button className="cal__cerrar" onClick={onClose}>{Ico.close()}</button>
                 </div>
-                <label className="cal-label">NOMBRE DEL GRUPO</label>
-                <input className="cal-input" value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Grupo A, Turno Norte..." autoFocus onKeyDown={e=>e.key==='Enter'&&name.trim()&&onSave(name.trim())} />
-                <div className="cal-botones">
-                    <button className="cal-btn cal-btn-sec" onClick={onClose}>Cancelar</button>
-                    <button className="cal-btn cal-btn-primario" onClick={()=>name.trim()&&onSave(name.trim())}>{editing?'Guardar':'Crear'}</button>
+                <label className="cal__label">NOMBRE DEL GRUPO</label>
+                <input className="cal__input" value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Grupo A, Turno Norte..." autoFocus onKeyDown={e=>e.key==='Enter'&&name.trim()&&onSave(name.trim())} />
+                <div className="cal__botones">
+                    <button className="cal__btn cal__btn--sec" onClick={onClose}>Cancelar</button>
+                    <button className="cal__btn cal__btn--primario" onClick={()=>name.trim()&&onSave(name.trim())}>{editing?'Guardar':'Crear'}</button>
                 </div>
-                {editing && !confirmDel && <button className="cal-eliminar" onClick={()=>setConfirmDel(true)}>{Ico.trash(C.red)} Eliminar grupo</button>}
+                {editing && !confirmDel && <button className="cal__eliminar" onClick={()=>setConfirmDel(true)}>{Ico.trash(C.red)} Eliminar grupo</button>}
                 {editing && confirmDel && (
-                    <div className="cal-confirmar">
-                        <p className="cal-confirmar-texto">¿Eliminar "{editing.nombre}" y todos sus datos?</p>
-                        <div className="cal-confirmar-botones">
-                            <button className="cal-btn-mini cal-btn-mini-no" onClick={()=>setConfirmDel(false)}>No</button>
-                            <button className="cal-btn-mini cal-btn-mini-si" onClick={onDelete}>Sí, eliminar</button>
+                    <div className="cal__confirmar">
+                        <p className="cal__confirmar-texto">¿Eliminar "{editing.nombre}" y todos sus datos?</p>
+                        <div className="cal__confirmar-botones">
+                            <button className="cal__btn-mini cal__btn-mini--no" onClick={()=>setConfirmDel(false)}>No</button>
+                            <button className="cal__btn-mini cal__btn-mini--si" onClick={onDelete}>Sí, eliminar</button>
                         </div>
                     </div>
                 )}
@@ -274,82 +274,82 @@ function ShiftForm({ shift, onBack, onSave, onDelete }) {
     // Paleta de colores: función (no componente) para no recrearla en cada render.
     // Cada muestra lleva su color en línea, porque es justamente lo que muestra.
     const paleta = (value, palette, onChange) => (
-        <div className="cal-paleta">
+        <div className="cal__paleta">
             {palette.map(c => (
-                <button key={c} className={`cal-color${value===c ? ' elegido' : ''}`} style={{ background: c }} onClick={() => onChange(c)} />
+                <button key={c} className={`cal__color${value===c ? ' cal__color--elegido' : ''}`} style={{ background: c }} onClick={() => onChange(c)} />
             ))}
-            <label className="cal-color-mas">
-                <span className="cal-color-mas-signo">+</span>
-                <input type="color" className="cal-color-input" value={value} onChange={e=>onChange(e.target.value)} />
+            <label className="cal__color-mas">
+                <span className="cal__color-mas-signo">+</span>
+                <input type="color" className="cal__color-input" value={value} onChange={e=>onChange(e.target.value)} />
             </label>
         </div>
     );
 
     return (
-        <div className="cal-modal cal-modal-superior cal-paleta-fija">
-            <div className="cal-modal-fondo cal-modal-fondo-oscuro" />
-            <div className="cal-modal-caja cal-modal-caja-form cal-scroll">
+        <div className="cal__modal cal__modal--superior cal__modal--paleta-fija">
+            <div className="cal__modal-fondo cal__modal-fondo--oscuro" />
+            <div className="cal__modal-caja cal__modal-caja--form cal__scroll">
                 {/* Header */}
-                <div className="cal-form-top">
-                    <button className="cal-volver" onClick={onBack}>{Ico.left()}</button>
-                    <span className="cal-form-titulo">{isNew ? 'Nuevo turno' : 'Editar turno'}</span>
+                <div className="cal__form-top">
+                    <button className="cal__volver" onClick={onBack}>{Ico.left()}</button>
+                    <span className="cal__form-titulo">{isNew ? 'Nuevo turno' : 'Editar turno'}</span>
                 </div>
 
                 {/* Preview con los colores elegidos */}
-                <div className="cal-preview" style={turnoVars(form)}>
-                    <div className="cal-preview-chip"><span className="cal-preview-corto">{form.short||'?'}</span></div>
+                <div className="cal__preview" style={turnoVars(form)}>
+                    <div className="cal__preview-chip"><span className="cal__preview-corto">{form.short||'?'}</span></div>
                     <div>
-                        <div className="cal-preview-nombre">{form.label||'Nombre del turno'}</div>
-                        {form.time && <div className="cal-preview-hora">{form.time}</div>}
+                        <div className="cal__preview-nombre">{form.label||'Nombre del turno'}</div>
+                        {form.time && <div className="cal__preview-hora">{form.time}</div>}
                     </div>
                 </div>
 
                 {/* Nombre */}
-                <label className="cal-label">NOMBRE</label>
-                <input className="cal-input cal-input-form cal-input-separado" value={form.label} onChange={e=>set('label',e.target.value)} placeholder="Ej: Día, Noche, Libre..." />
+                <label className="cal__label">NOMBRE</label>
+                <input className="cal__input cal__input--form cal__input--separado" value={form.label} onChange={e=>set('label',e.target.value)} placeholder="Ej: Día, Noche, Libre..." />
 
                 {/* Abreviatura */}
-                <div className="cal-form-fila">
-                    <div className="cal-form-col">
-                        <label className="cal-label">ABREVIATURA</label>
-                        <input className="cal-input cal-input-form" value={form.short} onChange={e=>set('short',e.target.value.slice(0,6))} placeholder="Día, Noc..." />
+                <div className="cal__form-fila">
+                    <div className="cal__form-col">
+                        <label className="cal__label">ABREVIATURA</label>
+                        <input className="cal__input cal__input--form" value={form.short} onChange={e=>set('short',e.target.value.slice(0,6))} placeholder="Día, Noc..." />
                     </div>
-                    <div className="cal-form-col">
-                        <label className="cal-label">HORAS</label>
-                        <input className="cal-input cal-input-form" type="number" min="0" max="24" value={form.hours} onChange={e=>set('hours',parseInt(e.target.value)||0)} />
+                    <div className="cal__form-col">
+                        <label className="cal__label">HORAS</label>
+                        <input className="cal__input cal__input--form" type="number" min="0" max="24" value={form.hours} onChange={e=>set('hours',parseInt(e.target.value)||0)} />
                     </div>
                 </div>
 
                 {/* Horario */}
-                <label className="cal-label">HORARIO (opcional)</label>
-                <input className="cal-input cal-input-form cal-input-separado-16" value={form.time} onChange={e=>set('time',e.target.value)} placeholder="Ej: 06:00–18:00" />
+                <label className="cal__label">HORARIO (opcional)</label>
+                <input className="cal__input cal__input--form cal__input--separado-16" value={form.time} onChange={e=>set('time',e.target.value)} placeholder="Ej: 06:00–18:00" />
 
                 {/* Color de fondo */}
-                <label className="cal-label cal-label-sin-margen">COLOR DE FONDO</label>
+                <label className="cal__label cal__label--sin-margen">COLOR DE FONDO</label>
                 {paleta(form.bg, PRESET_BG, v=>set('bg',v))}
 
                 {/* Color de texto */}
-                <label className="cal-label cal-label-sin-margen cal-label-separado">COLOR DE TEXTO</label>
+                <label className="cal__label cal__label--sin-margen cal__label--separado">COLOR DE TEXTO</label>
                 {paleta(form.text, PRESET_TX, v=>set('text',v))}
 
                 {/* Botones */}
-                <div className="cal-botones cal-botones-form">
-                    <button className="cal-btn cal-btn-sec" onClick={onBack}>Cancelar</button>
-                    <button className={`cal-btn cal-btn-primario cal-btn-sin-sombra${form.label.trim() ? '' : ' deshabilitado'}`} onClick={() => form.label.trim() && onSave(form)}>
+                <div className="cal__botones cal__botones--form">
+                    <button className="cal__btn cal__btn--sec" onClick={onBack}>Cancelar</button>
+                    <button className={`cal__btn cal__btn--primario cal__btn--sin-sombra${form.label.trim() ? '' : ' cal__btn--deshabilitado'}`} onClick={() => form.label.trim() && onSave(form)}>
                         {isNew ? 'Crear' : 'Guardar'}
                     </button>
                 </div>
                 {!isNew && !confirmDel && (
-                    <button className="cal-eliminar" onClick={()=>setConfirmDel(true)}>
+                    <button className="cal__eliminar" onClick={()=>setConfirmDel(true)}>
                         {Ico.trash(C.red)} Eliminar turno
                     </button>
                 )}
                 {!isNew && confirmDel && (
-                    <div className="cal-confirmar">
-                        <p className="cal-confirmar-texto">¿Eliminar este turno? Los días pintados con él quedarán sin color.</p>
-                        <div className="cal-confirmar-botones">
-                            <button className="cal-btn-mini cal-btn-mini-no" onClick={()=>setConfirmDel(false)}>No</button>
-                            <button className="cal-btn-mini cal-btn-mini-si" onClick={()=>onDelete(shift.id)}>Sí, eliminar</button>
+                    <div className="cal__confirmar">
+                        <p className="cal__confirmar-texto">¿Eliminar este turno? Los días pintados con él quedarán sin color.</p>
+                        <div className="cal__confirmar-botones">
+                            <button className="cal__btn-mini cal__btn-mini--no" onClick={()=>setConfirmDel(false)}>No</button>
+                            <button className="cal__btn-mini cal__btn-mini--si" onClick={()=>onDelete(shift.id)}>Sí, eliminar</button>
                         </div>
                     </div>
                 )}
@@ -378,34 +378,34 @@ function ShiftModal({ open, shifts, onClose, onSaveShift, onDeleteShift, onReord
     }
 
     return (
-        <div className="cal-modal cal-paleta-fija">
-            <div className="cal-modal-fondo" onClick={onClose} />
-            <div className="cal-modal-caja cal-modal-caja-lista">
-                <div className="cal-modal-top">
-                    <span className="cal-modal-titulo">Tipos de turno</span>
-                    <button className="cal-cerrar" onClick={onClose}>{Ico.close()}</button>
+        <div className="cal__modal cal__modal--paleta-fija">
+            <div className="cal__modal-fondo" onClick={onClose} />
+            <div className="cal__modal-caja cal__modal-caja--lista">
+                <div className="cal__modal-top">
+                    <span className="cal__modal-titulo">Tipos de turno</span>
+                    <button className="cal__cerrar" onClick={onClose}>{Ico.close()}</button>
                 </div>
 
-                <div className="cal-scroll cal-turnos-lista">
+                <div className="cal__scroll cal__turnos-lista">
                     {shifts.map((s, i) => (
-                        <div key={s.id} className="cal-turno-fila" style={turnoVars(s)}>
-                            <div className="cal-turno-chip cal-turno-chip-grande"><span className="cal-turno-chip-txt">{s.short}</span></div>
-                            <div className="cal-turno-info">
-                                <div className="cal-turno-nombre cal-turno-nombre-corto">{s.label}</div>
-                                <div className="cal-turno-hora">{s.time||`${s.hours>0?s.hours+'h':'Sin horario'}`}</div>
+                        <div key={s.id} className="cal__turno-fila" style={turnoVars(s)}>
+                            <div className="cal__turno-chip cal__turno-chip--grande"><span className="cal__turno-chip-txt">{s.short}</span></div>
+                            <div className="cal__turno-info">
+                                <div className="cal__turno-nombre cal__turno-nombre--corto">{s.label}</div>
+                                <div className="cal__turno-hora">{s.time||`${s.hours>0?s.hours+'h':'Sin horario'}`}</div>
                             </div>
-                            <div className="cal-orden">
-                                <button className="cal-orden-btn" disabled={i===0} onClick={() => onReorder(i,-1)}>{Ico.up(i===0?'#333':'#fff')}</button>
-                                <button className="cal-orden-btn" disabled={i===shifts.length-1} onClick={() => onReorder(i,1)}>{Ico.down(i===shifts.length-1?'#333':'#fff')}</button>
+                            <div className="cal__orden">
+                                <button className="cal__orden-btn" disabled={i===0} onClick={() => onReorder(i,-1)}>{Ico.up(i===0?'#333':'#fff')}</button>
+                                <button className="cal__orden-btn" disabled={i===shifts.length-1} onClick={() => onReorder(i,1)}>{Ico.down(i===shifts.length-1?'#333':'#fff')}</button>
                             </div>
-                            <button className="cal-editar" onClick={() => { setEditingShift(s); setView('form'); }}>
+                            <button className="cal__editar" onClick={() => { setEditingShift(s); setView('form'); }}>
                                 {Ico.edit()}
                             </button>
                         </div>
                     ))}
                 </div>
 
-                <button className="cal-crear-turno" onClick={() => { setEditingShift(null); setView('form'); }}>
+                <button className="cal__crear-turno" onClick={() => { setEditingShift(null); setView('form'); }}>
                     {Ico.plus('#fff',16)} Crear turno nuevo
                 </button>
             </div>
@@ -594,19 +594,19 @@ const CalendarioPage = () => {
     };
 
     return (
-        // .cal-tema-* define las variables de color del tema elegido (ver CalendarioPage.css)
-        <div className={`cal cal-tema-${temaActual}`}>
+        // .cal--tema-* define las variables de color del tema elegido (ver CalendarioPage.css)
+        <div className={`cal cal--tema-${temaActual}`}>
             {/* Header */}
-            <div className="cal-header">
-                <button className="cal-header-btn" onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })}>
+            <div className="cal__header">
+                <button className="cal__header-btn" onClick={() => navigate('/workspace', { state: { openDrawer: true, activeTab: 'calendario' } })}>
                     {Ico.back(C.text)}
                 </button>
-                <span className="cal-header-titulo">CALENDARIO</span>
-                <div className="cal-header-acciones">
-                    <button className={`cal-header-btn${themeOpen ? ' activo' : ''}`} onClick={() => setThemeOpen(v => !v)}>
+                <span className="cal__header-titulo">CALENDARIO</span>
+                <div className="cal__header-acciones">
+                    <button className={`cal__header-btn${themeOpen ? ' cal__header-btn--activo' : ''}`} onClick={() => setThemeOpen(v => !v)}>
                         {Ico.palette(themeOpen ? C.violet : C.mute)}
                     </button>
-                    <button className="cal-header-btn" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>
+                    <button className="cal__header-btn" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>
                         {Ico.plus()}
                     </button>
                 </div>
@@ -614,13 +614,13 @@ const CalendarioPage = () => {
 
             {/* Selector de tema */}
             {themeOpen && (
-                <div className="cal-temas">
-                    <p className="cal-temas-label">TEMA</p>
-                    <div className="cal-temas-grid">
+                <div className="cal__temas">
+                    <p className="cal__temas-label">TEMA</p>
+                    <div className="cal__temas-grid">
                         {Object.entries(THEME_LABELS).map(([key, label]) => (
-                            <button key={key} className={`cal-tema-btn cal-tema-btn-${key}${themeKey === key ? ' activo' : ''}`} onClick={() => changeTheme(key)}>
-                                <div className="cal-tema-punto" />
-                                <span className="cal-tema-nombre">{label.toUpperCase()}</span>
+                            <button key={key} className={`cal__tema-btn cal__tema-btn--${key}${themeKey === key ? ' cal__tema-btn--activo' : ''}`} onClick={() => changeTheme(key)}>
+                                <div className="cal__tema-punto" />
+                                <span className="cal__tema-nombre">{label.toUpperCase()}</span>
                             </button>
                         ))}
                     </div>
@@ -629,25 +629,25 @@ const CalendarioPage = () => {
 
             {/* Group selector */}
             {!loading && grupos.length > 0 && (
-                <div className="cal-grupo">
-                    <button className="cal-grupo-btn" onClick={() => setGroupsOpen(v=>!v)}>
-                        <div className="cal-grupo-actual">{Ico.cal(C.violet,14)}<span className="cal-grupo-nombre">{activeGrupo?.nombre||'—'}</span></div>
+                <div className="cal__grupo">
+                    <button className="cal__grupo-btn" onClick={() => setGroupsOpen(v=>!v)}>
+                        <div className="cal__grupo-actual">{Ico.cal(C.violet,14)}<span className="cal__grupo-nombre">{activeGrupo?.nombre||'—'}</span></div>
                         {Ico.chev(C.mute)}
                     </button>
                     {groupsOpen && (
-                        <div className="cal-grupos">
+                        <div className="cal__grupos">
                             {grupos.map(g => (
-                                <div key={g._id} className={`cal-grupos-item${g._id===activeGrupo?._id ? ' activo' : ''}`}>
-                                    <button className="cal-grupos-elegir" onClick={() => switchGrupoData(g)}>
-                                        <span className="cal-grupos-nombre">{g.nombre}</span>
+                                <div key={g._id} className={`cal__grupos-item${g._id===activeGrupo?._id ? ' cal__grupos-item--activo' : ''}`}>
+                                    <button className="cal__grupos-elegir" onClick={() => switchGrupoData(g)}>
+                                        <span className="cal__grupos-nombre">{g.nombre}</span>
                                     </button>
-                                    <button className="cal-grupos-editar" onClick={() => { setEditingGrupo(g); setGroupModal(true); setGroupsOpen(false); }}>
+                                    <button className="cal__grupos-editar" onClick={() => { setEditingGrupo(g); setGroupModal(true); setGroupsOpen(false); }}>
                                         {Ico.edit()}
                                     </button>
                                 </div>
                             ))}
-                            <button className="cal-grupos-nuevo" onClick={() => { setEditingGrupo(null); setGroupModal(true); setGroupsOpen(false); }}>
-                                {Ico.plus(C.mute,14)}<span className="cal-grupos-nuevo-label">Nuevo grupo</span>
+                            <button className="cal__grupos-nuevo" onClick={() => { setEditingGrupo(null); setGroupModal(true); setGroupsOpen(false); }}>
+                                {Ico.plus(C.mute,14)}<span className="cal__grupos-nuevo-label">Nuevo grupo</span>
                             </button>
                         </div>
                     )}
@@ -655,42 +655,42 @@ const CalendarioPage = () => {
             )}
 
             {!loading && grupos.length === 0 && (
-                <div className="cal-sin-grupos">
+                <div className="cal__sin-grupos">
                     {Ico.cal(C.dim,48)}
-                    <p className="cal-sin-grupos-texto">Sin grupos de calendario.<br/>Crea uno para comenzar.</p>
-                    <button className="cal-btn-crear" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>Crear primer grupo</button>
+                    <p className="cal__sin-grupos-texto">Sin grupos de calendario.<br/>Crea uno para comenzar.</p>
+                    <button className="cal__btn-crear" onClick={() => { setEditingGrupo(null); setGroupModal(true); }}>Crear primer grupo</button>
                 </div>
             )}
 
-            {loading && <div className="cal-cargando"><span className="cal-cargando-texto">Cargando…</span></div>}
+            {loading && <div className="cal__cargando"><span className="cal__cargando-texto">Cargando…</span></div>}
 
             {!loading && activeGrupo && (
                 <>
                     {/* Tab bar */}
-                    <div className="cal-tabs">
+                    <div className="cal__tabs">
                         {[['mes','MES'],['año','AÑO'],['resumen','RESUMEN']].map(([id,lbl])=>(
-                            <button key={id} className={`cal-tab${tab===id ? ' activo' : ''}`} onClick={() => { setTab(id); if(id!=='mes') setPaintMode(false); }}>{lbl}</button>
+                            <button key={id} className={`cal__tab${tab===id ? ' cal__tab--activo' : ''}`} onClick={() => { setTab(id); if(id!=='mes') setPaintMode(false); }}>{lbl}</button>
                         ))}
                     </div>
 
-                    <div className={`cal-scroll cal-contenido${tab==='mes' ? (paintMode ? ' pintando' : ' con-pie') : ''}`}>
+                    <div className={`cal__scroll cal__contenido${tab==='mes' ? (paintMode ? ' cal__contenido--pintando' : ' cal__contenido--con-pie') : ''}`}>
                         {tab==='mes' && (
-                            <div ref={monthCaptureRef} className="cal-mes">
-                                <div className="cal-mes-nav">
-                                    <button className="cal-nav-btn" onClick={prevMonth}>{Ico.left(C.text)}</button>
-                                    <span className="cal-mes-titulo">{MONTHS[month].toUpperCase()} {year}</span>
-                                    <div className="cal-mes-acciones">
-                                        <button className="cal-nav-btn" onClick={nextMonth}>{Ico.right(C.text)}</button>
-                                        <button className="cal-compartir" onClick={handleShare}>{Ico.share()}</button>
+                            <div ref={monthCaptureRef} className="cal__mes">
+                                <div className="cal__mes-nav">
+                                    <button className="cal__nav-btn" onClick={prevMonth}>{Ico.left(C.text)}</button>
+                                    <span className="cal__mes-titulo">{MONTHS[month].toUpperCase()} {year}</span>
+                                    <div className="cal__mes-acciones">
+                                        <button className="cal__nav-btn" onClick={nextMonth}>{Ico.right(C.text)}</button>
+                                        <button className="cal__compartir" onClick={handleShare}>{Ico.share()}</button>
                                     </div>
                                 </div>
                                 <MonthGrid year={year} month={month} dias={dias} paintMode={paintMode} selectedShift={selectedShift} onDayTap={handleDayTap} shifts={shifts} />
-                                <div className="cal-leyenda">
+                                <div className="cal__leyenda">
                                     {shifts.map(s => (
-                                        <div key={s.id} className="cal-leyenda-item" style={turnoVars(s)}>
-                                            <div className="cal-leyenda-color" />
-                                            <span className="cal-leyenda-nombre">{s.label}</span>
-                                            {s.time && <span className="cal-leyenda-hora">{s.time}</span>}
+                                        <div key={s.id} className="cal__leyenda-item" style={turnoVars(s)}>
+                                            <div className="cal__leyenda-color" />
+                                            <span className="cal__leyenda-nombre">{s.label}</span>
+                                            {s.time && <span className="cal__leyenda-hora">{s.time}</span>}
                                         </div>
                                     ))}
                                 </div>
@@ -698,37 +698,37 @@ const CalendarioPage = () => {
                         )}
 
                         {tab==='año' && (
-                            <div className="cal-anio">
-                                <div className="cal-anio-nav">
-                                    <button className="cal-nav-btn" onClick={() => setYearAnual(y=>y-1)}>{Ico.left(C.text)}</button>
-                                    <div className="cal-anio-centro">
-                                        <span className="cal-anio-actual">{yearAnual}</span>
-                                        <button className="cal-compartir cal-compartir-chico" onClick={handleShare}>{Ico.share()}</button>
+                            <div className="cal__anio">
+                                <div className="cal__anio-nav">
+                                    <button className="cal__nav-btn" onClick={() => setYearAnual(y=>y-1)}>{Ico.left(C.text)}</button>
+                                    <div className="cal__anio-centro">
+                                        <span className="cal__anio-actual">{yearAnual}</span>
+                                        <button className="cal__compartir cal__compartir--chico" onClick={handleShare}>{Ico.share()}</button>
                                     </div>
-                                    <button className="cal-nav-btn" onClick={() => setYearAnual(y=>y+1)}>{Ico.right(C.text)}</button>
+                                    <button className="cal__nav-btn" onClick={() => setYearAnual(y=>y+1)}>{Ico.right(C.text)}</button>
                                 </div>
-                                <div ref={yearCaptureRef} className="cal-anio-captura">
-                                    <div className="cal-anio-titulo">
-                                        <div className="cal-anio-grupo">{activeGrupo?.nombre?.toUpperCase()}</div>
-                                        <div className="cal-anio-num">{yearAnual}</div>
+                                <div ref={yearCaptureRef} className="cal__anio-captura">
+                                    <div className="cal__anio-titulo">
+                                        <div className="cal__anio-grupo">{activeGrupo?.nombre?.toUpperCase()}</div>
+                                        <div className="cal__anio-num">{yearAnual}</div>
                                     </div>
-                                    <div className="cal-anio-grid">
+                                    <div className="cal__anio-grid">
                                         {Array.from({length:12},(_,m) => <MiniMonth key={m} year={yearAnual} month={m} dias={dias} shifts={shifts} />)}
                                     </div>
                                 </div>
-                                <div className="cal-anio-stats">
-                                    <div className="cal-anio-stats-head">
-                                        <span className="cal-anio-stats-label">ESTADÍSTICA ANUAL {yearAnual}</span>
+                                <div className="cal__anio-stats">
+                                    <div className="cal__anio-stats-head">
+                                        <span className="cal__anio-stats-label">ESTADÍSTICA ANUAL {yearAnual}</span>
                                     </div>
                                     {(() => {
                                         const counts = {}; shifts.forEach(s => counts[s.id]=0);
                                         Object.entries(dias).forEach(([date,sid]) => { if(new Date(date+'T00:00:00').getFullYear()===yearAnual && counts[sid]!==undefined) counts[sid]++; });
                                         return shifts.map(s => { const cnt=counts[s.id]||0; const hrs=cnt*s.hours; return (
-                                            <div key={s.id} className="cal-anio-fila" style={turnoVars(s)}>
-                                                <div className="cal-turno-chip cal-turno-chip-chico"><span className="cal-turno-chip-txt">{s.short}</span></div>
-                                                <span className="cal-anio-fila-nombre">{s.label}</span>
-                                                <span className="cal-anio-fila-dias">{cnt} días</span>
-                                                <span className="cal-anio-fila-horas">{hrs>0?`${hrs}h`:'—'}</span>
+                                            <div key={s.id} className="cal__anio-fila" style={turnoVars(s)}>
+                                                <div className="cal__turno-chip cal__turno-chip--chico"><span className="cal__turno-chip-txt">{s.short}</span></div>
+                                                <span className="cal__anio-fila-nombre">{s.label}</span>
+                                                <span className="cal__anio-fila-dias">{cnt} días</span>
+                                                <span className="cal__anio-fila-horas">{hrs>0?`${hrs}h`:'—'}</span>
                                             </div>
                                         ); });
                                     })()}
@@ -741,32 +741,32 @@ const CalendarioPage = () => {
 
                     {/* Botón PINTAR (cuando no está en modo pintar) */}
                     {tab==='mes' && !paintMode && (
-                        <div className="cal-pintar">
-                            <button className="cal-pintar-btn" onClick={enterPaintMode}>PINTAR</button>
+                        <div className="cal__pintar">
+                            <button className="cal__pintar-btn" onClick={enterPaintMode}>PINTAR</button>
                         </div>
                     )}
 
                     {/* Barra de pintura — animada, fija al fondo */}
                     {tab==='mes' && paintMode && (
-                        <div className="cal-barra">
+                        <div className="cal__barra">
                             {/* Botones de turno con animación escalonada (el retraso va en línea) */}
-                            <div className="cal-barra-turnos">
-                                <button className={`cal-borrar${selectedShift===null ? ' elegido' : ''}`} onClick={() => setSelectedShift(null)}>
+                            <div className="cal__barra-turnos">
+                                <button className={`cal__borrar${selectedShift===null ? ' cal__borrar--elegido' : ''}`} onClick={() => setSelectedShift(null)}>
                                     {Ico.eraser()} Borrar
                                 </button>
                                 {shifts.map((s, i) => (
                                     <button key={s.id} onClick={() => setSelectedShift(s.id)}
-                                        className={`cal-pincel${selectedShift === s.id ? ' elegido' : ''}`}
+                                        className={`cal__pincel${selectedShift === s.id ? ' cal__pincel--elegido' : ''}`}
                                         style={{ ...turnoVars(s, 'cc'), '--t-sombra': s.bg + '88', animationDelay: `${(i+1)*55}ms` }}>
                                         {s.short}
                                     </button>
                                 ))}
-                                <button className="cal-gestionar" title="Gestionar turnos" onClick={() => setShiftModal(true)}
+                                <button className="cal__gestionar" title="Gestionar turnos" onClick={() => setShiftModal(true)}
                                     style={{ animationDelay: `${(shifts.length+1)*55}ms` }}>
                                     {Ico.gear()}
                                 </button>
                             </div>
-                            <button className="cal-salir" onClick={() => setPaintMode(false)}>SALIR DEL MODO EDICIÓN</button>
+                            <button className="cal__salir" onClick={() => setPaintMode(false)}>SALIR DEL MODO EDICIÓN</button>
                         </div>
                     )}
                 </>

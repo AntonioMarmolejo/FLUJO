@@ -175,8 +175,8 @@ function CyclePill({ cycle, onClick }) {
     const PILL_LABELS = { '14-7': '14·7', '14-14': '14·14', '15-15': '15·15', '20-10': '20·10', '30': '30 d' };
     const label = PILL_LABELS[cycle] || cycle;
     return (
-        <button className="fp-ciclo" onClick={(e) => { e.stopPropagation(); onClick && onClick(); }}>
-            <span className="fp-num">{label}</span>
+        <button className="fp__ciclo" onClick={(e) => { e.stopPropagation(); onClick && onClick(); }}>
+            <span className="fp__num">{label}</span>
             {Icon.chevDown(8, COLORS.textMute)}
         </button>
     );
@@ -184,8 +184,8 @@ function CyclePill({ cycle, onClick }) {
 
 function DaysBadge({ days, total }) {
     return (
-        <span className="fp-badge fp-badge-dia">
-            <span className="fp-badge-punto" />
+        <span className="fp__badge fp__badge--dia">
+            <span className="fp__badge-punto" />
             DÍA {days}/{total}
         </span>
     );
@@ -193,7 +193,7 @@ function DaysBadge({ days, total }) {
 
 function RemainingBadge({ remaining }) {
     return (
-        <span className="fp-badge fp-badge-restante">
+        <span className="fp__badge fp__badge--restante">
             {Icon.alert(10, COLORS.yellow)}
             {remaining} {remaining === 1 ? 'DÍA' : 'DÍAS'} REST.
         </span>
@@ -202,7 +202,7 @@ function RemainingBadge({ remaining }) {
 
 function ActionButton({ color, bg, icon, label, onClick }) {
     return (
-        <button onClick={onClick} title={label} aria-label={label} className="fp-accion"
+        <button onClick={onClick} title={label} aria-label={label} className="fp__accion"
             style={{ color, '--accion-fondo': bg.base, '--accion-hover': bg.hover, '--accion-borde': bg.border }}>
             {icon}
         </button>
@@ -212,9 +212,9 @@ function ActionButton({ color, bg, icon, label, onClick }) {
 function ProgressBar({ value, total, color }) {
     const pct = Math.min(100, (value / total) * 100);
     return (
-        <div className="fp-progreso">
+        <div className="fp__progreso">
             {/* Ancho según el avance y color según el turno: van en línea */}
-            <div className="fp-progreso-barra" style={{ width: `${pct}%`, background: color }} />
+            <div className="fp__progreso-barra" style={{ width: `${pct}%`, background: color }} />
         </div>
     );
 }
@@ -224,38 +224,38 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
     const turno = TURNO_META[worker.turno] ? worker.turno : 'dia';
 
     return (
-        <div className={`fp-card${soon ? ' proximo' : ''}`} onClick={() => onDetail && onDetail(worker)}>
-            {soon && <div className="fp-card-franja" />}
+        <div className={`fp__card${soon ? ' fp__card--proximo' : ''}`} onClick={() => onDetail && onDetail(worker)}>
+            {soon && <div className="fp__card-franja" />}
 
-            <div className="fp-card-top">
-                <div className="fp-card-rol-fila">
-                    <span className="fp-card-rol">{worker.role}</span>
-                    <span className={`fp-turno-chip fp-turno-${turno}`}>{turnoMeta.label}</span>
+            <div className="fp__card-top">
+                <div className="fp__card-rol-fila">
+                    <span className="fp__card-rol">{worker.role}</span>
+                    <span className={`fp__turno-chip fp-turno--${turno}`}>{turnoMeta.label}</span>
                 </div>
-                <div className="fp-card-fechas">
-                    <span className="fp-card-rango">{worker.in} – {worker.out}</span>
+                <div className="fp__card-fechas">
+                    <span className="fp__card-rango">{worker.in} – {worker.out}</span>
                     {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
                 </div>
             </div>
 
-            <div className="fp-card-nombre">{worker.name}</div>
+            <div className="fp__card-nombre">{worker.name}</div>
 
             <ProgressBar value={worker.days} total={worker.total} color={soon ? COLORS.yellow : COLORS.green} />
 
-            <div className="fp-card-pie">
-                <div className="fp-card-back">
-                    <div className="fp-card-back-avatar">
+            <div className="fp__card-pie">
+                <div className="fp__card-back">
+                    <div className="fp__card-back-avatar">
                         {(worker.back || '').split(' ').map(n => n[0]).slice(0, 2).join('')}
                     </div>
-                    <div className="fp-card-back-info">
-                        <div className="fp-card-back-label">BACK / RELEVO</div>
-                        <div className="fp-card-back-nombre">{worker.back}</div>
+                    <div className="fp__card-back-info">
+                        <div className="fp__card-back-label">BACK / RELEVO</div>
+                        <div className="fp__card-back-nombre">{worker.back}</div>
                     </div>
                 </div>
-                <div className="fp-card-botones">
+                <div className="fp__card-botones">
                     {/* Pasar a libre — solo para descanso */}
                     {worker.turno === 'descanso' && (
-                        <button className="fp-mini-btn fp-mini-libre" title="Pasar a libre"
+                        <button className="fp__mini-btn fp__mini-btn--e" title="Pasar a libre"
                             onClick={e => { e.stopPropagation(); onToLibre && onToLibre(worker); }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                                 <path d="M5 12h14M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -265,14 +265,14 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                     )}
                     {/* Intercambio back↔turno — solo para descanso en grupo de 3 */}
                     {worker.turno === 'descanso' && on3PersonSwap && (
-                        <button className="fp-mini-btn fp-mini-cuadrado fp-mini-amarillo" title="Intercambiar turno con persona de día o noche"
+                        <button className="fp__mini-btn fp__mini-btn--rado fp__mini-btn--illo" title="Intercambiar turno con persona de día o noche"
                             onClick={e => { e.stopPropagation(); on3PersonSwap(worker); }}>
                             {Icon.swap(12, COLORS.yellow)}
                         </button>
                     )}
                     {/* Intercambio día/noche — solo si hay un compañero con turno opuesto */}
                     {(worker.turno === 'dia' || worker.turno === 'noche') && hasTurnoSibling && (
-                        <button className={`fp-mini-btn fp-mini-turno ${worker.turno === 'dia' ? 'a-noche' : 'a-dia'}`}
+                        <button className={`fp__mini-btn fp__mini-btn--o ${worker.turno === 'dia' ? 'fp__mini-btn--a-noche' : 'fp__mini-btn--a-dia'}`}
                             title={`Cambiar a ${worker.turno === 'dia' ? 'noche' : 'día'}`}
                             onClick={e => { e.stopPropagation(); onTurnoSwap && onTurnoSwap(worker); }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -283,7 +283,7 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                     )}
                     {/* Swap principal (relevo/cambio de guardia) — no se muestra en descanso */}
                     {worker.turno !== 'descanso' && (
-                        <button className={`fp-mini-btn fp-mini-cuadrado ${soon ? 'fp-mini-amarillo' : 'fp-mini-neutro'}`} title="Rotar / Cambio de turno"
+                        <button className={`fp__mini-btn fp__mini-btn--rado ${soon ? 'fp__mini-btn--illo' : 'fp__mini-btn--ro'}`} title="Rotar / Cambio de turno"
                             onClick={e => { e.stopPropagation(); onSwap && onSwap(worker); }}>
                             {Icon.swap(12, soon ? COLORS.yellow : COLORS.textMute)}
                         </button>
@@ -301,31 +301,31 @@ function WorkerCardTrio({ worker, soon, onDetail, onCycleClick, onTrioNightSwap,
     const desc  = worker.trioPeople?.find(p => p.turno === 'descanso');
 
     return (
-        <div className={`fp-card${soon ? ' proximo' : ''}`} onClick={() => onDetail && onDetail(worker)}>
-            {soon && <div className="fp-card-franja" />}
+        <div className={`fp__card${soon ? ' fp__card--proximo' : ''}`} onClick={() => onDetail && onDetail(worker)}>
+            {soon && <div className="fp__card-franja" />}
 
             {/* Encabezado */}
-            <div className="fp-card-top fp-card-top-trio">
-                <div className="fp-card-rol-fila">
-                    <span className="fp-card-rol">{worker.role}</span>
-                    <span className="fp-turno-chip fp-turno-trio">TRÍO</span>
+            <div className="fp__card-top fp__card-top--trio">
+                <div className="fp__card-rol-fila">
+                    <span className="fp__card-rol">{worker.role}</span>
+                    <span className="fp__turno-chip fp-turno--trio">TRÍO</span>
                 </div>
-                <div className="fp-card-fechas fp-card-fechas-trio">
-                    <span className="fp-card-rango">{worker.in} – {worker.out}</span>
+                <div className="fp__card-fechas fp__card-fechas--trio">
+                    <span className="fp__card-rango">{worker.in} – {worker.out}</span>
                     {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
                 </div>
             </div>
 
             {/* Tres personas */}
-            <div className="fp-trio">
+            <div className="fp__trio">
                 {[
                     { person: dia,   turno: 'dia',      label: 'DÍA',      icon: '☀' },
                     { person: noche, turno: 'noche',    label: 'NOCHE',    icon: '🌙' },
                     { person: desc,  turno: 'descanso', label: 'DESCANSO', icon: '💤' },
                 ].map(({ person, turno, label, icon }) => (
-                    <div key={label} className={`fp-trio-fila fp-turno-${turno}`}>
-                        <span className="fp-trio-turno">{icon} {label}</span>
-                        <span className="fp-trio-nombre">{person?.name || '—'}</span>
+                    <div key={label} className={`fp__trio-fila fp-turno--${turno}`}>
+                        <span className="fp__trio-turno">{icon} {label}</span>
+                        <span className="fp__trio-nombre">{person?.name || '—'}</span>
                     </div>
                 ))}
             </div>
@@ -333,12 +333,12 @@ function WorkerCardTrio({ worker, soon, onDetail, onCycleClick, onTrioNightSwap,
             <ProgressBar value={worker.days} total={worker.total} color={soon ? COLORS.yellow : COLORS.violet} />
 
             {/* Botones de cambio rápido */}
-            <div className="fp-trio-botones">
-                <button className="fp-trio-btn fp-trio-btn-noche" title="Intercambiar NOCHE con DESCANSO (06:00 auto)"
+            <div className="fp__trio-botones">
+                <button className="fp__trio-btn fp__trio-btn--noche" title="Intercambiar NOCHE con DESCANSO (06:00 auto)"
                     onClick={e => { e.stopPropagation(); onTrioNightSwap && onTrioNightSwap(worker); }}>
                     {Icon.swap(10, '#3b82f6')} 🌙↔💤
                 </button>
-                <button className="fp-trio-btn fp-trio-btn-dia" title="Intercambiar DÍA con NOCHE (18:00 auto)"
+                <button className="fp__trio-btn fp__trio-btn--dia" title="Intercambiar DÍA con NOCHE (18:00 auto)"
                     onClick={e => { e.stopPropagation(); onTrioDayNightSwap && onTrioDayNightSwap(worker); }}>
                     {Icon.swap(10, '#4ade80')} ☀↔🌙
                 </button>
@@ -357,11 +357,11 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
 
     // Botones de abajo (Editar, Copiar, Compartir, Eliminar): cada uno con su color
     const acciones = lista => (
-        <div className={`fp-det-acciones fp-det-acciones-${lista.length}`}>
+        <div className={`fp__det-acciones fp__det-acciones--${lista.length}`}>
             {lista.map(({ icon, label, tono, action }) => (
-                <button key={label} className={`fp-det-accion fp-tono-${tono}`} onClick={action}>
+                <button key={label} className={`fp__det-accion fp-tono--${tono}`} onClick={action}>
                     {icon}
-                    <span className="fp-det-accion-label">{label}</span>
+                    <span className="fp__det-accion-label">{label}</span>
                 </button>
             ))}
         </div>
@@ -369,23 +369,23 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
 
     // Barra de avance del ciclo con su porcentaje
     const progreso = (
-        <div className="fp-det-progreso">
-            <div className="fp-det-progreso-top">
+        <div className="fp__det-progreso">
+            <div className="fp__det-progreso-top">
                 {soon ? <RemainingBadge remaining={worker.remaining} /> : <DaysBadge days={worker.days} total={worker.total} />}
-                <span className="fp-det-porcentaje">{pct.toFixed(0)}% del ciclo</span>
+                <span className="fp__det-porcentaje">{pct.toFixed(0)}% del ciclo</span>
             </div>
-            <div className="fp-det-barra">
+            <div className="fp__det-barra">
                 {/* El ancho depende del avance: único estilo en línea */}
-                <div className="fp-det-barra-relleno" style={{ width: `${pct}%` }} />
+                <div className="fp__det-barra-relleno" style={{ width: `${pct}%` }} />
             </div>
         </div>
     );
 
     // Fila de dato: función (no componente) para no recrearla en cada render
     const fila = (label, value) => (
-        <div className="fp-det-fila">
-            <span className="fp-det-fila-label">{label}</span>
-            <span className="fp-det-fila-valor">{value}</span>
+        <div className="fp__det-fila">
+            <span className="fp__det-fila-label">{label}</span>
+            <span className="fp__det-fila-valor">{value}</span>
         </div>
     );
 
@@ -396,44 +396,44 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
         const desc  = worker.trioPeople?.find(p => p.turno === 'descanso');
         return (
             <ModalShell open={open} onClose={onClose}>
-                <div className={`fp-det ${soon ? 'fp-acento-amarillo' : 'fp-acento-violeta'}`}>
-                    <div className="fp-det-banda" />
-                    <div className="fp-det-cuerpo fp-det-cuerpo-trio">
+                <div className={`fp__det ${soon ? 'fp-acento--amarillo' : 'fp-acento--violeta'}`}>
+                    <div className="fp__det-banda" />
+                    <div className="fp__det-cuerpo fp__det-cuerpo--trio">
                         {/* Header */}
-                        <div className="fp-det-header fp-det-header-trio">
-                            <div className="fp-det-avatar fp-det-avatar-trio">👥</div>
-                            <div className="fp-det-identidad">
-                                <div className="fp-det-rol-fila">
-                                    <span className="fp-det-rol">{worker.role}</span>
-                                    <span className="fp-turno-chip fp-turno-trio fp-det-chip">TRÍO</span>
+                        <div className="fp__det-header fp__det-header--trio">
+                            <div className="fp__det-avatar fp__det-avatar--trio">👥</div>
+                            <div className="fp__det-identidad">
+                                <div className="fp__det-rol-fila">
+                                    <span className="fp__det-rol">{worker.role}</span>
+                                    <span className="fp__turno-chip fp-turno--trio fp__det-chip">TRÍO</span>
                                 </div>
-                                <div className="fp-det-nombre-trio">Puesto de 3 Personas</div>
+                                <div className="fp__det-nombre-trio">Puesto de 3 Personas</div>
                             </div>
-                            <button className="fp-icono-btn fp-det-cerrar" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
+                            <button className="fp__icono-btn fp__det-cerrar" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
                         </div>
                         {progreso}
                         {/* 3 personas */}
-                        <div className="fp-det-trio">
+                        <div className="fp__det-trio">
                             {[
                                 { person: dia,   turno: 'dia',      label: 'DÍA',      icon: '☀' },
                                 { person: noche, turno: 'noche',    label: 'NOCHE',    icon: '🌙' },
                                 { person: desc,  turno: 'descanso', label: 'DESCANSO', icon: '💤' },
                             ].map(({ person, turno, label, icon }) => (
-                                <div key={label} className={`fp-det-trio-fila fp-turno-${turno}`}>
-                                    <div className="fp-det-trio-icono">{icon}</div>
-                                    <div className="fp-opcion-info">
-                                        <div className="fp-det-trio-turno">{label}</div>
-                                        <div className="fp-det-trio-nombre">{person?.name || '—'}</div>
+                                <div key={label} className={`fp__det-trio-fila fp-turno--${turno}`}>
+                                    <div className="fp__det-trio-icono">{icon}</div>
+                                    <div className="fp__opcion-info">
+                                        <div className="fp__det-trio-turno">{label}</div>
+                                        <div className="fp__det-trio-nombre">{person?.name || '—'}</div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                         {/* Info */}
-                        <div className="fp-det-info-trio">
+                        <div className="fp__det-info-trio">
                             {[{ label: 'Ingreso', val: worker.in }, { label: 'Salida est.', val: worker.out }, { label: 'Ciclo', val: worker.cycle }].map(({ label, val }) => (
-                                <div key={label} className="fp-det-fila fp-det-fila-trio">
-                                    <span className="fp-det-fila-label">{label}</span>
-                                    <span className="fp-det-fila-valor">{val}</span>
+                                <div key={label} className="fp__det-fila fp__det-fila--trio">
+                                    <span className="fp__det-fila-label">{label}</span>
+                                    <span className="fp__det-fila-valor">{val}</span>
                                 </div>
                             ))}
                         </div>
@@ -453,46 +453,46 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className={`fp-det ${soon ? 'fp-acento-amarillo' : 'fp-acento-verde'}`}>
+            <div className={`fp__det ${soon ? 'fp-acento--amarillo' : 'fp-acento--verde'}`}>
                 {/* Banda de color superior */}
-                <div className="fp-det-banda" />
+                <div className="fp__det-banda" />
 
-                <div className="fp-det-cuerpo">
+                <div className="fp__det-cuerpo">
                     {/* Cabecera */}
-                    <div className="fp-det-header">
-                        <div className="fp-det-avatar">{initials}</div>
-                        <div className="fp-det-identidad">
-                            <div className="fp-det-rol fp-det-rol-solo">{worker.role}</div>
-                            <div className="fp-det-nombre">{worker.name}</div>
+                    <div className="fp__det-header">
+                        <div className="fp__det-avatar">{initials}</div>
+                        <div className="fp__det-identidad">
+                            <div className="fp__det-rol fp__det-rol--solo">{worker.role}</div>
+                            <div className="fp__det-nombre">{worker.name}</div>
                         </div>
-                        <button className="fp-icono-btn fp-det-cerrar" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
+                        <button className="fp__icono-btn fp__det-cerrar" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
                     </div>
 
                     {progreso}
 
                     {/* Filas de info */}
-                    <div className="fp-det-info">
+                    <div className="fp__det-info">
                         {fila('Ingreso', worker.in)}
                         {fila('Salida estimada', worker.out)}
                         {fila('Ciclo', (
-                            <button className="fp-det-ciclo" onClick={() => { onClose(); setTimeout(() => onCycleClick && onCycleClick(worker), 180); }}>
+                            <button className="fp__det-ciclo" onClick={() => { onClose(); setTimeout(() => onCycleClick && onCycleClick(worker), 180); }}>
                                 {worker.cycle}
                                 {Icon.chevDown(8, COLORS.textMute)}
                             </button>
                         ))}
-                        <div className="fp-det-fila fp-det-fila-back">
-                            <span className="fp-det-fila-label">Back / Relevo</span>
-                            <div className="fp-det-back">
-                                <div className="fp-det-back-avatar">{backInitials}</div>
-                                <span className="fp-det-fila-valor">{worker.back}</span>
+                        <div className="fp__det-fila fp__det-fila--back">
+                            <span className="fp__det-fila-label">Back / Relevo</span>
+                            <div className="fp__det-back">
+                                <div className="fp__det-back-avatar">{backInitials}</div>
+                                <span className="fp__det-fila-valor">{worker.back}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Botón cambio de turno (siempre visible) */}
-                <div className="fp-det-rotar-caja">
-                    <button className={`fp-det-rotar${soon ? ' proximo' : ''}`} onClick={() => { onClose(); setTimeout(() => onSwap && onSwap(worker), 180); }}>
+                <div className="fp__det-rotar-caja">
+                    <button className={`fp__det-rotar${soon ? ' fp__det-rotar--proximo' : ''}`} onClick={() => { onClose(); setTimeout(() => onSwap && onSwap(worker), 180); }}>
                         {Icon.swap(13, soon ? COLORS.yellow : COLORS.textMute)}
                         Cambiar turno / Rotar
                     </button>
@@ -511,12 +511,12 @@ function WorkerDetailModal({ open, worker, soon, onClose, onEdit, onDelete, onSw
 
 function SectionHeader({ label, count, dot, alert }) {
     return (
-        <div className="fp-seccion">
+        <div className="fp__seccion">
             {/* El color del punto depende de la sección */}
-            <span className="fp-seccion-punto" style={{ '--punto-color': dot }} />
-            <span className={`fp-seccion-label${alert ? ' alerta' : ''}`}>{label}</span>
-            <span className="fp-seccion-conteo">{count}</span>
-            <div className="fp-seccion-linea" />
+            <span className="fp__seccion-punto" style={{ '--punto-color': dot }} />
+            <span className={`fp__seccion-label${alert ? ' fp__seccion-label--alerta' : ''}`}>{label}</span>
+            <span className="fp__seccion-conteo">{count}</span>
+            <div className="fp__seccion-linea" />
         </div>
     );
 }
@@ -524,9 +524,9 @@ function SectionHeader({ label, count, dot, alert }) {
 // ── Modals ──────────────────────────────────────────────
 function ModalShell({ open, onClose, children }) {
     return (
-        <div className={`fp-modal${open ? ' abierto' : ''}`}>
-            <div className="fp-modal-fondo" onClick={onClose} />
-            <div className="fp-modal-caja">{children}</div>
+        <div className={`fp__modal${open ? ' fp__modal--abierto' : ''}`}>
+            <div className="fp__modal-fondo" onClick={onClose} />
+            <div className="fp__modal-caja">{children}</div>
         </div>
     );
 }
@@ -534,23 +534,23 @@ function ModalShell({ open, onClose, children }) {
 function DeleteModal({ open, worker, onClose, onConfirm }) {
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel">
-                <div className="fp-panel-icono fp-panel-icono-peligro">
+            <div className="fp__panel">
+                <div className="fp__panel-icono fp__panel-icono--peligro">
                     {Icon.trash(20, COLORS.red)}
                 </div>
-                <div className="fp-panel-titulo fp-panel-titulo-grande">¿Eliminar funcionario?</div>
-                <div className="fp-panel-texto">
+                <div className="fp__panel-titulo fp__panel-titulo--grande">¿Eliminar funcionario?</div>
+                <div className="fp__panel-texto">
                     Esta acción no se puede deshacer. Se removerán los registros de turno asociados.
                 </div>
                 {worker && (
-                    <div className="fp-panel-persona">
-                        <div className="fp-panel-persona-rol">{worker.role.toUpperCase()}</div>
-                        <div className="fp-panel-persona-nombre">{worker.name}</div>
+                    <div className="fp__panel-persona">
+                        <div className="fp__panel-persona-rol">{worker.role.toUpperCase()}</div>
+                        <div className="fp__panel-persona-nombre">{worker.name}</div>
                     </div>
                 )}
-                <div className="fp-botones">
-                    <button className="fp-btn fp-btn-sec" onClick={onClose}>Cancelar</button>
-                    <button className="fp-btn fp-btn-peligro" onClick={onConfirm}>Eliminar</button>
+                <div className="fp__botones">
+                    <button className="fp__btn fp__btn--sec" onClick={onClose}>Cancelar</button>
+                    <button className="fp__btn fp__btn--peligro" onClick={onConfirm}>Eliminar</button>
                 </div>
             </div>
         </ModalShell>
@@ -571,29 +571,29 @@ function SwapModal({ open, worker, onClose, onConfirm }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel">
-                <div className="fp-modal-top">
-                    <div className="fp-modal-top-info">
-                        <div className="fp-modal-top-icono fp-modal-top-icono-amarillo">{Icon.swap(16, COLORS.yellow)}</div>
+            <div className="fp__panel">
+                <div className="fp__modal-top">
+                    <div className="fp__modal-top-info">
+                        <div className="fp__modal-top-icono fp__modal-top-icono--amarillo">{Icon.swap(16, COLORS.yellow)}</div>
                         <div>
-                            <div className="fp-panel-titulo">Cambio de turno</div>
-                            <div className="fp-lista-sub">{worker.name}</div>
+                            <div className="fp__panel-titulo">Cambio de turno</div>
+                            <div className="fp__lista-sub">{worker.name}</div>
                         </div>
                     </div>
-                    <button className="fp-icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
+                    <button className="fp__icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
                 </div>
                 {SWAP_OPTS.map(o => (
-                    <button key={o.id} className={`fp-radio-opcion${choice === o.id ? ' elegida' : ''}`} onClick={() => setChoice(o.id)}>
-                        <div className="fp-radio">{choice === o.id && Icon.check(10, '#fff')}</div>
-                        <div className="fp-opcion-info">
-                            <div className="fp-radio-titulo">{o.title}</div>
-                            <div className="fp-radio-desc">{o.desc}</div>
+                    <button key={o.id} className={`fp__radio-opcion${choice === o.id ? ' fp__radio-opcion--elegida' : ''}`} onClick={() => setChoice(o.id)}>
+                        <div className="fp__radio">{choice === o.id && Icon.check(10, '#fff')}</div>
+                        <div className="fp__opcion-info">
+                            <div className="fp__radio-titulo">{o.title}</div>
+                            <div className="fp__radio-desc">{o.desc}</div>
                         </div>
                     </button>
                 ))}
-                <div className="fp-botones fp-botones-separados">
-                    <button className="fp-btn fp-btn-sec" onClick={onClose}>Cancelar</button>
-                    <button className="fp-btn fp-btn-primario fp-btn-principal" onClick={() => onConfirm(choice)}>Confirmar</button>
+                <div className="fp__botones fp__botones--separados">
+                    <button className="fp__btn fp__btn--sec" onClick={onClose}>Cancelar</button>
+                    <button className="fp__btn fp__btn--primario fp__btn--principal" onClick={() => onConfirm(choice)}>Confirmar</button>
                 </div>
             </div>
         </ModalShell>
@@ -615,30 +615,30 @@ function SwapModal3({ open, group, onClose, onConfirm }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel">
-                <div className="fp-modal-top">
-                    <div className="fp-modal-top-info">
-                        <div className="fp-modal-top-icono fp-modal-top-icono-amarillo">{Icon.swap(16, COLORS.yellow)}</div>
+            <div className="fp__panel">
+                <div className="fp__modal-top">
+                    <div className="fp__modal-top-info">
+                        <div className="fp__modal-top-icono fp__modal-top-icono--amarillo">{Icon.swap(16, COLORS.yellow)}</div>
                         <div>
-                            <div className="fp-panel-titulo">Intercambio de turno</div>
-                            <div className="fp-lista-sub">{backWorker.name} — Descanso</div>
+                            <div className="fp__panel-titulo">Intercambio de turno</div>
+                            <div className="fp__lista-sub">{backWorker.name} — Descanso</div>
                         </div>
                     </div>
-                    <button className="fp-icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
+                    <button className="fp__icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
                 </div>
-                <div className="fp-modal-pregunta">¿Con quién desea intercambiar?</div>
+                <div className="fp__modal-pregunta">¿Con quién desea intercambiar?</div>
                 {opts.map(o => (
-                    <button key={o.id} className={`fp-radio-opcion fp-turno-${o.id}${choice === o.id ? ' elegida' : ''}`} onClick={() => setChoice(o.id)}>
-                        <div className="fp-radio">{choice === o.id && Icon.check(10, '#fff')}</div>
-                        <div className="fp-opcion-info">
-                            <div className="fp-radio-titulo">{o.icon} {o.label}</div>
-                            <div className="fp-radio-desc fp-radio-desc-corta">{o.sub}</div>
+                    <button key={o.id} className={`fp__radio-opcion fp-turno--${o.id}${choice === o.id ? ' fp__radio-opcion--elegida' : ''}`} onClick={() => setChoice(o.id)}>
+                        <div className="fp__radio">{choice === o.id && Icon.check(10, '#fff')}</div>
+                        <div className="fp__opcion-info">
+                            <div className="fp__radio-titulo">{o.icon} {o.label}</div>
+                            <div className="fp__radio-desc fp__radio-desc--corta">{o.sub}</div>
                         </div>
                     </button>
                 ))}
-                <div className="fp-botones fp-botones-juntos">
-                    <button className="fp-btn fp-btn-sec" onClick={onClose}>Cancelar</button>
-                    <button className="fp-btn fp-btn-primario fp-btn-principal" onClick={() => onConfirm(choice)}>Confirmar</button>
+                <div className="fp__botones fp__botones--juntos">
+                    <button className="fp__btn fp__btn--sec" onClick={onClose}>Cancelar</button>
+                    <button className="fp__btn fp__btn--primario fp__btn--principal" onClick={() => onConfirm(choice)}>Confirmar</button>
                 </div>
             </div>
         </ModalShell>
@@ -662,19 +662,19 @@ function CycleModal({ open, worker, onClose, onConfirm }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel">
-                <div className="fp-panel-titulo">Ciclo de turno</div>
-                <div className="fp-panel-sub">{worker.name}</div>
+            <div className="fp__panel">
+                <div className="fp__panel-titulo">Ciclo de turno</div>
+                <div className="fp__panel-sub">{worker.name}</div>
                 {opts.map(o => (
-                    <button key={o.id} className={`fp-opcion${sel === o.id ? ' elegida' : ''}`} onClick={() => setSel(o.id)}>
-                        <div className="fp-opcion-info">
-                            <div className="fp-opcion-titulo">{o.label}</div>
-                            <div className="fp-opcion-desc">{o.desc}</div>
+                    <button key={o.id} className={`fp__opcion${sel === o.id ? ' fp__opcion--elegida' : ''}`} onClick={() => setSel(o.id)}>
+                        <div className="fp__opcion-info">
+                            <div className="fp__opcion-titulo">{o.label}</div>
+                            <div className="fp__opcion-desc">{o.desc}</div>
                         </div>
-                        {sel === o.id && <div className="fp-opcion-check">{Icon.check(10, '#fff')}</div>}
+                        {sel === o.id && <div className="fp__opcion-check">{Icon.check(10, '#fff')}</div>}
                     </button>
                 ))}
-                <button className="fp-btn fp-btn-primario fp-btn-ancho" onClick={() => onConfirm(sel)}>Aplicar ciclo</button>
+                <button className="fp__btn fp__btn--primario fp__btn--ancho" onClick={() => onConfirm(sel)}>Aplicar ciclo</button>
             </div>
         </ModalShell>
     );
@@ -706,35 +706,35 @@ function CountListModal({ open, onClose, kind, items }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            {/* .fp-lista-activos (verde) / .fp-lista-libres (morado) definen el color de acento */}
-            <div className={`fp-panel fp-lista ${isActive ? 'fp-lista-activos' : 'fp-lista-libres'}`}>
-                <div className="fp-lista-header">
-                    <div className="fp-lista-icono"><span className="fp-lista-icono-punto" /></div>
-                    <div className="fp-lista-titulos">
-                        <div className="fp-panel-titulo">{title}</div>
-                        <div className="fp-lista-sub">{subtitle}</div>
+            {/* .fp__lista--activos (verde) / .fp__lista--libres (morado) definen el color de acento */}
+            <div className={`fp__panel fp__lista ${isActive ? 'fp__lista--activos' : 'fp__lista--libres'}`}>
+                <div className="fp__lista-header">
+                    <div className="fp__lista-icono"><span className="fp__lista-icono-punto" /></div>
+                    <div className="fp__lista-titulos">
+                        <div className="fp__panel-titulo">{title}</div>
+                        <div className="fp__lista-sub">{subtitle}</div>
                     </div>
-                    <div className="fp-lista-total">{items.length}</div>
-                    <button className={`fp-icono-btn${copied ? ' copiado' : ''}`} onClick={handleShare} title="Compartir lista">
+                    <div className="fp__lista-total">{items.length}</div>
+                    <button className={`fp__icono-btn${copied ? ' fp__icono-btn--copiado' : ''}`} onClick={handleShare} title="Compartir lista">
                         {copied ? Icon.check(13, accent) : Icon.share(13, COLORS.textMute)}
                     </button>
-                    <button className="fp-icono-btn" onClick={onClose}>
+                    <button className="fp__icono-btn" onClick={onClose}>
                         {Icon.close(12, COLORS.textMute)}
                     </button>
                 </div>
-                <div className="fp-scroll fp-lista-scroll">
+                <div className="fp__scroll fp__lista-scroll">
                     {items.length === 0 ? (
-                        <div className="fp-vacio">No hay funcionarios en esta categoría.</div>
+                        <div className="fp__vacio">No hay funcionarios en esta categoría.</div>
                     ) : (
-                        <div className="fp-lista-items">
+                        <div className="fp__lista-items">
                             {items.map((p, i) => (
-                                <div key={i} className="fp-lista-item">
-                                    <div className="fp-lista-avatar">{p.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</div>
-                                    <div className="fp-lista-persona">
-                                        <div className="fp-lista-nombre">{p.name}</div>
-                                        <div className="fp-lista-rol">{p.role}</div>
+                                <div key={i} className="fp__lista-item">
+                                    <div className="fp__lista-avatar">{p.name.split(' ').map(n => n[0]).slice(0, 2).join('')}</div>
+                                    <div className="fp__lista-persona">
+                                        <div className="fp__lista-nombre">{p.name}</div>
+                                        <div className="fp__lista-rol">{p.role}</div>
                                     </div>
-                                    {p.meta && <div className="fp-lista-meta">{p.meta}</div>}
+                                    {p.meta && <div className="fp__lista-meta">{p.meta}</div>}
                                 </div>
                             ))}
                         </div>
@@ -813,30 +813,30 @@ function ImportModal({ open, onClose, onConfirm }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel fp-panel-compacto">
+            <div className="fp__panel fp__panel--compacto">
                 {/* Encabezado */}
-                <div className="fp-imp-top">
-                    <div className="fp-imp-top-icono">{Icon.upload(14, COLORS.green)}</div>
-                    <div className="fp-opcion-info">
-                        <div className="fp-imp-titulo">Importar funcionarios</div>
-                        <div className="fp-imp-sub">Excel .xlsx — primera fila = encabezados</div>
+                <div className="fp__imp-top">
+                    <div className="fp__imp-top-icono">{Icon.upload(14, COLORS.green)}</div>
+                    <div className="fp__opcion-info">
+                        <div className="fp__imp-titulo">Importar funcionarios</div>
+                        <div className="fp__imp-sub">Excel .xlsx — primera fila = encabezados</div>
                     </div>
-                    <button className="fp-icono-btn fp-icono-btn-chico" onClick={onClose}>{Icon.close(11, COLORS.textMute)}</button>
+                    <button className="fp__icono-btn fp__icono-btn--chico" onClick={onClose}>{Icon.close(11, COLORS.textMute)}</button>
                 </div>
 
                 {/* Columnas */}
-                <div className="fp-imp-label">COLUMNAS REQUERIDAS</div>
-                <div className="fp-imp-columnas">
+                <div className="fp__imp-label">COLUMNAS REQUERIDAS</div>
+                <div className="fp__imp-columnas">
                     {cols.map(c => (
-                        <div key={c.name} className="fp-imp-columna">
-                            <span className="fp-imp-col-nombre">{c.name}</span>
-                            <span className="fp-imp-col-ejemplo">{c.ex}</span>
+                        <div key={c.name} className="fp__imp-columna">
+                            <span className="fp__imp-col-nombre">{c.name}</span>
+                            <span className="fp__imp-col-ejemplo">{c.ex}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* Nota */}
-                <div className="fp-imp-nota">
+                <div className="fp__imp-nota">
                     Ciclo por defecto <b>15-15</b>. Fecha de ingreso = hoy.
                     El back se asigna después editando cada registro.
                 </div>
@@ -844,28 +844,28 @@ function ImportModal({ open, onClose, onConfirm }) {
                 {/* Zona de archivo o vista previa */}
                 <input ref={fileRef} type="file" accept=".xlsx" hidden onChange={handleFileChange} />
                 {preview ? (
-                    <div className="fp-imp-preview">
-                        <div className="fp-imp-preview-titulo">
+                    <div className="fp__imp-preview">
+                        <div className="fp__imp-preview-titulo">
                             {preview.length} REGISTRO{preview.length !== 1 ? 'S' : ''} LISTOS PARA IMPORTAR
                         </div>
                         {preview.slice(0, 3).map((r, i) => (
-                            <div key={i} className="fp-imp-preview-fila">{r.nombre_completo} — {r.cargo}</div>
+                            <div key={i} className="fp__imp-preview-fila">{r.nombre_completo} — {r.cargo}</div>
                         ))}
-                        {preview.length > 3 && <div className="fp-imp-preview-mas">+{preview.length - 3} más…</div>}
-                        <button className="fp-imp-cambiar" onClick={() => { setPreview(null); fileRef.current?.click(); }}>Cambiar archivo</button>
+                        {preview.length > 3 && <div className="fp__imp-preview-mas">+{preview.length - 3} más…</div>}
+                        <button className="fp__imp-cambiar" onClick={() => { setPreview(null); fileRef.current?.click(); }}>Cambiar archivo</button>
                     </div>
                 ) : (
-                    <button className="fp-imp-elegir" onClick={() => fileRef.current?.click()}>
+                    <button className="fp__imp-elegir" onClick={() => fileRef.current?.click()}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                             <path d="M12 16V4M12 4l-4 4M12 4l4 4M5 20h14" stroke={COLORS.textMute} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         Seleccionar archivo .xlsx
                     </button>
                 )}
-                {error && <div className="fp-imp-error">{error}</div>}
+                {error && <div className="fp__imp-error">{error}</div>}
 
                 {/* Plantilla */}
-                <button className="fp-imp-plantilla" onClick={downloadTemplate}>
+                <button className="fp__imp-plantilla" onClick={downloadTemplate}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
                         <path d="M12 4v12M12 16l-4-4M12 16l4-4M5 20h14" stroke={COLORS.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -873,9 +873,9 @@ function ImportModal({ open, onClose, onConfirm }) {
                 </button>
 
                 {/* Botones */}
-                <div className="fp-botones">
-                    <button className="fp-btn fp-btn-sec fp-btn-chico" onClick={onClose}>Cancelar</button>
-                    <button className={`fp-btn fp-btn-chico fp-btn-principal fp-imp-confirmar${preview ? ' listo' : ''}`} onClick={handleConfirm}>
+                <div className="fp__botones">
+                    <button className="fp__btn fp__btn--sec fp__btn--chico" onClick={onClose}>Cancelar</button>
+                    <button className={`fp__btn fp__btn--chico fp__btn--principal fp__imp-confirmar${preview ? ' fp__imp-confirmar--listo' : ''}`} onClick={handleConfirm}>
                         {Icon.upload(13, preview ? '#0a2010' : COLORS.green)}
                         {preview ? `Importar ${preview.length}` : 'Seleccionar archivo'}
                     </button>
@@ -888,10 +888,10 @@ function ImportModal({ open, onClose, onConfirm }) {
 // ── Header ──────────────────────────────────────────────
 function PageHeader({ onBack, controlsOpen, onToggleControls }) {
     return (
-        <div className="fp-header">
-            <button className="fp-header-btn" onClick={onBack}>{Icon.back(16, '#cfcfcf')}</button>
-            <div className="fp-header-titulo">FLUJOS</div>
-            <button className={`fp-header-btn fp-header-controles${controlsOpen ? ' activo' : ''}`} onClick={onToggleControls} title="Controles">
+        <div className="fp__header">
+            <button className="fp__header-btn" onClick={onBack}>{Icon.back(16, '#cfcfcf')}</button>
+            <div className="fp__header-titulo">FLUJOS</div>
+            <button className={`fp__header-btn fp__header-controles${controlsOpen ? ' fp__header-controles--activo' : ''}`} onClick={onToggleControls} title="Controles">
                 {Icon.sliders(15, controlsOpen ? COLORS.violet : '#cfcfcf')}
             </button>
         </div>
@@ -911,26 +911,26 @@ function SearchBar({ value, onChange, onImport, activeCount = 0, freeCount = 0, 
     };
 
     return (
-        <div className="fp-busqueda">
-            <button className="fp-contador fp-contador-activos" title="En turno activo" onClick={onActiveClick}>
-                <span className="fp-contador-punto" />
-                <span className="fp-contador-num">{activeCount}</span>
-                <span className="fp-contador-label">activos</span>
+        <div className="fp__busqueda">
+            <button className="fp__contador fp__contador--activos" title="En turno activo" onClick={onActiveClick}>
+                <span className="fp__contador-punto" />
+                <span className="fp__contador-num">{activeCount}</span>
+                <span className="fp__contador-label">activos</span>
             </button>
-            <button className="fp-contador fp-contador-libres" title="En descanso o vacaciones" onClick={onFreeClick}>
-                <span className="fp-contador-punto" />
-                <span className="fp-contador-num">{freeCount}</span>
-                <span className="fp-contador-label">libres</span>
+            <button className="fp__contador fp__contador--libres" title="En descanso o vacaciones" onClick={onFreeClick}>
+                <span className="fp__contador-punto" />
+                <span className="fp__contador-num">{freeCount}</span>
+                <span className="fp__contador-label">libres</span>
             </button>
             {/* Se expande al tocar la lupa o al escribir */}
-            <div className={`fp-buscar${expanded ? ' expandido' : ''}${focus ? ' foco' : ''}`}
+            <div className={`fp__buscar${expanded ? ' fp__buscar--expandido' : ''}${focus ? ' fp__buscar--foco' : ''}`}
                 onClick={() => { if (!expanded) setOpen(true); }}>
-                <div className="fp-buscar-lupa">
+                <div className="fp__buscar-lupa">
                     {Icon.search(16, focus ? COLORS.violet : COLORS.textMute)}
                 </div>
                 <input
                     ref={inputRef}
-                    className="fp-buscar-input"
+                    className="fp__buscar-input"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onFocus={() => { setFocus(true); if (inputRef.current) inputRef.current.focus(); }}
@@ -938,7 +938,7 @@ function SearchBar({ value, onChange, onImport, activeCount = 0, freeCount = 0, 
                     placeholder="Buscar por nombre o cargo..."
                 />
             </div>
-            <button className="fp-importar" title="Importar" onClick={onImport}>
+            <button className="fp__importar" title="Importar" onClick={onImport}>
                 {Icon.upload(15)}
             </button>
         </div>
@@ -948,14 +948,14 @@ function SearchBar({ value, onChange, onImport, activeCount = 0, freeCount = 0, 
 // ── Bottom nav ──────────────────────────────────────────
 function BottomNav({ onHome }) {
     return (
-        <div className="fp-nav">
-            <button className="fp-nav-btn" onClick={onHome}>
+        <div className="fp__nav">
+            <button className="fp__nav-btn" onClick={onHome}>
                 {Icon.home(20, COLORS.textMute)}
-                <span className="fp-nav-label">Inicio</span>
+                <span className="fp__nav-label">Inicio</span>
             </button>
-            <button className="fp-nav-btn activo">
+            <button className="fp__nav-btn fp__nav-btn--activo">
                 {Icon.flow(20, COLORS.violet)}
-                <span className="fp-nav-label">Flujos</span>
+                <span className="fp__nav-label">Flujos</span>
             </button>
         </div>
     );
@@ -1060,14 +1060,14 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
         });
     };
 
-    const lbl = (t) => <label className="fp-label">{t}</label>;
+    const lbl = (t) => <label className="fp__label">{t}</label>;
     // Ciclo y días: función (no componente) para que los campos no se
     // vuelvan a montar y pierdan el foco al escribir
     const cicloYDias = (vals, setter) => (
-        <div className="fp-form-fila">
-            <div className="fp-form-col">
+        <div className="fp__form-fila">
+            <div className="fp__form-col">
                 {lbl('CICLO *')}
-                <select className="fp-input fp-select" value={vals.cycle} onChange={e => setter('cycle', e.target.value)}>
+                <select className="fp__input fp__select" value={vals.cycle} onChange={e => setter('cycle', e.target.value)}>
                     <option value="14-7">14 / 7 días</option>
                     <option value="14-14">14 / 14 días</option>
                     <option value="15-15">15 / 15 días</option>
@@ -1075,12 +1075,12 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
                     <option value="30">30 días</option>
                 </select>
             </div>
-            <div className="fp-form-col">
+            <div className="fp__form-col">
                 {lbl('DÍAS EN TURNO')}
-                <div className="fp-dias">
-                    <input className="fp-input fp-dias-input" type="number" min="1" placeholder="1"
+                <div className="fp__dias">
+                    <input className="fp__input fp__dias-input" type="number" min="1" placeholder="1"
                         value={vals.days} onChange={e => setter('days', e.target.value)} />
-                    <span className="fp-dias-auto">AUTO</span>
+                    <span className="fp__dias-auto">AUTO</span>
                 </div>
             </div>
         </div>
@@ -1088,24 +1088,24 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
 
     return (
         <ModalShell open={open} onClose={onClose}>
-            <div className="fp-panel">
+            <div className="fp__panel">
                 {/* Header */}
-                <div className="fp-modal-top fp-modal-top-amplio">
-                    <div className="fp-modal-top-info">
-                        <div className="fp-modal-top-icono fp-modal-top-icono-violeta">{Icon.user(16, COLORS.violet)}</div>
+                <div className="fp__modal-top fp__modal-top--amplio">
+                    <div className="fp__modal-top-info">
+                        <div className="fp__modal-top-icono fp__modal-top-icono--violeta">{Icon.user(16, COLORS.violet)}</div>
                         <div>
-                            <div className="fp-panel-titulo">{editData ? 'Editar funcionario' : 'Nuevo funcionario'}</div>
-                            <div className="fp-lista-sub">{editData ? 'Actualizar datos del turno' : 'Agregar a turno activo'}</div>
+                            <div className="fp__panel-titulo">{editData ? 'Editar funcionario' : 'Nuevo funcionario'}</div>
+                            <div className="fp__lista-sub">{editData ? 'Actualizar datos del turno' : 'Agregar a turno activo'}</div>
                         </div>
                     </div>
-                    <button className="fp-icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
+                    <button className="fp__icono-btn" onClick={onClose}>{Icon.close(12, COLORS.textMute)}</button>
                 </div>
 
                 {/* Toggle modo — solo al crear */}
                 {!editData && (
-                    <div className="fp-modo">
+                    <div className="fp__modo">
                         {[{ id: 'duo', label: '2 personas' }, { id: 'trio', label: '3 personas' }].map(m => (
-                            <button key={m.id} className={`fp-modo-btn${mode === m.id ? ' activo' : ''}`}
+                            <button key={m.id} className={`fp__modo-btn${mode === m.id ? ' fp__modo-btn--activo' : ''}`}
                                 onClick={() => { setMode(m.id); setError(''); }}>{m.label}</button>
                         ))}
                     </div>
@@ -1114,39 +1114,39 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
                 {/* ── FORMULARIO DUO ── */}
                 {mode === 'duo' && (
                     <>
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('NOMBRE COMPLETO *')}
-                            <input className="fp-input" placeholder="Ej: Marcelo Quintero Ríos"
+                            <input className="fp__input" placeholder="Ej: Marcelo Quintero Ríos"
                                 value={form.name} onChange={e => setF('name', e.target.value)} />
                         </div>
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('CARGO / ROL *')}
-                            <input className="fp-input" placeholder="Ej: Operador de Planta"
+                            <input className="fp__input" placeholder="Ej: Operador de Planta"
                                 value={form.role} onChange={e => setF('role', e.target.value)} />
                         </div>
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('FECHA DE INGRESO *')}
-                            <input className="fp-input" type="date" value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
+                            <input className="fp__input" type="date" value={form.inDate} onChange={e => setF('inDate', e.target.value)} />
                         </div>
                         {cicloYDias(form, setF)}
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('TURNO')}
-                            <div className="fp-turnos">
+                            <div className="fp__turnos">
                                 {[
                                     { id: 'dia',      label: '☀ Día' },
                                     { id: 'noche',    label: '🌙 Noche' },
                                     { id: 'descanso', label: '💤 Descanso' },
                                 ].map(t => (
                                     <button key={t.id} type="button" onClick={() => setF('turno', t.id)}
-                                        className={`fp-turno-btn fp-turno-${t.id}${form.turno === t.id ? ' elegido' : ''}`}>
+                                        className={`fp__turno-btn fp-turno--${t.id}${form.turno === t.id ? ' fp__turno-btn--elegido' : ''}`}>
                                         {t.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        <div className="fp-campo fp-campo-ultimo">
+                        <div className="fp__campo fp__campo--ultimo">
                             {lbl('NOMBRE DEL RELEVO / BACK *')}
-                            <input className="fp-input" placeholder="Ej: Rodrigo Salinas Vega"
+                            <input className="fp__input" placeholder="Ej: Rodrigo Salinas Vega"
                                 value={form.back} onChange={e => setF('back', e.target.value)} />
                         </div>
                     </>
@@ -1155,9 +1155,9 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
                 {/* ── FORMULARIO TRIO ── */}
                 {mode === 'trio' && (
                     <>
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('PUESTO / CARGO *')}
-                            <input className="fp-input" placeholder="Ej: Analista de Supervisión"
+                            <input className="fp__input" placeholder="Ej: Analista de Supervisión"
                                 value={trioForm.role} onChange={e => setTF('role', e.target.value)} />
                         </div>
                         {[
@@ -1165,25 +1165,25 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
                             { turno: 'noche',    titulo: '🌙 PERSONA NOCHE *',   campo: 'nameNoche' },
                             { turno: 'descanso', titulo: '💤 BACK / DESCANSO *', campo: 'nameBack' },
                         ].map(({ turno, titulo, campo }) => (
-                            <div key={campo} className={`fp-trio-campo fp-turno-${turno}`}>
-                                <div className="fp-trio-campo-titulo">{titulo}</div>
-                                <input className="fp-input" placeholder="Nombre completo"
+                            <div key={campo} className={`fp__trio-campo fp-turno--${turno}`}>
+                                <div className="fp__trio-campo-titulo">{titulo}</div>
+                                <input className="fp__input" placeholder="Nombre completo"
                                     value={trioForm[campo]} onChange={e => setTF(campo, e.target.value)} />
                             </div>
                         ))}
-                        <div className="fp-campo">
+                        <div className="fp__campo">
                             {lbl('FECHA DE INGRESO *')}
-                            <input className="fp-input" type="date" value={trioForm.inDate} onChange={e => setTF('inDate', e.target.value)} />
+                            <input className="fp__input" type="date" value={trioForm.inDate} onChange={e => setTF('inDate', e.target.value)} />
                         </div>
                         {cicloYDias(trioForm, setTF)}
                     </>
                 )}
 
-                {error && <p className="fp-form-error">{error}</p>}
+                {error && <p className="fp__form-error">{error}</p>}
 
-                <div className="fp-botones">
-                    <button className="fp-btn fp-btn-sec" onClick={onClose}>Cancelar</button>
-                    <button className="fp-btn fp-btn-primario fp-btn-principal" onClick={mode === 'trio' ? handleSubmitTrio : handleSubmitDuo}>
+                <div className="fp__botones">
+                    <button className="fp__btn fp__btn--sec" onClick={onClose}>Cancelar</button>
+                    <button className="fp__btn fp__btn--primario fp__btn--principal" onClick={mode === 'trio' ? handleSubmitTrio : handleSubmitDuo}>
                         {editData ? 'Guardar cambios' : 'Agregar'}
                     </button>
                 </div>
@@ -1193,7 +1193,7 @@ function AddWorkerModal({ open, onClose, onAdd, onAddTrio, editData, onEdit }) {
 }
 
 function Toast({ open, msg }) {
-    return <div className={`fp-toast${open ? ' visible' : ''}`}>{msg}</div>;
+    return <div className={`fp__toast${open ? ' fp__toast--visible' : ''}`}>{msg}</div>;
 }
 
 // ── Page principal ──────────────────────────────────────
@@ -1604,10 +1604,10 @@ const FlujoPersonalPage = () => {
             />
             <Toast open={!!toast} msg={toast || ''} />
 
-            <div className="fp-scroll">
+            <div className="fp__scroll">
                 {/* Centra el contenido igual que WorkspacePage en escritorio */}
-                <div className="fp-contenido">
-                    <div className={`fp-controles${controlsOpen ? ' abiertos' : ''}`}>
+                <div className="fp__contenido">
+                    <div className={`fp__controles${controlsOpen ? ' fp__controles--abiertos' : ''}`}>
                         <SearchBar
                             value={search} onChange={setSearch}
                             onImport={() => setImportOpen(true)}
@@ -1617,9 +1617,9 @@ const FlujoPersonalPage = () => {
                             onFreeClick={() => setCountOpen('free')}
                         />
                     </div>
-                    <div className="fp-listas">
+                    <div className="fp__listas">
                         {loading && (
-                            <div className="fp-vacio">
+                            <div className="fp__vacio">
                                 Cargando funcionarios…
                             </div>
                         )}
@@ -1647,7 +1647,7 @@ const FlujoPersonalPage = () => {
                         )}
                         {!loading && <SectionHeader label="En turno activo" count={filteredActive.length} dot={COLORS.green} />}
                         {filteredActive.length === 0 ? (
-                            <div className="fp-vacio">
+                            <div className="fp__vacio">
                                 {search ? 'Sin resultados para la búsqueda.' : 'Sin funcionarios en turno activo.'}
                             </div>
                         ) : (
@@ -1693,7 +1693,7 @@ const FlujoPersonalPage = () => {
             <BottomNav onHome={() => navigate('/workspace')} />
 
             {/* FAB — esquina inferior derecha */}
-            <button className="fp-fab" onClick={() => setAddOpen(true)}>
+            <button className="fp__fab" onClick={() => setAddOpen(true)}>
                 {Icon.plus(24, '#fff')}
             </button>
 
