@@ -15,6 +15,7 @@ import {
 import { CacheFreshnessBadge, ModalConfirm, PendienteBadge, PersonaSugMini } from './comunes';
 import { CROP_MIN, compressImage, fmtFechaCorta, rotateImageDataUrl } from './helpers';
 import { IconChevronRight } from './iconos';
+import { Sk, SkeletonFirmas } from '../../components/Skeleton';
 
 // ── Firmas Funcionarios ────────────────────────────────────
 // Captura de firma: cámara en vivo (mismo patrón que ModalEscanerQR, sin jsQR)
@@ -653,7 +654,7 @@ export const PantallaFirmas = ({ turnoActivo }) => {
                 <div>
                     <div className="firma__galeria-titulo">Firmas Funcionarios</div>
                     <div className="firma__galeria-subtitulo">
-                        {loading ? 'Cargando registro...' : firmas.length === 0 ? 'Sin firmas registradas' : `${firmas.length} firma${firmas.length !== 1 ? 's' : ''} registrada${firmas.length !== 1 ? 's' : ''}`}
+                        {loading ? <Sk forma="titulo" ancho="60" /> : firmas.length === 0 ? 'Sin firmas registradas' : `${firmas.length} firma${firmas.length !== 1 ? 's' : ''} registrada${firmas.length !== 1 ? 's' : ''}`}
                     </div>
                 </div>
                 <button className="firma__btn-primary" onClick={abrirNueva}>+ Nueva firma</button>
@@ -710,9 +711,7 @@ export const PantallaFirmas = ({ turnoActivo }) => {
             {fromCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {loading ? (
-                <div className="firma__grid firma__grid--cargando">
-                    {Array.from({ length: 6 }).map((_, i) => <div key={i} className="firma__skeleton" />)}
-                </div>
+                <SkeletonFirmas />
             ) : firmas.length === 0 ? (
                 <div className="firma__empty">
                     <div className="firma__empty-icon">

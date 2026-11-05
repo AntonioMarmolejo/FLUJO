@@ -3,12 +3,21 @@ import { MovCard } from './Movimientos';
 import { DASH_FILTROS, addMouseSwipe, generarNarrativa } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
 
+import {
+    Sk,
+    SkeletonBitacora,
+    SkeletonGrafica,
+    SkeletonMovimientos,
+    SkeletonRegistro,
+} from '../../components/Skeleton';
+
 const StatsChart = lazy(() => import('../../components/StatsChart.jsx'));
 
 // Bitácora: salidas e ingresos de la misma placa, en pares
 export const VistaBitacora = ({
     bitacora,
     bitacoraFiltrada,
+    cargandoMovimientos,
     expandedBitSet,
     exportBitacora,
     handleDeleteBitPair,
@@ -24,7 +33,7 @@ export const VistaBitacora = ({
         <div className="ws__bitacora">
             <div className="bit__toolbar">
                 <span className="bit__toolbar-count">
-                    {searchQuery
+                    {cargandoMovimientos ? <Sk forma="chip" /> : searchQuery
                         ? <>{bitacoraFiltrada.length} <span className="ws__conteo-total">de {bitacora.length}</span></>
                         : <>{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</>
                     }
@@ -38,7 +47,7 @@ export const VistaBitacora = ({
                 </button>
             </div>
             {bitacora.length === 0 ? (
-                <p className="ws__empty">Sin movimientos para consolidar</p>
+                cargandoMovimientos ? <SkeletonBitacora /> : <p className="ws__empty">Sin movimientos para consolidar</p>
             ) : bitacoraFiltrada.length === 0 ? (
                 <p className="ws__empty">Sin resultados para "{searchQuery}"</p>
             ) : (
@@ -147,6 +156,7 @@ export const VistaRegistro = ({
     handleDelete,
     handleEdit,
     movimientos,
+    cargandoMovimientos,
     regSort,
     registroConfig,
     searchQuery,
@@ -162,7 +172,7 @@ export const VistaRegistro = ({
         <div className="ws__registro">
             <div className="reg__toolbar">
                 <span className="reg__count">
-                    {searchQuery
+                    {cargandoMovimientos ? <Sk forma="chip" /> : searchQuery
                         ? <>{sortedRegs.length} <span className="ws__conteo-total">de {movimientos.length}</span></>
                         : <>{movimientos.length} entrada{movimientos.length !== 1 ? 's' : ''}</>
                     }
@@ -189,7 +199,7 @@ export const VistaRegistro = ({
                 </div>
             </div>
             {movimientos.length === 0 ? (
-                <p className="ws__empty">Sin movimientos registrados</p>
+                cargandoMovimientos ? <SkeletonRegistro /> : <p className="ws__empty">Sin movimientos registrados</p>
             ) : sortedRegs.length === 0 ? (
                 <p className="ws__empty">Sin resultados para "{searchQuery}"</p>
             ) : (
@@ -282,6 +292,7 @@ export const VistaMovimientos = ({
     movCollapsed,
     movSort,
     movimientos,
+    cargandoMovimientos,
     movsLista,
     searchQuery,
     selectAll,
@@ -341,7 +352,7 @@ export const VistaMovimientos = ({
                                 </svg>
                             </button>
                             {!chartCollapsed && (
-                                <Suspense fallback={<div className="ws__chart-cargando" />}>
+                                <Suspense fallback={<SkeletonGrafica />}>
                                     <StatsChart
                                         data={stats?.grafico}
                                         turno={turnoActivo?.turnoActual || 'diurno'}
@@ -416,7 +427,7 @@ export const VistaMovimientos = ({
                         )}
                         <div className="ws__section-content">
                             {movimientos.length === 0
-                                ? <p className="ws__empty">Sin movimientos registrados hoy</p>
+                                ? (cargandoMovimientos ? <SkeletonMovimientos /> : <p className="ws__empty">Sin movimientos registrados hoy</p>)
                                 : movsLista.length === 0
                                     ? <p className="ws__empty">
                                         {dashFiltro && !searchQuery

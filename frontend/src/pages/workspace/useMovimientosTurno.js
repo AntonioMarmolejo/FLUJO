@@ -22,13 +22,16 @@ export const useMovimientosTurno = (userId, isPending) => {
     const [diasActivos, setDiasActivos] = useState(0);
     const [movimientos, setMovimientos] = useState([]);
     const [turnoActivo, setTurnoActivo] = useState(null);
+    // Mientras esto no se resuelva, una lista vacía no significa "sin movimientos"
+    const [turnoResuelto, setTurnoResuelto] = useState(false);
+    const [cargadoPara, setCargadoPara] = useState(null);
 
     // El turno se guarda también en el dispositivo: sin conexión se sigue
     // trabajando con él (incluido uno abierto offline que aún no se sube).
     useEffect(() => {
         const cargarTurno = () => {
             const local = leerTurnoLocal(userId);
-            if (local) setTurnoActivo(local);
+            if (local) { setTurnoActivo(local); setTurnoResuelto(true); }
             api.get('/turnos/activo')
                 .then(({ data }) => {
                     if (data.turno) {
@@ -38,7 +41,8 @@ export const useMovimientosTurno = (userId, isPending) => {
                         setTurnoActivo(null);
                     }
                 })
-                .catch(() => { });
+                .catch(() => { })
+                .finally(() => setTurnoResuelto(true));
         };
         cargarTurno();
         const onOperacion = e => { if (e.detail?.tipo === 'turno' && e.detail.data) cargarTurno(); };
@@ -78,7 +82,11 @@ export const useMovimientosTurno = (userId, isPending) => {
         }
     };
 
-    useEffect(() => { cargarDatos(); }, [turnoActivo]);
+    const claveTurno = turnoActivo && `${turnoActivo.puesto}|${turnoActivo.bloque}|${turnoActivo.fecha}`;
+    useEffect(() => {
+        cargarDatos().finally(() => setCargadoPara(claveTurno));
+    }, [turnoActivo]);
+    const cargando = !turnoResuelto || (!!turnoActivo && cargadoPara !== claveTurno);
 
     // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión,
     // cuando la pestaña recupera el foco (el navegador puede pausar el intervalo
@@ -213,7 +221,7 @@ export const useMovimientosTurno = (userId, isPending) => {
     };
 
     return {
-        turnoActivo, movimientos, diasActivos, cargarDatos,
+        turnoActivo, movimientos, diasActivos, cargando, cargarDatos,
         agregarOptimista, confirmarMovimiento, editarLocal,
         borrar, borrarVarios, cambiarHora, guardarIngreso,
     };

@@ -10,6 +10,9 @@ import {
 import { CacheFreshnessBadge, ModalField } from './comunes';
 import { EMPTY_EXT, addMouseSwipe, extToText, handleCopyText, handleShareText } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
+import { Sk, SkeletonTabla } from '../../components/Skeleton';
+
+const TITULOS_EXTENSIONES = ['NOMBRE', 'CARGO', 'DEPTO', 'EXT.', 'CELULAR', 'EMPRESA'];
 
 // ── Modal detalle Extensión ───────────────────────────────
 const ModalDetalleExt = ({ ext, onClose, onEdit, onDelete }) => {
@@ -238,7 +241,7 @@ export const PantallaExtensiones = () => {
                     {search && <button className="ws__search-clear" onClick={() => setSearch('')}>✕</button>}
                 </div>
                 <span className="lista__total">
-                    {filtrados.length} reg.
+                    {loading ? <Sk forma="chip" /> : `${filtrados.length} reg.`}
                 </span>
             </div>
 
@@ -247,14 +250,14 @@ export const PantallaExtensiones = () => {
 
             {/* Tabla de extensiones */}
             {loading
-                ? <p className="ws__empty">Cargando...</p>
+                ? <SkeletonTabla columnas="ftable__cols-extensiones" titulos={TITULOS_EXTENSIONES} />
                 : filtrados.length === 0
                     ? <p className="ws__empty">{search ? `Sin resultados para "${search}"` : 'No hay extensiones registradas'}</p>
                     : (
                         <div className="ftable__scroll">
                             {/* Encabezado */}
                             <div className="ftable__head ftable__cols-extensiones">
-                                {['NOMBRE', 'CARGO', 'DEPTO', 'EXT.', 'CELULAR', 'EMPRESA'].map(h => (
+                                {TITULOS_EXTENSIONES.map(h => (
                                     <span key={h} className="ftable__head-cell">{h}</span>
                                 ))}
                             </div>

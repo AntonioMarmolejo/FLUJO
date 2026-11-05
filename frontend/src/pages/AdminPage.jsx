@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
 import '../styles/AdminPage.css';
+import { SkeletonComentarios, SkeletonUsuarios } from '../components/Skeleton';
 
 // Cada rol / estado tiene un "tono" (ver .adm-tono--* en AdminPage.css)
 const ROLE_META = {
@@ -148,7 +149,7 @@ const ComentariosAdmin = ({ onSinLeer }) => {
     const visibles = comentarios.filter(c =>
         filtro === 'todos' || (filtro === 'sin-leer' ? !c.leido : c.tipo === filtro));
 
-    if (loading) return <div className="adm__vacio">Cargando comentarios…</div>;
+    if (loading) return <SkeletonComentarios />;
     if (error) return <div className="adm__error-texto">{error}</div>;
 
     return (
@@ -431,7 +432,7 @@ export default function AdminPage() {
                     <div className="adm__alerta">{loadError}</div>
                 )}
                 {loading ? (
-                    <div className="adm__vacio">Cargando…</div>
+                    <SkeletonUsuarios />
                 ) : filtered.length === 0 ? (
                     <div className="adm__vacio">No se encontraron usuarios</div>
                 ) : (

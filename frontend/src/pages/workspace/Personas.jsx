@@ -14,6 +14,9 @@ import {
 import { CacheFreshnessBadge, ModalField, PendienteBadge } from './comunes';
 import { EMPTY_PERSONA, addMouseSwipe, handleCopyText, handleShareText, pToText } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconQR, IconShare } from './iconos';
+import { Sk, SkeletonTabla } from '../../components/Skeleton';
+
+const TITULOS_PERSONAS = ['CÉDULA', 'NOMBRE', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'];
 
 // ── Modal detalle Persona ─────────────────────────────────
 const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onToggleAutorizado }) => {
@@ -519,7 +522,7 @@ export const PantallaPersonas = () => {
                     </svg>
                 </button>
                 <span className="lista__total">
-                    {filtrados.length} reg.
+                    {loading ? <Sk forma="chip" /> : `${filtrados.length} reg.`}
                 </span>
             </div>
 
@@ -528,14 +531,14 @@ export const PantallaPersonas = () => {
 
             {/* Tabla de personas */}
             {loading
-                ? <p className="ws__empty">Cargando...</p>
+                ? <SkeletonTabla columnas="ftable__cols-personas" titulos={TITULOS_PERSONAS} />
                 : filtrados.length === 0
                     ? <p className="ws__empty">{search ? `Sin resultados para "${search}"` : 'No hay personas registradas'}</p>
                     : (
                         <div className="ftable__scroll">
                             {/* Encabezado fijo — mismo template que las filas para alineación perfecta */}
                             <div className="ftable__head ftable__cols-personas">
-                                {['CÉDULA', 'NOMBRE', 'EMPRESA', 'CARGO', 'DEPTO', 'NOM.'].map(h => (
+                                {TITULOS_PERSONAS.map(h => (
                                     <span key={h} className="ftable__head-cell">{h}</span>
                                 ))}
                             </div>

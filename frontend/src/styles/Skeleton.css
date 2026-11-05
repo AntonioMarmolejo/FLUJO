@@ -1,0 +1,104 @@
+/* ══════════════════════════════════════════════════════════
+   MINIATURAS DE CARGA (components/Skeleton.jsx)
+   Grises translúcidos: sirven igual en modo día, modo noche y
+   en todos los temas del calendario, sin definir un color por tema.
+══════════════════════════════════════════════════════════ */
+
+.skeleton {
+    display: block;
+    flex-shrink: 0;
+    max-width: 100%;
+    height: 10px;
+    border-radius: 6px;
+    background-color: rgba(128, 128, 128, 0.18);
+    background-image: linear-gradient(100deg, transparent 30%, rgba(128, 128, 128, 0.18) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: skeleton-brillo 1.4s linear infinite;
+}
+
+/* Formas */
+.skeleton--texto { height: 10px; }
+.skeleton--titulo { height: 14px; }
+.skeleton--chip { width: 52px; height: 18px; border-radius: 999px; }
+.skeleton--boton { width: 28px; height: 28px; border-radius: 8px; }
+.skeleton--avatar { width: 40px; height: 40px; border-radius: 50%; }
+.skeleton--imagen { height: 88px; border-radius: 10px; }
+.skeleton--barra { height: 6px; margin-block: 10px; border-radius: 999px; }
+.skeleton--columna { flex: 1; }
+
+/* Anchos (no aplican a las formas de tamaño fijo) */
+.skeleton--ancho-30 { width: 30%; }
+.skeleton--ancho-40 { width: 40%; }
+.skeleton--ancho-50 { width: 50%; }
+.skeleton--ancho-60 { width: 60%; }
+.skeleton--ancho-70 { width: 70%; }
+.skeleton--ancho-80 { width: 80%; }
+.skeleton--ancho-100 { width: 100%; }
+.skeleton--chip.skeleton--ancho-100 { width: 52px; }
+.skeleton--boton.skeleton--ancho-100 { width: 28px; }
+.skeleton--avatar.skeleton--ancho-100 { width: 40px; }
+
+@keyframes skeleton-brillo {
+    from { background-position: 150% 0; }
+    to { background-position: -50% 0; }
+}
+
+/* Contenedor: entra con retraso para que una carga rápida no parpadee */
+.skeleton-zona {
+    width: 100%;
+    animation: skeleton-aparecer 0.25s ease 0.12s both;
+}
+.skeleton-zona__contenido {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+@keyframes skeleton-aparecer {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Ayudas de distribución dentro de las clases reales de cada pantalla */
+.skeleton-pila {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+.skeleton-etiqueta {
+    width: 104px;
+}
+/* width: también debe llenar el ancho cuando la tarjeta pasa a columna en el celular */
+.skeleton-crece {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+}
+.skeleton-reparto {
+    display: flex;
+    justify-content: space-around;
+    gap: 12px;
+    padding-block: 10px;
+}
+.skeleton-grafica {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 200px;
+    padding: 10px 14px;
+}
+.skeleton-grafica .skeleton:nth-child(3n + 1) { height: 45%; }
+.skeleton-grafica .skeleton:nth-child(3n + 2) { height: 80%; }
+.skeleton-grafica .skeleton:nth-child(3n) { height: 60%; }
+
+/* Pantalla completa al abrir la app */
+.skeleton-app {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--fondo-app);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; background-image: none; }
+    .skeleton-zona { animation: none; }
+}

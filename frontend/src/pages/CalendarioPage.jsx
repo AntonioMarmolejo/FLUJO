@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import '../styles/CalendarioPage.css';
+import { SkeletonCalendario } from '../components/Skeleton';
 
 // ── Paleta por defecto (tema oscuro) ─────────────────────
 const C = {
@@ -662,7 +663,7 @@ const CalendarioPage = () => {
                 </div>
             )}
 
-            {loading && <div className="cal__cargando"><span className="cal__cargando-texto">Cargando…</span></div>}
+            {loading && <SkeletonCalendario />}
 
             {!loading && activeGrupo && (
                 <>

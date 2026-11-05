@@ -7,6 +7,7 @@ import {
     nuevoIdWorker,
     refrescarWorkers,
 } from '../lib/flujoWorkersOffline.js';
+import { SkeletonFuncionarios } from '../components/Skeleton';
 import '../styles/FlujoPersonalPage.css';
 
 const COLORS = {
@@ -261,7 +262,7 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                 <div className="fp__card-botones">
                     {/* Pasar a libre — solo para descanso */}
                     {worker.turno === 'descanso' && (
-                        <button className="fp__mini-btn fp__mini-btn--e" title="Pasar a libre"
+                        <button className="fp__mini-btn fp__mini-btn--libre" title="Pasar a libre"
                             onClick={e => { e.stopPropagation(); onToLibre && onToLibre(worker); }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                                 <path d="M5 12h14M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -271,14 +272,14 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                     )}
                     {/* Intercambio back↔turno — solo para descanso en grupo de 3 */}
                     {worker.turno === 'descanso' && on3PersonSwap && (
-                        <button className="fp__mini-btn fp__mini-btn--rado fp__mini-btn--illo" title="Intercambiar turno con persona de día o noche"
+                        <button className="fp__mini-btn fp__mini-btn--cuadrado fp__mini-btn--amarillo" title="Intercambiar turno con persona de día o noche"
                             onClick={e => { e.stopPropagation(); on3PersonSwap(worker); }}>
                             {Icon.swap(12, COLORS.yellow)}
                         </button>
                     )}
                     {/* Intercambio día/noche — solo si hay un compañero con turno opuesto */}
                     {(worker.turno === 'dia' || worker.turno === 'noche') && hasTurnoSibling && (
-                        <button className={`fp__mini-btn fp__mini-btn--o ${worker.turno === 'dia' ? 'fp__mini-btn--a-noche' : 'fp__mini-btn--a-dia'}`}
+                        <button className={`fp__mini-btn fp__mini-btn--turno ${worker.turno === 'dia' ? 'fp__mini-btn--a-noche' : 'fp__mini-btn--a-dia'}`}
                             title={`Cambiar a ${worker.turno === 'dia' ? 'noche' : 'día'}`}
                             onClick={e => { e.stopPropagation(); onTurnoSwap && onTurnoSwap(worker); }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
@@ -289,7 +290,7 @@ function WorkerCard({ worker, soon, onDetail, onCycleClick, onSwap, onTurnoSwap,
                     )}
                     {/* Swap principal (relevo/cambio de guardia) — no se muestra en descanso */}
                     {worker.turno !== 'descanso' && (
-                        <button className={`fp__mini-btn fp__mini-btn--rado ${soon ? 'fp__mini-btn--illo' : 'fp__mini-btn--ro'}`} title="Rotar / Cambio de turno"
+                        <button className={`fp__mini-btn fp__mini-btn--cuadrado ${soon ? 'fp__mini-btn--amarillo' : 'fp__mini-btn--neutro'}`} title="Rotar / Cambio de turno"
                             onClick={e => { e.stopPropagation(); onSwap && onSwap(worker); }}>
                             {Icon.swap(12, soon ? COLORS.yellow : COLORS.textMute)}
                         </button>
@@ -1553,11 +1554,7 @@ const FlujoPersonalPage = () => {
                         />
                     </div>
                     <div className="fp__listas">
-                        {loading && (
-                            <div className="fp__vacio">
-                                Cargando funcionarios…
-                            </div>
-                        )}
+                        {loading && <SkeletonFuncionarios />}
                         {!loading && filteredSoon.length > 0 && (
                             <>
                                 <SectionHeader label="Próximos a salir" count={filteredSoon.length} dot={COLORS.yellow} alert />

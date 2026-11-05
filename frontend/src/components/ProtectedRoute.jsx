@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { vaultExists } from '../lib/vault.js';
 import LockScreen from '../pages/LockScreen';
-import Spinner from './Spinner';
+import { SkeletonApp } from './Skeleton';
 
 // allowedRoles: array de roles permitidos, ej. ['admin'] o ['admin', 'supervisor']
 // Si no se pasa allowedRoles, solo verifica que el usuario esté autenticado.
@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireActive }) => {
         vaultExists().then(exists => { setHasVault(exists); setCheckingVault(false); });
     }, []);
 
-    if (checkingVault) return <Spinner />;
+    if (checkingVault) return <SkeletonApp />;
     // Recargar la página estando en una ruta protegida (ej. /workspace) no
     // pasa por RootRoute ("/"), así que sin esto el vault nunca se consulta
     // aquí: AuthContext deja user=null a propósito para que LockScreen lo
@@ -29,7 +29,7 @@ const ProtectedRoute = ({ children, allowedRoles, requireActive }) => {
     // después de un login recién hecho en esta misma sesión.
     if (hasVault && !unlocked && !user) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
 
-    if (loading) return <Spinner />;
+    if (loading) return <SkeletonApp />;
     if (!user) return <Navigate to="/" replace />;
 
     if (allowedRoles && !allowedRoles.includes(role)) {

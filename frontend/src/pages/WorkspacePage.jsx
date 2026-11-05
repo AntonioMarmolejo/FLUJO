@@ -61,7 +61,7 @@ const WorkspacePage = () => {
     const showScrollTop = useBajoDe(280);
 
     const {
-        turnoActivo, movimientos, diasActivos, cargarDatos,
+        turnoActivo, movimientos, diasActivos, cargando: cargandoMovimientos, cargarDatos,
         agregarOptimista: handleGuardadoOptimista, confirmarMovimiento: handleMovimientoConfirmado,
         editarLocal, borrar: handleDelete, borrarVarios, cambiarHora, guardarIngreso,
     } = useMovimientosTurno(user?.id, isPending);
@@ -479,6 +479,7 @@ const WorkspacePage = () => {
                         <VistaBitacora
                             bitacora={bitacora}
                             bitacoraFiltrada={bitacoraFiltrada}
+                            cargandoMovimientos={cargandoMovimientos}
                             expandedBitSet={expandedBitSet}
                             exportBitacora={exportBitacora}
                             handleDeleteBitPair={handleDeleteBitPair}
@@ -496,6 +497,7 @@ const WorkspacePage = () => {
                             handleDelete={handleDelete}
                             handleEdit={handleEdit}
                             movimientos={movimientos}
+                            cargandoMovimientos={cargandoMovimientos}
                             regSort={regSort}
                             registroConfig={registroConfig}
                             searchQuery={searchQuery}
@@ -517,6 +519,7 @@ const WorkspacePage = () => {
                             movCollapsed={movCollapsed}
                             movSort={movSort}
                             movimientos={movimientos}
+                            cargandoMovimientos={cargandoMovimientos}
                             movsLista={movsLista}
                             searchQuery={searchQuery}
                             selectAll={selectAll}

@@ -3424,21 +3424,6 @@
     margin: 0;
 }
 
-.firma__skeleton {
-    aspect-ratio: 1;
-    border-radius: 14px;
-    background: linear-gradient(100deg, var(--fondo-2) 20%, var(--fondo-4) 40%, var(--fondo-2) 60%);
-    background-size: 200% 100%;
-    animation: firma-shimmer 1.4s infinite;
-}
-@keyframes firma-shimmer {
-    from {
-        background-position: 200% 0;
-    }
-    to {
-        background-position: -200% 0;
-    }
-}
 
 /* ── Formulario ── */
 .firma__form {
@@ -6889,9 +6874,6 @@
 }
 .ws__search-bar.ws__search-bar--firma {
     margin: 0 16px 10px;
-}
-.firma__grid.firma__grid--cargando {
-    padding: 0 16px;
 }
 .firma__coleccion {
     padding: 0 16px 24px;

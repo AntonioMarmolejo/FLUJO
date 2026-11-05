@@ -12,6 +12,12 @@ import {
     movToText,
 } from './helpers';
 import { IconArrowLeft, IconChevronRight, IconCopy, IconMinus, IconMoon, IconShare, IconSun } from './iconos';
+import {
+    SkeletonFlujoDias,
+    SkeletonFlujoEtiquetas,
+    SkeletonFlujoMeses,
+    SkeletonMovimientos,
+} from '../../components/Skeleton';
 
 // ── Pantalla detalle de un flujo ──────────────────────────
 const PantallaFlujoDetalle = ({ fecha, movs, onBack }) => {
@@ -642,7 +648,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
     // Nivel 4: detalle de un día — se carga justo al entrar, y solo ese día
     if (flujoSeleccionado) {
         return loadingDia
-            ? <p className="ws__empty ws__empty--amplio">Cargando...</p>
+            ? <SkeletonMovimientos filas={7} />
             : <PantallaFlujoDetalle
                 fecha={flujoSeleccionado}
                 movs={diaMovs}
@@ -654,7 +660,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
     // movimientos de TODOS los usuarios que registraron en ese puesto/bloque.
     if (puestoFlujoSeleccionado) {
         return loadingDiaP
-            ? <p className="ws__empty ws__empty--amplio">Cargando...</p>
+            ? <SkeletonMovimientos filas={7} />
             : <PantallaFlujoDetalle
                 fecha={puestoFlujoSeleccionado}
                 movs={diaMovsP}
@@ -679,7 +685,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
             <div className="flujos__panel">
                 {!anioSel ? (
                     loadingAnios
-                        ? <p className="ws__empty">Cargando...</p>
+                        ? <SkeletonFlujoEtiquetas />
                         : anios.length === 0
                             ? <p className="ws__empty">No hay flujos registrados aún</p>
                             : <div className="flujo__tags-row">
@@ -695,7 +701,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                         <button className="flujo__back-btn" onClick={() => setAnioSel(null)}>
                             <IconArrowLeft /> <span>{anioSel}</span>
                         </button>
-                        {loadingMeses ? <p className="ws__empty">Cargando...</p> : (
+                        {loadingMeses ? <SkeletonFlujoMeses /> : (
                             <div className="flujo__mes-grid">
                                 {MESES_ES.map((nombre, i) => {
                                     const mm = String(i + 1).padStart(2, '0');
@@ -719,7 +725,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                             <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSel, 10) - 1]} {anioSel}</span>
                         </button>
                         {loadingDias
-                            ? <p className="ws__empty">Cargando...</p>
+                            ? <SkeletonFlujoDias />
                             : dias.length === 0
                                 ? <p className="ws__empty">Sin días registrados</p>
                                 : <div className="flujos__dias">
@@ -755,7 +761,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                 {!genQuery.trim() ? (
                     <p className="ws__empty ws__empty--flujos-general-aviso">Escribe algo para buscar en todos los registros</p>
                 ) : genLoading ? (
-                    <p className="ws__empty ws__empty--flujos-general-aviso">Buscando...</p>
+                    <SkeletonMovimientos filas={4} />
                 ) : genResultados.length === 0 ? (
                     <p className="ws__empty ws__empty--flujos-general-aviso">Sin resultados para "{genQuery}"</p>
                 ) : (
@@ -804,7 +810,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                 <div className="flujos__panel">
                     {!puestoSel ? (
                         loadingPuestos
-                            ? <p className="ws__empty">Cargando...</p>
+                            ? <SkeletonFlujoEtiquetas />
                             : !BLOQUES_DATA[bloque]
                                 ? <p className="ws__empty">Sin bloque activo</p>
                                 : <div className="flujo__tags-row">
@@ -824,7 +830,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                                 <IconArrowLeft /> <span>{puestoSel}</span>
                             </button>
                             {loadingAniosP
-                                ? <p className="ws__empty">Cargando...</p>
+                                ? <SkeletonFlujoEtiquetas />
                                 : aniosP.length === 0
                                     ? <p className="ws__empty">No hay flujos registrados en este puesto</p>
                                     : <div className="flujo__tags-row">
@@ -842,7 +848,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                             <button className="flujo__back-btn" onClick={() => setAnioSelP(null)}>
                                 <IconArrowLeft /> <span>{anioSelP}</span>
                             </button>
-                            {loadingMesesP ? <p className="ws__empty">Cargando...</p> : (
+                            {loadingMesesP ? <SkeletonFlujoMeses /> : (
                                 <div className="flujo__mes-grid">
                                     {MESES_ES.map((nombre, i) => {
                                         const mm = String(i + 1).padStart(2, '0');
@@ -866,7 +872,7 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
                                 <IconArrowLeft /> <span>{MESES_ES[parseInt(mesSelP, 10) - 1]} {anioSelP}</span>
                             </button>
                             {loadingDiasP
-                                ? <p className="ws__empty">Cargando...</p>
+                                ? <SkeletonFlujoDias />
                                 : diasP.length === 0
                                     ? <p className="ws__empty">Sin días registrados</p>
                                     : <div className="flujos__dias">

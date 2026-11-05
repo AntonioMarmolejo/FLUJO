@@ -11,6 +11,9 @@ import {
     vToText,
 } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconQR, IconShare } from './iconos';
+import { Sk, SkeletonTabla } from '../../components/Skeleton';
+
+const TITULOS_PLACAS = ['PLACA', 'MARCA', 'COLOR', 'TIPO', 'EMPRESA'];
 
 const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
     const [form, setForm] = useState(editData
@@ -524,7 +527,7 @@ export const PantallaPlacasDB = () => {
                     </svg>
                 </button>
                 <span className="lista__total">
-                    {filtrados.length} reg.
+                    {loading ? <Sk forma="chip" /> : `${filtrados.length} reg.`}
                 </span>
             </div>
 
@@ -533,7 +536,7 @@ export const PantallaPlacasDB = () => {
 
             {/* Tabla de vehículos */}
             {loading
-                ? <p className="ws__empty">Cargando...</p>
+                ? <SkeletonTabla columnas="ftable__cols-placas" titulos={TITULOS_PLACAS} />
                 : loadError
                     ? (
                         <div className="lista__error">
@@ -551,7 +554,7 @@ export const PantallaPlacasDB = () => {
                         <div className="ftable__scroll">
                             {/* Encabezado */}
                             <div className="ftable__head ftable__cols-placas">
-                                {['PLACA', 'MARCA', 'COLOR', 'TIPO', 'EMPRESA'].map(h => (
+                                {TITULOS_PLACAS.map(h => (
                                     <span key={h} className="ftable__head-cell">{h}</span>
                                 ))}
                             </div>

@@ -664,10 +664,10 @@
     justify-content: center;
     cursor: pointer;
 }
-.fp__mini-btn--rado {
+.fp__mini-btn--cuadrado {
     width: 28px;
 }
-.fp__mini-btn--e {
+.fp__mini-btn--libre {
     gap: 4px;
     padding: 0 8px;
     background: var(--fp-violet-dim);
@@ -677,17 +677,17 @@
     font-weight: 700;
     letter-spacing: 0.3px;
 }
-.fp__mini-btn--illo {
+.fp__mini-btn--amarillo {
     background: var(--fp-yellow-dim);
     border: 1px solid rgba(239, 159, 39, 0.4);
     color: var(--fp-yellow);
 }
-.fp__mini-btn--ro {
+.fp__mini-btn--neutro {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--fp-border);
     color: var(--fp-text-mute);
 }
-.fp__mini-btn--o {
+.fp__mini-btn--turno {
     gap: 3px;
     padding: 0 7px;
     font-size: 9px;

@@ -320,16 +320,6 @@
     font-weight: 700;
     cursor: pointer;
 }
-.cal__cargando {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.cal__cargando-texto {
-    font-size: 13px;
-    color: var(--cal-mute);
-}
 
 /* ── Pestañas MES / AÑO / RESUMEN ── */
 .cal__tabs {

@@ -11,6 +11,7 @@ import {
 import { CacheFreshnessBadge, ModalConfirm } from './comunes';
 import { addMouseSwipe, handleShareText } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
+import { SkeletonPlataformas } from '../../components/Skeleton';
 
 // ── Pantalla Plataformas y Nominativos ────────────────────
 const SECCIONES_NOMINATIVO = [
@@ -372,7 +373,7 @@ export const PantallaPlataformas = ({ turnoActivo, search = '' }) => {
             )}
 
             {loading ? (
-                <p className="ws__empty">Cargando...</p>
+                <SkeletonPlataformas secciones={SECCIONES_NOMINATIVO.length} />
             ) : (
                 SECCIONES_NOMINATIVO.map(s => {
                     const items = filtrados.filter(n => n.seccion === s.id);

@@ -5,7 +5,7 @@ import { getHomeRoute } from '../lib/homeRoute.js';
 import { vaultExists } from '../lib/vault.js';
 import LoginPage from '../pages/LoginPage';
 import LockScreen from '../pages/LockScreen';
-import Spinner from './Spinner';
+import { SkeletonApp } from './Skeleton';
 
 // Ruta "/": primero revisa si hay un vault cifrado en este dispositivo — si lo
 // hay, muestra la pantalla de bloqueo (PIN/huella) ANTES de cualquier otra
@@ -21,10 +21,10 @@ const RootRoute = () => {
         vaultExists().then(exists => { setHasVault(exists); setCheckingVault(false); });
     }, []);
 
-    if (checkingVault) return <Spinner />;
+    if (checkingVault) return <SkeletonApp />;
     if (hasVault && !unlocked) return <LockScreen onUnlocked={() => setUnlocked(true)} />;
 
-    if (loading) return <Spinner />;
+    if (loading) return <SkeletonApp />;
     if (user) return <Navigate to={getHomeRoute(user)} replace />;
     return <LoginPage />;
 };
