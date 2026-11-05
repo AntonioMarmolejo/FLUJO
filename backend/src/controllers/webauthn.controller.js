@@ -205,6 +205,7 @@ export const listPasskeys = async (req, res) => {
         const user = await User.findById(req.user._id).select('+passkeys');
         const passkeys = (user.passkeys || []).map(pk => ({
             credentialID: pk.credentialID,
+            deviceId: pk.deviceId || '',
             deviceName: pk.deviceName || 'Dispositivo',
             createdAt: pk.createdAt,
         }));

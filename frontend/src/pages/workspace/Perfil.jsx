@@ -106,7 +106,7 @@ const DesbloqueoHuellaLocal = () => {
 };
 
 export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
-    const { registerPasskey } = useAuth();
+    const { registerPasskey, hasPasskeyOnDevice } = useAuth();
     const { installed: appInstalada, canPrompt: puedeInstalar, isIOS: esIOS, promptInstall } = usePwaInstall();
     const bloque = turnoActivo ? BLOQUES_DATA[turnoActivo.bloque] : null;
     const iniciales = `${user?.name?.split(' ')[0]?.[0] || ''}${user?.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
@@ -130,6 +130,17 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
         })();
     }, []);
 
+    // Si ya está activada no se ofrece activarla. Sin conexión queda el botón.
+    useEffect(() => {
+        hasPasskeyOnDevice()
+            .then(activa => {
+                if (!activa) return;
+                setBioStatus('ok');
+                setBioMsg('Huella activada. Ya puedes usarla al iniciar sesión.');
+            })
+            .catch(() => {});
+    }, [user?.id]);
+
     const handleActivarHuella = async () => {
         setBioStatus('loading');
         setBioMsg('');
@@ -137,11 +148,11 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             const deviceName = navigator.platform || 'Este dispositivo';
             await registerPasskey(deviceName);
             setBioStatus('ok');
-            setBioMsg('Huella / Face ID activado en este dispositivo');
+            setBioMsg('Huella activada. Ya puedes usarla al iniciar sesión.');
         } catch (err) {
             if (err.name === 'InvalidStateError') {
                 setBioStatus('ok');
-                setBioMsg('La huella ya está activada en este dispositivo');
+                setBioMsg('Huella activada. Ya puedes usarla al iniciar sesión.');
                 return;
             }
             setBioStatus('error');
@@ -179,7 +190,11 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
                 <div className="perfil__bio-section">
                     <p className="perfil__bio-label">ACCESO BIOMÉTRICO</p>
                     {bioStatus === 'ok' ? (
-                        <p className="perfil__bio-success">{bioMsg}</p>
+                        <>
+                            <p className="perfil__bio-success">{bioMsg}</p>
+                            {/* Por si la llave se borró del teléfono */}
+                            <button className="pin__footer-link" onClick={handleActivarHuella}>¿No te funciona? Volver a registrarla</button>
+                        </>
                     ) : (
                         <>
                             <button

@@ -207,16 +207,32 @@ export const AuthProvider = ({ children }) => {
         await afterAuthSuccess(verifyRes.data);
     };
 
+    // ¿Este dispositivo ya tiene huella activada? Evita pedir la huella para crear
+    // una llave que ya existe: Android solo lo avisa después de ponerla.
+    const marcaHuella = () => `huellaActiva:${user?.id}`;
+    const hasPasskeyOnDevice = async () => {
+        if (localStorage.getItem(marcaHuella())) return true;
+        const { data } = await api.get('/webauthn/passkeys');
+        return data.passkeys.some(pk => pk.deviceId === getDeviceId());
+    };
+
     // Registrar la huella del dispositivo actual (debe llamarse con sesión activa)
     const registerPasskey = async (deviceName = '') => {
         const deviceId = getDeviceId();
         const optRes = await api.post('/webauthn/register/options');
-        const attResp = await startRegistration({ optionsJSON: optRes.data });
+        let attResp;
+        try {
+            attResp = await startRegistration({ optionsJSON: optRes.data });
+        } catch (err) {
+            if (err.name === 'InvalidStateError') localStorage.setItem(marcaHuella(), '1');
+            throw err;
+        }
         const verifyRes = await api.post('/webauthn/register/verify', {
             body: attResp,
             deviceId,
             deviceName,
         });
+        localStorage.setItem(marcaHuella(), '1');
         return verifyRes.data;
     };
 
@@ -246,7 +262,7 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={{
             user, loading,
-            login, register, loginWithGoogle, loginWithBiometric, registerPasskey,
+            login, register, loginWithGoogle, loginWithBiometric, registerPasskey, hasPasskeyOnDevice,
             logout, updateUser, restoreFromVault,
             role, isAdmin, isSupervisor, isPending, isSuspended, permisosPanel, hasPermiso, tieneBloque,
         }}>
