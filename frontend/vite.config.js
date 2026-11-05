@@ -38,7 +38,11 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
                 runtimeCaching: [
                     {
-                        urlPattern: ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
+                        // Jefes Inmediatos guarda su propia copia (lib/flujoWorkersOffline.js):
+                        // una respuesta vieja de esta caché parecería venir del servidor
+                        urlPattern: ({ url, request }) => url.pathname.startsWith('/api/')
+                            && !url.pathname.startsWith('/api/flujo-workers')
+                            && request.method === 'GET',
                         handler: 'NetworkFirst',
                         options: {
                             cacheName: 'api-cache',

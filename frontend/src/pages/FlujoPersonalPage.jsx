@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import {
+    aplicarCambios,
+    encolarCambiosWorkers,
+    leerWorkersLocales,
+    nuevoIdWorker,
+    refrescarWorkers,
+} from '../lib/flujoWorkersOffline.js';
 import '../styles/FlujoPersonalPage.css';
 
 const COLORS = {
@@ -1215,23 +1221,58 @@ const FlujoPersonalPage = () => {
     const [descansoList, setDescanso] = useState([]);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
+    const [cargaTerminada, setCargaTerminada] = useState(false);
     const autoSwapDoneRef = useRef(false);
+    const vistaRef = useRef([]);
 
-    const reloadWorkers = () =>
-        api.get('/flujo-workers').then(res => {
-            const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
-            setActive(a);
-            setSoon(s);
-            setDescanso((res.data.descanso || []).map(fromApi));
-        });
+    const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 1800);
+    };
+
+    const pintar = (lista) => {
+        vistaRef.current = lista;
+        const { active: a, soon: s } = classifyWorkers(lista.filter(w => w.turno !== 'descanso'));
+        setActive(a);
+        setSoon(s);
+        setDescanso(lista.filter(w => w.turno === 'descanso').map(fromApi));
+    };
+
+    // Primero lo guardado en el dispositivo; luego lo que diga el servidor, si hay conexión
+    useEffect(() => {
+        (async () => {
+            const local = await leerWorkersLocales().catch(() => []);
+            if (local.length) { pintar(local); setLoading(false); }
+            await refrescarWorkers().catch(() => {});
+            pintar(await leerWorkersLocales().catch(() => local));
+            setLoading(false);
+            setCargaTerminada(true);
+        })();
+    }, []);
 
     useEffect(() => {
-        reloadWorkers().catch(() => {}).finally(() => setLoading(false));
+        const alCambiar = (e) => {
+            leerWorkersLocales().then(pintar).catch(() => {});
+            const n = e.detail?.rechazados;
+            if (n) showToast(`El servidor rechazó ${n} cambio${n !== 1 ? 's' : ''}`);
+        };
+        window.addEventListener('flujo:workers', alCambiar);
+        return () => window.removeEventListener('flujo:workers', alCambiar);
     }, []);
+
+    // Todo cambio pasa por aquí: se ve al instante y queda en cola para el servidor
+    const aplicar = (cambios, mensaje) => {
+        pintar(aplicarCambios(vistaRef.current, cambios));
+        showToast(navigator.onLine ? mensaje : `${mensaje} · se enviará al tener conexión`);
+        encolarCambiosWorkers(cambios).catch(() => {
+            showToast('No se pudo guardar el cambio en el dispositivo');
+            leerWorkersLocales().then(pintar).catch(() => {});
+        });
+    };
 
     // Auto-swap de tríos: NOCHE↔DESCANSO a las 06:00 y DÍA↔NOCHE a las 18:00
     useEffect(() => {
-        if (loading || autoSwapDoneRef.current) return;
+        if (!cargaTerminada || autoSwapDoneRef.current) return;
         autoSwapDoneRef.current = true;
 
         const hourECU = parseInt(
@@ -1241,45 +1282,32 @@ const FlujoPersonalPage = () => {
         const trioWorkers = [...active, ...soonList].filter(w => w.isTrio && w.trioPeople?.length === 3);
         if (!trioWorkers.length) return;
 
-        (async () => {
-            let anySwap = false;
-            for (const worker of trioWorkers) {
-                let people = worker.trioPeople.map(p => ({ ...p }));
-                const upd = { lastMorningSwap: worker.lastMorningSwap, lastEveningSwap: worker.lastEveningSwap };
-                let changed = false;
-                if (hourECU >= 6 && worker.lastMorningSwap !== today) {
-                    people = people.map(p =>
-                        p.turno === 'noche' ? { ...p, turno: 'descanso' } :
-                        p.turno === 'descanso' ? { ...p, turno: 'noche' } : p
-                    );
-                    upd.lastMorningSwap = today;
-                    changed = true;
-                }
-                if (hourECU >= 18 && worker.lastEveningSwap !== today) {
-                    people = people.map(p =>
-                        p.turno === 'dia' ? { ...p, turno: 'noche' } :
-                        p.turno === 'noche' ? { ...p, turno: 'dia' } : p
-                    );
-                    upd.lastEveningSwap = today;
-                    changed = true;
-                }
-                if (changed) {
-                    await api.put(`/flujo-workers/${worker.id}`, { ...worker, ...upd, trioPeople: people });
-                    anySwap = true;
-                }
+        const cambios = [];
+        for (const worker of trioWorkers) {
+            let people = worker.trioPeople.map(p => ({ ...p }));
+            const upd = { lastMorningSwap: worker.lastMorningSwap, lastEveningSwap: worker.lastEveningSwap };
+            let changed = false;
+            if (hourECU >= 6 && worker.lastMorningSwap !== today) {
+                people = people.map(p =>
+                    p.turno === 'noche' ? { ...p, turno: 'descanso' } :
+                    p.turno === 'descanso' ? { ...p, turno: 'noche' } : p
+                );
+                upd.lastMorningSwap = today;
+                changed = true;
             }
-            if (anySwap) {
-                await reloadWorkers();
-                showToast('Cambio de turno automático aplicado');
+            if (hourECU >= 18 && worker.lastEveningSwap !== today) {
+                people = people.map(p =>
+                    p.turno === 'dia' ? { ...p, turno: 'noche' } :
+                    p.turno === 'noche' ? { ...p, turno: 'dia' } : p
+                );
+                upd.lastEveningSwap = today;
+                changed = true;
             }
-        })().catch(() => {});
-    }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+            if (changed) cambios.push({ tipo: 'editar', id: worker.id, doc: { ...worker, ...upd, trioPeople: people } });
+        }
+        if (cambios.length) aplicar(cambios, 'Cambio de turno automático aplicado');
+    }, [cargaTerminada]); // eslint-disable-line react-hooks/exhaustive-deps
     const [controlsOpen, setControlsOpen] = useState(false);
-
-    const showToast = (msg) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 1800);
-    };
 
     const filter = (list) => list.filter(w =>
         !search ||
@@ -1287,50 +1315,34 @@ const FlujoPersonalPage = () => {
         w.role.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (!deleteFor) return;
-        try {
-            await api.delete(`/flujo-workers/${deleteFor.id}`);
-            setActive(a => a.filter(w => w.id !== deleteFor.id));
-            setSoon(s => s.filter(w => w.id !== deleteFor.id));
-            showToast(`${deleteFor.name.split(' ')[0]} eliminado`);
-        } catch {
-            showToast('Error al eliminar');
-        }
+        aplicar([{ tipo: 'borrar', id: deleteFor.id }], `${deleteFor.name.split(' ')[0]} eliminado`);
         setDeleteFor(null);
     };
 
-    const handleSwap = async (mode) => {
+    const handleSwap = (mode) => {
         if (mode === 'full') {
-            const total = CYCLE_TOTAL[swapFor.cycle];
-            const todayISO = new Date().toISOString().split('T')[0];
-            try {
-                // Crear primero → si falla, el saliente sigue en el sistema (no se pierde)
-                const res = await api.post('/flujo-workers', {
-                    name: swapFor.back,
-                    role: swapFor.role,
-                    cycle: swapFor.cycle,
-                    total,
-                    days: 1,
-                    inDateISO: todayISO,
-                    back: swapFor.name,
-                    status: 'active',
-                    turno: swapFor.turno || 'dia',
-                });
-                await api.delete(`/flujo-workers/${swapFor.id}`);
-                setSoon(s => s.filter(w => w.id !== swapFor.id));
-                setActive(a => [...a.filter(w => w.id !== swapFor.id), fromApi(res.data.worker)]);
-                showToast(`Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
-            } catch {
-                showToast('Error al realizar el cambio');
-            }
+            // Se actualiza la misma tarjeta: confirmar varias veces no puede duplicarla
+            const doc = {
+                ...swapFor,
+                name: swapFor.back,
+                back: swapFor.name,
+                total: CYCLE_TOTAL[swapFor.cycle],
+                days: 1,
+                inDateISO: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' }),
+                status: 'active',
+                remaining: null,
+                turno: swapFor.turno || 'dia',
+            };
+            aplicar([{ tipo: 'editar', id: swapFor.id, doc }], `Cambio de ${swapFor.name.split(' ')[0]} confirmado`);
         } else {
             showToast('Ingreso del back registrado');
         }
         setSwapFor(null);
     };
 
-    const handleTurnoSwap = async (worker) => {
+    const handleTurnoSwap = (worker) => {
         const allWorkers = [...active, ...soonList];
         const sibling = allWorkers.find(w =>
             w.id !== worker.id &&
@@ -1338,166 +1350,92 @@ const FlujoPersonalPage = () => {
             (w.turno === 'dia' || w.turno === 'noche')
         );
         const newTurno = worker.turno === 'dia' ? 'noche' : 'dia';
-        try {
-            await api.put(`/flujo-workers/${worker.id}`, { ...worker, turno: newTurno });
-            if (sibling) {
-                const siblingNewTurno = sibling.turno === 'dia' ? 'noche' : 'dia';
-                await api.put(`/flujo-workers/${sibling.id}`, { ...sibling, turno: siblingNewTurno });
-            }
-            const applySwap = list => list.map(w => {
-                if (w.id === worker.id) return { ...w, turno: newTurno };
-                if (sibling && w.id === sibling.id) return { ...w, turno: sibling.turno === 'dia' ? 'noche' : 'dia' };
-                return w;
-            });
-            setActive(applySwap);
-            setSoon(applySwap);
-            showToast(`Turno cambiado a ${newTurno}`);
-        } catch {
-            showToast('Error al cambiar turno');
+        const cambios = [{ tipo: 'editar', id: worker.id, doc: { ...worker, turno: newTurno } }];
+        if (sibling) {
+            cambios.push({ tipo: 'editar', id: sibling.id, doc: { ...sibling, turno: sibling.turno === 'dia' ? 'noche' : 'dia' } });
         }
+        aplicar(cambios, `Turno cambiado a ${newTurno}`);
     };
 
-    const handleToLibre = async (worker) => {
-        try {
-            await api.delete(`/flujo-workers/${worker.id}`);
-            setDescanso(d => d.filter(w => w.id !== worker.id));
-            showToast(`${worker.name.split(' ')[0]} pasó a libre`);
-        } catch {
-            showToast('Error al actualizar');
-        }
+    const handleToLibre = (worker) => {
+        aplicar([{ tipo: 'borrar', id: worker.id }], `${worker.name.split(' ')[0]} pasó a libre`);
     };
 
-    const handleCycle = async (cycle) => {
+    const handleCycle = (cycle) => {
         const total = CYCLE_TOTAL[cycle];
         const worker = [...active, ...soonList].find(w => w.id === cycleFor.id);
-        if (!worker) { setCycleFor(null); return; }
-        try {
-            await api.put(`/flujo-workers/${cycleFor.id}`, { ...worker, cycle, total });
-            setActive(a => a.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
-            setSoon(s => s.map(w => w.id === cycleFor.id ? { ...w, cycle, total } : w));
-            showToast(`Ciclo actualizado a ${cycle}`);
-        } catch {
-            showToast('Error al actualizar ciclo');
-        }
         setCycleFor(null);
+        if (!worker) return;
+        aplicar([{ tipo: 'editar', id: worker.id, doc: { ...worker, cycle, total } }], `Ciclo actualizado a ${cycle}`);
     };
 
-    const handleAdd = async (worker) => {
-        try {
-            const res = await api.post('/flujo-workers', {
-                name: worker.name,
-                role: worker.role,
-                cycle: worker.cycle,
-                total: worker.total,
-                days: worker.days,
-                inDateISO: worker.inDateISO,
-                back: worker.back,
-                status: 'active',
-                turno: worker.turno || 'dia',
-            });
-            const saved = fromApi(res.data.worker);
-            if (saved.turno === 'descanso') {
-                setDescanso(d => [...d, saved]);
-            } else {
-                setActive(a => [...a, saved]);
-            }
-            setAddOpen(false);
-            showToast(`${worker.name.split(' ')[0]} agregado`);
-        } catch {
-            showToast('Error al guardar');
-        }
+    const handleAdd = (worker) => {
+        const doc = {
+            _id: nuevoIdWorker(),
+            name: worker.name,
+            role: worker.role,
+            cycle: worker.cycle,
+            total: worker.total,
+            days: worker.days,
+            inDateISO: worker.inDateISO,
+            back: worker.back,
+            status: 'active',
+            turno: worker.turno || 'dia',
+        };
+        setAddOpen(false);
+        aplicar([{ tipo: 'crear', id: doc._id, doc }], `${worker.name.split(' ')[0]} agregado`);
     };
 
-    const handleAddTrio = async ({ role, nameDia, nameNoche, nameBack, cycle, inDate, days }) => {
-        const total = CYCLE_TOTAL[cycle];
-        try {
-            await api.post('/flujo-workers', {
-                name: nameDia, role, cycle, total, days,
-                inDateISO: inDate, back: nameBack, status: 'active', turno: 'dia',
-                isTrio: true,
-                trioPeople: [
-                    { name: nameDia,   turno: 'dia' },
-                    { name: nameNoche, turno: 'noche' },
-                    { name: nameBack,  turno: 'descanso' },
-                ],
-            });
-            await reloadWorkers();
-            setAddOpen(false);
-            showToast('Puesto de 3 personas registrado');
-        } catch {
-            showToast('Error al registrar');
-        }
+    const handleAddTrio = ({ role, nameDia, nameNoche, nameBack, cycle, inDate, days }) => {
+        const doc = {
+            _id: nuevoIdWorker(),
+            name: nameDia, role, cycle, total: CYCLE_TOTAL[cycle], days,
+            inDateISO: inDate, back: nameBack, status: 'active', turno: 'dia',
+            isTrio: true,
+            trioPeople: [
+                { name: nameDia,   turno: 'dia' },
+                { name: nameNoche, turno: 'noche' },
+                { name: nameBack,  turno: 'descanso' },
+            ],
+        };
+        setAddOpen(false);
+        aplicar([{ tipo: 'crear', id: doc._id, doc }], 'Puesto de 3 personas registrado');
     };
 
-    const handleTrioNightSwap = async (worker) => {
+    const handleTrioNightSwap = (worker) => {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
         const newPeople = (worker.trioPeople || []).map(p =>
             p.turno === 'noche' ? { ...p, turno: 'descanso' } :
             p.turno === 'descanso' ? { ...p, turno: 'noche' } : p
         );
-        try {
-            await api.put(`/flujo-workers/${worker.id}`, { ...worker, trioPeople: newPeople, lastMorningSwap: today });
-            await reloadWorkers();
-            showToast('Cambio 🌙↔💤 aplicado');
-        } catch {
-            showToast('Error al cambiar turno');
-        }
+        aplicar([{ tipo: 'editar', id: worker.id, doc: { ...worker, trioPeople: newPeople, lastMorningSwap: today } }], 'Cambio 🌙↔💤 aplicado');
     };
 
-    const handleTrioDayNightSwap = async (worker) => {
+    const handleTrioDayNightSwap = (worker) => {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
         const newPeople = (worker.trioPeople || []).map(p =>
             p.turno === 'dia' ? { ...p, turno: 'noche' } :
             p.turno === 'noche' ? { ...p, turno: 'dia' } : p
         );
-        try {
-            await api.put(`/flujo-workers/${worker.id}`, { ...worker, trioPeople: newPeople, lastEveningSwap: today });
-            await reloadWorkers();
-            showToast('Cambio ☀↔🌙 aplicado');
-        } catch {
-            showToast('Error al cambiar turno');
-        }
+        aplicar([{ tipo: 'editar', id: worker.id, doc: { ...worker, trioPeople: newPeople, lastEveningSwap: today } }], 'Cambio ☀↔🌙 aplicado');
     };
 
-    const handleSwap3 = async (targetTurno) => {
+    const handleSwap3 = (targetTurno) => {
         if (!swapFor3) return;
         const { backWorker, dayWorker, nightWorker } = swapFor3;
         const targetWorker = targetTurno === 'dia' ? dayWorker : nightWorker;
-        try {
-            await Promise.all([
-                api.put(`/flujo-workers/${backWorker.id}`,   { ...backWorker,   turno: targetTurno }),
-                api.put(`/flujo-workers/${targetWorker.id}`, { ...targetWorker, turno: 'descanso' }),
-            ]);
-            await reloadWorkers();
-            showToast(`${backWorker.name.split(' ')[0]} pasa a ${targetTurno === 'dia' ? 'día' : 'noche'}`);
-        } catch {
-            showToast('Error al intercambiar');
-        }
         setSwapFor3(null);
+        aplicar([
+            { tipo: 'editar', id: backWorker.id,   doc: { ...backWorker,   turno: targetTurno } },
+            { tipo: 'editar', id: targetWorker.id, doc: { ...targetWorker, turno: 'descanso' } },
+        ], `${backWorker.name.split(' ')[0]} pasa a ${targetTurno === 'dia' ? 'día' : 'noche'}`);
     };
 
-    const handleEdit = async (updated) => {
-        try {
-            const res = await api.put(`/flujo-workers/${updated.id}`, {
-                name: updated.name,
-                role: updated.role,
-                cycle: updated.cycle,
-                total: updated.total,
-                days: updated.days,
-                inDateISO: updated.inDateISO,
-                back: updated.back,
-                status: updated.status || 'active',
-                remaining: updated.remaining ?? null,
-            });
-            const saved = fromApi(res.data.worker);
-            setActive(a => a.map(w => w.id === saved.id ? saved : w));
-            setSoon(s => s.map(w => w.id === saved.id ? saved : w));
-            setEditData(null);
-            setAddOpen(false);
-            showToast(`${saved.name.split(' ')[0]} actualizado`);
-        } catch {
-            showToast('Error al actualizar');
-        }
+    const handleEdit = (updated) => {
+        const doc = { ...updated, status: updated.status || 'active', remaining: updated.remaining ?? null };
+        setEditData(null);
+        setAddOpen(false);
+        aplicar([{ tipo: 'editar', id: updated.id, doc }], `${updated.name.split(' ')[0]} actualizado`);
     };
 
     const handleCopy = (worker) => {
@@ -1526,7 +1464,7 @@ const FlujoPersonalPage = () => {
 
     const openEdit = (worker) => { setEditData(worker); setAddOpen(true); };
 
-    const handleImportConfirm = async (newWorkers) => {
+    const handleImportConfirm = (newWorkers) => {
         let updActive = [...active];
         let updSoon = [...soonList];
         const toAdd = [];
@@ -1551,17 +1489,14 @@ const FlujoPersonalPage = () => {
             }
         });
 
-        try {
-            await api.post('/flujo-workers/bulk', { workers: toAdd });
-            const res = await api.get('/flujo-workers');
-            const { active: a, soon: s } = classifyWorkers([...res.data.active, ...res.data.soon]);
-            setActive(a);
-            setSoon(s);
-            setImportOpen(false);
-            showToast(`${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`);
-        } catch {
-            showToast('Error al importar');
-        }
+        setImportOpen(false);
+        aplicar(
+            toAdd.map(w => {
+                const _id = nuevoIdWorker();
+                return { tipo: 'crear', id: _id, doc: { ...w, _id } };
+            }),
+            `${newWorkers.length} funcionario${newWorkers.length !== 1 ? 's' : ''} importado${newWorkers.length !== 1 ? 's' : ''}`
+        );
     };
 
     const filteredActive = filter(active);

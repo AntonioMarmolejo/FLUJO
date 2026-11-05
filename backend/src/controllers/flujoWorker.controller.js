@@ -17,6 +17,9 @@ const fields = w => ({
     lastEveningSwap: w.lastEveningSwap || null,
 });
 
+// Datos inválidos: reintentar no los arregla, a diferencia de un fallo del servidor
+const statusDeError = (error) => (['ValidationError', 'CastError'].includes(error.name) ? 400 : 500);
+
 // GET /api/flujo-workers
 export const getWorkers = async (req, res) => {
     try {
@@ -34,12 +37,25 @@ export const getWorkers = async (req, res) => {
 };
 
 // POST /api/flujo-workers
+// El dispositivo puede mandar el _id: si la app reenvía la misma creación (porque se
+// perdió la respuesta), se devuelve el registro existente en vez de crear otro.
 export const createWorker = async (req, res) => {
+    const { _id } = req.body;
+    if (_id !== undefined && !/^[0-9a-f]{24}$/i.test(String(_id))) {
+        return res.status(400).json({ message: 'Identificador inválido' });
+    }
     try {
-        const worker = await FlujoWorker.create(fields(req.body));
+        if (_id) {
+            const existente = await FlujoWorker.findById(_id);
+            if (existente) return res.json({ message: 'Funcionario ya registrado', worker: existente });
+        }
+        const worker = await FlujoWorker.create({ ...fields(req.body), ...(_id ? { _id } : {}) });
         res.status(201).json({ message: 'Funcionario registrado', worker });
     } catch (error) {
-        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+        if (error.code === 11000 && _id) {
+            return res.json({ message: 'Funcionario ya registrado', worker: await FlujoWorker.findById(_id) });
+        }
+        res.status(statusDeError(error)).json({ message: 'Error al registrar el funcionario', error: error.message });
     }
 };
 
@@ -50,7 +66,7 @@ export const updateWorker = async (req, res) => {
         if (!worker) return res.status(404).json({ message: 'Funcionario no encontrado' });
         res.json({ message: 'Funcionario actualizado', worker });
     } catch (error) {
-        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+        res.status(statusDeError(error)).json({ message: 'Error al actualizar el funcionario', error: error.message });
     }
 };
 

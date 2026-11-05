@@ -82,4 +82,21 @@ db.version(7).stores({
     operacionesPending: 'uuid, tipo, createdAt',
 });
 
+// v8: Jefes Inmediatos sin conexión: última lista del servidor y cola de cambios
+db.version(8).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+});
+
 export default db;
