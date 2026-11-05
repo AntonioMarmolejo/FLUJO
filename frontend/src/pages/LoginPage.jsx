@@ -48,19 +48,16 @@ const LoginPage = () => {
     };
 
     const handleBiometric = async () => {
-        if (!form.email) { setError('Ingresa tu correo para usar la huella'); return; }
         setBioLoading(true);
         setError('');
         try {
             await loginWithBiometric(form.email);
         } catch (err) {
-            const msg = err.response?.data?.message;
-            if (msg === 'Usuario sin passkey registrado') {
-                setError('Este dispositivo no tiene huella registrada. Inicia sesión con contraseña primero.');
-            } else if (err.name === 'NotAllowedError') {
-                setError('Autenticación cancelada o no permitida.');
+            if (err.name === 'NotAllowedError') {
+                // El navegador no distingue "cancelado" de "sin huellas para este sitio"
+                setError('Se canceló o no hay huella activada en este dispositivo. Si no la has activado, entra con contraseña y actívala en tu perfil.');
             } else {
-                setError(msg || 'No se pudo autenticar con huella');
+                setError(err.response?.data?.message || 'No se pudo autenticar con huella');
             }
         } finally {
             setBioLoading(false);

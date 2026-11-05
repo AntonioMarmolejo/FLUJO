@@ -32,3 +32,25 @@ export const migrarBloquesAprobados = async () => {
         console.error(`❌ Migración de bloques: ${error.message}`);
     }
 };
+
+// Antes el ID de cada huella se guardaba codificado dos veces en base64url. Un ID
+// real, al decodificarlo, da bytes al azar; uno doble da otra vez texto base64url.
+export const migrarPasskeys = async () => {
+    try {
+        let corregidas = 0;
+        for (const user of await User.find({ 'passkeys.0': { $exists: true } }).select('+passkeys')) {
+            for (const pk of user.passkeys) {
+                const decodificado = Buffer.from(pk.credentialID, 'base64url').toString('latin1');
+                if (!/^[A-Za-z0-9_-]{16,}$/.test(decodificado)) continue;
+                await User.updateOne(
+                    { _id: user._id, 'passkeys.credentialID': pk.credentialID },
+                    { $set: { 'passkeys.$.credentialID': decodificado } }
+                );
+                corregidas++;
+            }
+        }
+        if (corregidas) console.log(`🔐 Huellas: ${corregidas} ID corregidos`);
+    } catch (error) {
+        console.error('Error corrigiendo las huellas guardadas:', error.message);
+    }
+};

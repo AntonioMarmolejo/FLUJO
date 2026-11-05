@@ -193,14 +193,15 @@ export const AuthProvider = ({ children }) => {
         await afterAuthSuccess(data);
     };
 
-    // Login biométrico: el usuario solo necesita su email + huella/Face ID
-    const loginWithBiometric = async (email) => {
+    // Login biométrico: basta la huella/Face ID. El correo es opcional y solo
+    // ayuda con huellas antiguas que el dispositivo no puede ofrecer por sí solo.
+    const loginWithBiometric = async (email = '') => {
         const deviceId = getDeviceId();
         const optRes = await api.post('/webauthn/authenticate/options', { email });
         const asseResp = await startAuthentication({ optionsJSON: optRes.data });
         const verifyRes = await api.post('/webauthn/authenticate/verify', {
             body: asseResp,
-            userId: optRes.data.userId,
+            challengeId: optRes.data.challengeId,
             deviceId,
         });
         await afterAuthSuccess(verifyRes.data);

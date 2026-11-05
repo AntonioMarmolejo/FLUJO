@@ -139,11 +139,14 @@ export const PantallaPerfil = ({ user, turnoActivo, onLogout }) => {
             setBioStatus('ok');
             setBioMsg('Huella / Face ID activado en este dispositivo');
         } catch (err) {
+            if (err.name === 'InvalidStateError') {
+                setBioStatus('ok');
+                setBioMsg('La huella ya está activada en este dispositivo');
+                return;
+            }
             setBioStatus('error');
             if (err.name === 'NotAllowedError') {
                 setBioMsg('Cancelado. Vuelve a intentarlo cuando quieras.');
-            } else if (err.name === 'InvalidStateError') {
-                setBioMsg('Ya tienes una huella registrada en este dispositivo.');
             } else {
                 setBioMsg(err.response?.data?.message || 'No se pudo registrar la huella');
             }

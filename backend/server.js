@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
-import { migrarBloquesAprobados } from './src/config/migraciones.js';
+import { migrarBloquesAprobados, migrarPasskeys } from './src/config/migraciones.js';
 import authRoutes from './src/routes/auth.routes.js';
 import userRoutes from './src/routes/user.routes.js';
 import turnoRoutes from './src/routes/turno.routes.js';
@@ -19,7 +19,7 @@ import webauthnRoutes from './src/routes/webauthn.routes.js';
 import comentarioRoutes from './src/routes/comentario.routes.js';
 
 dotenv.config();
-connectDB().then(migrarBloquesAprobados);
+connectDB().then(migrarBloquesAprobados).then(migrarPasskeys);
 
 const app = express();
 
