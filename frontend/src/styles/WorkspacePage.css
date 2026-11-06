@@ -1,5 +1,4 @@
-/* Los colores salen de las variables de styles/tema.css */
-/* Clases en BEM: bloque__elemento--modificador. Aquí los estados y variantes se
+/* Los colores salen de las variables de styles/tema.css *//* Clases en BEM: bloque__elemento--modificador. Aquí los estados y variantes se
    escriben con la clase base delante (.mov__item.mov__item--selected) para que
    conserven la fuerza que tenían antes del renombre y sigan ganándole a :hover
    y a las reglas del modo día ([data-theme="light"] .mov__item-inner). */
@@ -153,7 +152,10 @@
     text-align: left;
     font-family: inherit;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    transition:
+        border-color 0.15s,
+        background 0.15s,
+        transform 0.1s;
 }
 .ws__counter-filtro:active {
     transform: scale(0.97);
@@ -1350,7 +1352,10 @@
     background: rgba(245, 158, 11, 0.14);
     vertical-align: middle;
 }
-.pendiente__badge--error { color: var(--peligro); background: rgba(239, 68, 68, 0.14); }
+.pendiente__badge--error {
+    color: var(--peligro);
+    background: rgba(239, 68, 68, 0.14);
+}
 .pendiente__descartar {
     background: none;
     border: none;
@@ -2336,7 +2341,6 @@
     .ws__topbar {
         padding: 14px 24px;
     }
-
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2386,7 +2390,6 @@
     .ws__counter-val {
         font-size: 36px;
     }
-
 }
 
 /* ── Sub-pestañas Movimientos / Bitácora ───────────────── */
@@ -3424,7 +3427,6 @@
     margin: 0;
 }
 
-
 /* ── Formulario ── */
 .firma__form {
     margin: -16px;
@@ -3945,7 +3947,9 @@
 .scroll__top-btn.scroll__top-btn--gesto,
 .scroll__top-btn.scroll__top-btn--gesto:active {
     transform: scale(1.15);
-    box-shadow: 0 0 0 6px rgba(108, 99, 255, 0.25), 0 4px 16px rgba(108, 99, 255, 0.45);
+    box-shadow:
+        0 0 0 6px rgba(108, 99, 255, 0.25),
+        0 4px 16px rgba(108, 99, 255, 0.45);
 }
 .scroll__gesto-capa {
     position: fixed;
@@ -3970,7 +3974,9 @@
     font-weight: 600;
     white-space: nowrap;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    transition: transform 0.12s ease, background 0.12s ease;
+    transition:
+        transform 0.12s ease,
+        background 0.12s ease;
 }
 .scroll__gesto-op.scroll__gesto-op--activa {
     background: #6c63ff;
@@ -4681,7 +4687,9 @@
     border-color: #4f46e5;
     background: rgba(99, 102, 241, 0.08);
 }
-[data-theme="light"] .ws__counter-filtro.ws__counter-filtro--activo .ws__counter-label,
+[data-theme="light"]
+    .ws__counter-filtro.ws__counter-filtro--activo
+    .ws__counter-label,
 [data-theme="light"] .ws__filtro-chip {
     color: #4f46e5;
 }
@@ -4931,7 +4939,10 @@
     color: #000;
 }
 /* :not(...) para no tapar el color de INGRESA / SALE ni el botón habilitado */
-[data-theme="light"] .modal__tipo-btn:not(.modal__tipo-btn--active-ingreso):not(.modal__tipo-btn--active-salida) {
+[data-theme="light"]
+    .modal__tipo-btn:not(.modal__tipo-btn--active-ingreso):not(
+        .modal__tipo-btn--active-salida
+    ) {
     background: rgba(255, 255, 255, 0.7);
 }
 [data-theme="light"] .modal__btn:not(.modal__btn--active) {
@@ -5074,7 +5085,11 @@
     white-space: pre-wrap;
     word-break: break-word;
     /* Línea punteada tipo cuaderno debajo de cada renglón */
-    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0.8px, transparent 0.8px);
+    background-image: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.25) 0.8px,
+        transparent 0.8px
+    );
     background-size: 6px 26px;
     background-repeat: repeat;
     background-position: 0 30px;
@@ -5157,7 +5172,9 @@
     background: linear-gradient(180deg, #1a1c23 0%, #16171d 100%);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
     overflow: hidden;
 }
 .ficha__det-top {
@@ -5688,7 +5705,8 @@
     align-items: center;
     justify-content: center;
 }
-.cuenta__panel-modulo.cuenta__panel-modulo--habilitado .cuenta__panel-modulo-icono {
+.cuenta__panel-modulo.cuenta__panel-modulo--habilitado
+    .cuenta__panel-modulo-icono {
     background: rgba(40, 201, 151, 0.2);
     border-color: #28c99766;
 }
@@ -5697,7 +5715,8 @@
     font-weight: 600;
     color: #666;
 }
-.cuenta__panel-modulo.cuenta__panel-modulo--habilitado .cuenta__panel-modulo-label {
+.cuenta__panel-modulo.cuenta__panel-modulo--habilitado
+    .cuenta__panel-modulo-label {
     color: #d4d4d4;
 }
 
@@ -5769,13 +5788,17 @@
 [data-theme="light"] .ficha__det-auth-texto {
     color: #6b7280;
 }
-[data-theme="light"] .ficha__det-auth.ficha__det-auth--activa .ficha__det-auth-texto {
+[data-theme="light"]
+    .ficha__det-auth.ficha__det-auth--activa
+    .ficha__det-auth-texto {
     color: #059669;
 }
 [data-theme="light"] .ficha__det-switch {
     background: #d1d9e6;
 }
-[data-theme="light"] .ficha__det-auth.ficha__det-auth--activa .ficha__det-switch {
+[data-theme="light"]
+    .ficha__det-auth.ficha__det-auth--activa
+    .ficha__det-switch {
     background: #10b981;
 }
 /* Formulario de ingreso */
@@ -5830,7 +5853,9 @@
 [data-theme="light"] .acceso__restringido-texto strong {
     color: #374151;
 }
-[data-theme="light"] .cuenta__panel-paso.cuenta__panel-paso--hecho .cuenta__panel-paso-label {
+[data-theme="light"]
+    .cuenta__panel-paso.cuenta__panel-paso--hecho
+    .cuenta__panel-paso-label {
     color: #059669;
 }
 [data-theme="light"] .cuenta__panel-paso-linea {
@@ -5847,7 +5872,9 @@
 [data-theme="light"] .cuenta__panel-modulo-label {
     color: #9ca3af;
 }
-[data-theme="light"] .cuenta__panel-modulo.cuenta__panel-modulo--habilitado .cuenta__panel-modulo-label {
+[data-theme="light"]
+    .cuenta__panel-modulo.cuenta__panel-modulo--habilitado
+    .cuenta__panel-modulo-label {
     color: #1f2937;
 }
 
@@ -5866,7 +5893,7 @@
         font-size: 11.5px;
     }
     .movdet__nav {
-        padding: 1px 138px;
+        padding: 1px 108px;
         background: rgba(255, 255, 255, 0.016);
     }
 }
@@ -5965,7 +5992,9 @@
     line-height: 1;
     color: #3f3f46;
     cursor: pointer;
-    transition: color 0.15s, transform 0.15s;
+    transition:
+        color 0.15s,
+        transform 0.15s;
 }
 .coment__estrella.coment__estrella--active {
     color: #fbbf24;
@@ -6565,21 +6594,39 @@
     display: grid;
     grid-template-columns: 90px 110px 90px 120px 1fr;
 }
-.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(1) { width: 90px; }
-.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(2) { width: 110px; }
-.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(3) { width: 90px; }
-.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(4) { width: 120px; }
+.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(1) {
+    width: 90px;
+}
+.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(2) {
+    width: 110px;
+}
+.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(3) {
+    width: 90px;
+}
+.ftable__row.ftable__cols-placas > .ftable__cell:nth-child(4) {
+    width: 120px;
+}
 
 .ftable__head.ftable__cols-extensiones,
 .ftable__row.ftable__cols-extensiones {
     display: grid;
     grid-template-columns: 1fr 130px 100px 70px 100px 110px;
 }
-.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(2) { width: 130px; }
-.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(3) { width: 100px; }
-.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(4) { width: 70px; }
-.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(5) { width: 100px; }
-.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(6) { width: 110px; }
+.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(2) {
+    width: 130px;
+}
+.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(3) {
+    width: 100px;
+}
+.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(4) {
+    width: 70px;
+}
+.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(5) {
+    width: 100px;
+}
+.ftable__row.ftable__cols-extensiones > .ftable__cell:nth-child(6) {
+    width: 110px;
+}
 
 .ftable__head.ftable__cols-personas,
 .ftable__row.ftable__cols-personas {
