@@ -19,7 +19,7 @@ import { PantallaPerfil } from './workspace/Perfil';
 import { PantallaPersonas } from './workspace/Personas';
 import { PantallaPlacasDB } from './workspace/Placas';
 import { PantallaUtilidades } from './workspace/Utilidades';
-import { AccesoRestringido, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
+import { AccesoRestringido, AvisoIniciarFlujo, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
 import {
     DASH_FILTROS,
     DRAWER_TABS,
@@ -552,7 +552,7 @@ const WorkspacePage = () => {
                 )}
 
                 {tabActiva === 'utilidades' && (
-                    <PantallaUtilidades turnoActivo={turnoActivo} onDetalleChange={handleUtilidadDetalleChange} platSearchQuery={platSearchQuery} />
+                    <PantallaUtilidades turnoActivo={turnoActivo} cargandoTurno={cargandoMovimientos} onDetalleChange={handleUtilidadDetalleChange} platSearchQuery={platSearchQuery} />
                 )}
 
                 {tabActiva === 'perfil' && (
@@ -613,8 +613,9 @@ const WorkspacePage = () => {
                                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                             </button>
-                            {/* Registrar exige el panel "movimientos" y el bloque del turno aprobado */}
-                            {(isAdmin || (!isPending && hasPermiso('movimientos') && tieneBloque(turnoActivo?.bloque))) && (
+                            {/* Registrar exige el panel "movimientos" y el bloque del turno aprobado.
+                                Sin flujo también se muestra: al tocarlo avisa que hay que iniciar uno. */}
+                            {(isAdmin || (!isPending && hasPermiso('movimientos') && (!turnoActivo || tieneBloque(turnoActivo.bloque)))) && (
                                 <button className="ws__dial-item ws__dial-add"
                                     onClick={() => { setShowModal(true); setFabOpen(false); setShowShareMenu(false); setShowExportMenu(false); }}
                                     title="Nuevo movimiento">
@@ -633,6 +634,13 @@ const WorkspacePage = () => {
             )}
 
             {/* Modales */}
+            {/* Mientras el turno carga no se avisa: si existe, el formulario se abre solo */}
+            {showModal && !turnoActivo && !cargandoMovimientos && (
+                <AvisoIniciarFlujo
+                    detalle="Para registrar vehículos necesitas iniciar un flujo."
+                    onCerrar={() => setShowModal(false)}
+                />
+            )}
             {showModal && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}

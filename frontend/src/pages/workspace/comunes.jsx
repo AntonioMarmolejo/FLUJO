@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PANEL_LABELS, formatRelativeTime } from './helpers';
 
 // Marca de un registro hecho sin conexión que todavía no se sube. Si el
@@ -262,6 +263,27 @@ export const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
         </div>
     </div>
 );
+
+// Aviso de que la acción necesita un flujo iniciado, con el atajo para iniciarlo
+export const AvisoIniciarFlujo = ({ detalle, onCerrar }) => {
+    const navigate = useNavigate();
+    return (
+        <div className="modal__overlay" onClick={onCerrar}>
+            <div className="modal__card modal__card--confirmar" onClick={e => e.stopPropagation()}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar__icono">
+                    <circle cx="12" cy="12" r="10" stroke="#ef9f27" strokeWidth="2" />
+                    <path d="M12 8v4M12 16h.01" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="confirmar__mensaje">Primero inicia un flujo</p>
+                <p className="confirmar__detalle">{detalle}</p>
+                <div className="confirmar__botones">
+                    <button className="confirmar__cancelar" onClick={onCerrar}>Ahora no</button>
+                    <button className="confirmar__eliminar confirmar__eliminar--salir" onClick={() => navigate('/onboarding')}>Iniciar flujo</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // Dropdown de sugerencias de persona (mismo estilo visual que PersonaSugList del formulario de movimientos)
 export const PersonaSugMini = ({ items, onSel }) => !items.length ? null : (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PantallaFirmas } from './Firmas';
 import { PantallaPlataformas } from './Plataformas';
+import { AvisoIniciarFlujo } from './comunes';
 
 // ── Pantalla Utilidades ────────────────────────────────────
 const UTIL_ITEMS = [
@@ -46,11 +47,14 @@ const UTIL_ITEMS = [
     },
 ];
 
-export const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQuery }) => {
+export const PantallaUtilidades = ({ turnoActivo, cargandoTurno, onDetalleChange, platSearchQuery }) => {
     const [detalle, setDetalleRaw] = useState(null);
     const setDetalle = tile => { setDetalleRaw(tile); onDetalleChange?.(tile?.id ?? null); };
 
-    if (detalle) {
+    // Los nominativos dependen del bloque del flujo: sin flujo se queda en el menú
+    const faltaFlujo = detalle?.id === 'plataformas' && !turnoActivo;
+
+    if (detalle && !faltaFlujo) {
         return (
             <div className="util__detalle">
                 <button className="util__back-btn" onClick={() => setDetalle(null)}>
@@ -83,6 +87,12 @@ export const PantallaUtilidades = ({ turnoActivo, onDetalleChange, platSearchQue
                     <span className="util__tile-label">{u.label}</span>
                 </button>
             ))}
+            {faltaFlujo && !cargandoTurno && (
+                <AvisoIniciarFlujo
+                    detalle="Para ver los nominativos necesitas iniciar un flujo."
+                    onCerrar={() => setDetalle(null)}
+                />
+            )}
         </div>
     );
 };
