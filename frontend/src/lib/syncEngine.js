@@ -165,17 +165,6 @@ export const buscarPlacaLocal = async (placa) => {
     return db.vehiculosCache.get(placa.trim().toUpperCase());
 };
 
-// Devuelve todos los vehículos cacheados (para listado offline completo)
-export const getVehiculosCache = async () => {
-    return db.vehiculosCache.orderBy('placa').toArray();
-};
-
-// Elimina un vehículo del caché local (tras borrado en servidor)
-export const deleteCachedVehiculo = async (placa) => {
-    if (!placa) return;
-    await db.vehiculosCache.delete(placa.trim().toUpperCase());
-};
-
 // Cachea personas para búsqueda offline de conductor/cédula
 export const cachePersona = async (p) => {
     if (!p.cedula) return;
@@ -188,46 +177,6 @@ export const buscarPersonaLocal = async (query) => {
         .filter(p =>
             (p.nombres || '').toLowerCase().includes(q) ||
             (p.cedula || '').includes(q)
-        )
-        .toArray();
-};
-
-// Devuelve todo el catálogo de personas cacheado (para la pantalla de Personas offline)
-// Nota: 'nombres' no es un índice de la tabla, así que se ordena en JS
-// (orderBy() de Dexie exige que la clave esté indexada).
-export const getPersonasCache = async () => {
-    const arr = await db.personasCache.toArray();
-    return arr.sort((a, b) => (a.nombres || '').localeCompare(b.nombres || ''));
-};
-
-export const deleteCachedPersona = async (cedula) => {
-    if (!cedula) return;
-    await db.personasCache.delete(cedula);
-};
-
-// Cachea una extensión para la pantalla de Extensiones offline
-export const cacheExtension = async (e) => {
-    if (!e._id) return;
-    await db.extensionesCache.put({ ...e, updatedAt: Date.now() });
-};
-
-export const getExtensionesCache = async () => {
-    const arr = await db.extensionesCache.toArray();
-    return arr.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-};
-
-export const deleteCachedExtension = async (id) => {
-    if (!id) return;
-    await db.extensionesCache.delete(id);
-};
-
-export const buscarExtensionLocal = async (query) => {
-    const q = query.toLowerCase();
-    return db.extensionesCache
-        .filter(e =>
-            (e.nombre || '').toLowerCase().includes(q) ||
-            (e.cargo || '').toLowerCase().includes(q) ||
-            (e.departamento || '').toLowerCase().includes(q)
         )
         .toArray();
 };

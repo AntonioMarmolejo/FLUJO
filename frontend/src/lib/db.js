@@ -136,4 +136,24 @@ db.version(10).stores({
     personasPending: '++seq',
 });
 
+// v11: cola de cambios de Extensiones sin conexión (la copia local es extensionesCache)
+db.version(11).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+    vehiculosPending: '++seq',
+    personasPending: '++seq',
+    extensionesPending: '++seq',
+});
+
 export default db;

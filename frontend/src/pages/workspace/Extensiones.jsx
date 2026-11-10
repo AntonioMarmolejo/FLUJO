@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import api from '../../api/axios';
+import { getCatalogMeta } from '../../lib/syncEngine.js';
 import {
-    cacheExtension,
-    getExtensionesCache,
-    deleteCachedExtension,
-    touchCatalogMeta,
-    getCatalogMeta,
-} from '../../lib/syncEngine.js';
-import { CacheFreshnessBadge, ModalField } from './comunes';
+    encolarCambioExtension,
+    idsExtensionesPendientes,
+    leerExtensionesLocales,
+    nuevoIdExtension,
+    refrescarExtensiones,
+} from '../../lib/extensionesOffline.js';
+import { CacheFreshnessBadge, ModalField, PendienteBadge } from './comunes';
 import { EMPTY_EXT, addMouseSwipe, extToText, handleCopyText, handleShareText } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
 import { Sk, SkeletonTabla } from '../../components/Skeleton';
@@ -105,21 +105,24 @@ const ModalExtension = ({ onClose, onGuardado, editData }) => {
         setError('');
     };
 
+    // Guardado al instante, con o sin internet: el cambio queda en el dispositivo
+    // y se sube cuando haya conexión (lib/extensionesOffline.js).
     const handleSubmit = async () => {
-        if (!form.nombre) { setError('El nombre es obligatorio'); return; }
+        const nombre = form.nombre.trim();
+        if (!nombre) { setError('El nombre es obligatorio'); return; }
+        if (loading) return;
         setLoading(true);
         try {
             if (editData?._id) {
-                const { data } = await api.put(`/extensiones/${editData._id}`, form);
-                onGuardado(data.extension);
+                const { _pendiente, ...actual } = editData;
+                await encolarCambioExtension({ tipo: 'editar', doc: { ...actual, ...form, nombre } });
             } else {
-                const { data } = await api.post('/extensiones', form);
-                onGuardado(data.extension);
+                await encolarCambioExtension({ tipo: 'crear', doc: { ...form, nombre, _id: nuevoIdExtension() } });
             }
+            onGuardado();
             onClose();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Error al guardar');
-        } finally {
+        } catch {
+            setError('No se pudo guardar en este dispositivo');
             setLoading(false);
         }
     };
@@ -167,23 +170,30 @@ export const PantallaExtensiones = () => {
     const extSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
     const [detailExt, setDetailExt] = useState(null);
 
+    // Lo que se ve es siempre la copia del dispositivo: la última lista del
+    // servidor más los cambios que todavía no se suben (marcados "Pendiente").
+    const mostrarLocales = async () => {
+        const [locales, pendientes] = await Promise.all([
+            leerExtensionesLocales().catch(() => []),
+            idsExtensionesPendientes().catch(() => new Set()),
+        ]);
+        setExtensiones(locales.map(e => (pendientes.has(e._id) ? { ...e, _pendiente: true } : e)));
+        return locales;
+    };
+
     const cargar = async () => {
-        setLoading(true);
-        setFromCache(false);
+        // Primero lo local, para no esperar a la red
+        const locales = await mostrarLocales();
+        if (locales.length) setLoading(false);
         try {
-            const { data } = await api.get('/extensiones');
-            setExtensiones(data.extensiones);
-            data.extensiones.forEach(e => cacheExtension(e).catch(() => {}));
-            await touchCatalogMeta('extensiones');
+            await refrescarExtensiones();
+            await mostrarLocales();
+            setFromCache(false);
         } catch {
-            // Sin conexión: mostrar lo último que se tenga cacheado localmente
-            try {
-                const cached = await getExtensionesCache();
-                setExtensiones(cached);
-                setFromCache(cached.length > 0);
-                const meta = await getCatalogMeta('extensiones');
-                setCachedAt(meta?.cachedAt || null);
-            } catch { /* se queda en lista vacía */ }
+            // Sin conexión: se sigue con la copia local
+            setFromCache(locales.length > 0);
+            const meta = await getCatalogMeta('extensiones').catch(() => null);
+            setCachedAt(meta?.cachedAt || null);
         } finally {
             setLoading(false);
         }
@@ -191,23 +201,12 @@ export const PantallaExtensiones = () => {
 
     useEffect(() => { cargar(); }, []);
 
-    // Actualización optimista: refleja el cambio en la UI de inmediato
-    const onGuardado = (savedExt) => {
-        if (!savedExt) { cargar(); return; }
-        setExtensiones(prev => {
-            const idx = prev.findIndex(e => e._id === savedExt._id);
-            if (idx >= 0) {
-                // Edición: reemplaza el registro existente
-                const next = [...prev];
-                next[idx] = savedExt;
-                return next;
-            }
-            // Nuevo: inserta ordenado por nombre
-            return [...prev, savedExt].sort((a, b) =>
-                (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
-            );
-        });
-    };
+    // Tras subir la cola (aquí o desde otra pantalla) la copia local ya está al día
+    useEffect(() => {
+        const onSync = () => { mostrarLocales(); };
+        window.addEventListener('flujo:extensiones', onSync);
+        return () => window.removeEventListener('flujo:extensiones', onSync);
+    }, []);
 
     const sq = search.toLowerCase();
     const filtrados = sq
@@ -218,11 +217,10 @@ export const PantallaExtensiones = () => {
             (e.departamento || '').toLowerCase().includes(sq))
         : extensiones;
 
-    // Eliminación optimista: quita la fila inmediatamente, luego sincroniza
+    // Eliminación al instante; queda en cola hasta que el servidor la confirme
     const handleDelete = async id => {
         setExtensiones(prev => prev.filter(e => e._id !== id));
-        deleteCachedExtension(id).catch(() => {});
-        try { await api.delete(`/extensiones/${id}`); } catch { }
+        await encolarCambioExtension({ tipo: 'borrar', id, clave: id }).catch(() => {});
     };
 
     return (
@@ -302,7 +300,10 @@ export const PantallaExtensiones = () => {
                                                     setDetailExt(e);
                                                 }}
                                             >
-                                                <span className="ftable__cell ftable__cell--flex ftable__cell--bold">{(e.nombre || '—').toUpperCase()}</span>
+                                                <span className="ftable__cell ftable__cell--flex ftable__cell--bold">
+                                                    {(e.nombre || '—').toUpperCase()}
+                                                    {e._pendiente && <PendienteBadge />}
+                                                </span>
                                                 <span className="ftable__cell">{e.cargo || '—'}</span>
                                                 <span className="ftable__cell ftable__cell--dim">{(e.departamento || '—').toUpperCase()}</span>
                                                 <span className="ftable__cell ftable__cell--accent">{e.extension ? `Ext. ${e.extension}` : '—'}</span>
@@ -322,7 +323,7 @@ export const PantallaExtensiones = () => {
             {(showForm || editExt) && (
                 <ModalExtension
                     onClose={() => { setShowForm(false); setEditExt(null); }}
-                    onGuardado={onGuardado}
+                    onGuardado={mostrarLocales}
                     editData={editExt}
                 />
             )}
