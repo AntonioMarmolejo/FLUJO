@@ -117,4 +117,23 @@ db.version(9).stores({
     vehiculosPending: '++seq',
 });
 
+// v10: cola de cambios de Personas sin conexión (la copia local es personasCache)
+db.version(10).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+    vehiculosPending: '++seq',
+    personasPending: '++seq',
+});
+
 export default db;

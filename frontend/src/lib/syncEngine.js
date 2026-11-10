@@ -310,6 +310,16 @@ export const descartarOperacion = async (uuid) => {
     if (op) notificarOperaciones({ tipo: op.tipo, uuid });
 };
 
+// Cambia los datos de una operación que aún no se sube; si el servidor la había
+// rechazado, vuelve a intentarse con los datos corregidos.
+export const actualizarOperacion = async (uuid, payload) => {
+    const op = await db.operacionesPending.get(uuid);
+    if (!op) return;
+    await db.operacionesPending.update(uuid, { payload: { ...op.payload, ...payload }, error: null });
+    notificarOperaciones({ tipo: op.tipo, uuid });
+    syncPendingOperaciones().catch(() => {});
+};
+
 let sincronizandoOperaciones = false;
 
 export const syncPendingOperaciones = async () => {

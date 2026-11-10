@@ -490,7 +490,7 @@ export const PantallaPlacasDB = () => {
     // Eliminación al instante; queda en cola hasta que el servidor la confirme
     const handleDelete = async (id, placa) => {
         setVehiculos(prev => prev.filter(v => v._id !== id));
-        await encolarCambioVehiculo({ tipo: 'borrar', id, placa }).catch(() => {});
+        await encolarCambioVehiculo({ tipo: 'borrar', id, clave: placa }).catch(() => {});
     };
 
     const qrData = v => [

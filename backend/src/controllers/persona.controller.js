@@ -36,15 +36,33 @@ export const getPersonas = async (req, res) => {
 };
 
 // POST /api/personas
+// El dispositivo puede mandar el _id: si la app reenvía la misma creación (porque se
+// perdió la respuesta sin conexión), se devuelve la persona ya creada en vez de otra.
 export const createPersona = async (req, res) => {
     try {
-        const { cedula } = req.body;
-        if (!cedula) return res.status(400).json({ message: 'La cédula es obligatoria' });
-        const persona = await Persona.create({ cedula: cedula.trim(), ...fields(req.body) });
+        const { _id, cedula } = req.body;
+        if (!cedula?.trim()) return res.status(400).json({ message: 'La cédula es obligatoria' });
+        if (_id !== undefined && !/^[0-9a-f]{24}$/i.test(String(_id))) {
+            return res.status(400).json({ message: 'ID de persona inválido' });
+        }
+        if (_id) {
+            const existente = await Persona.findById(_id);
+            if (existente) return res.json({ message: 'Persona ya registrada', persona: existente });
+        }
+        const persona = await Persona.create({ ...(_id ? { _id } : {}), cedula: cedula.trim(), ...fields(req.body) });
         res.status(201).json({ message: 'Persona registrada', persona });
     } catch (error) {
-        // 409: la cola offline lo toma como "ya estaba registrada", no como error
-        if (error.code === 11000) return res.status(409).json({ message: 'Esa cédula ya está registrada' });
+        // Dos envíos de la misma persona casi al mismo tiempo: el segundo choca con el primero
+        if (error.code === 11000 && req.body._id) {
+            const misma = await Persona.findById(req.body._id).catch(() => null);
+            if (misma) return res.json({ message: 'Persona ya registrada', persona: misma });
+        }
+        // 409: la cola de operaciones lo toma como "ya estaba registrada"; la de
+        // Personas guarda los datos escritos sobre la persona existente
+        if (error.code === 11000) {
+            const existing = await Persona.findOne({ cedula: (req.body.cedula || '').trim() }).catch(() => null);
+            return res.status(409).json({ message: 'Esa cédula ya está registrada', existing });
+        }
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };

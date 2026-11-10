@@ -3,14 +3,18 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import {
     cachePersona,
-    getPersonasCache,
-    deleteCachedPersona,
-    touchCatalogMeta,
     getCatalogMeta,
     getOperacionesPendientes,
     descartarOperacion,
-    registrarPersona,
+    actualizarOperacion,
 } from '../../lib/syncEngine.js';
+import {
+    encolarCambioPersona,
+    idsPersonasPendientes,
+    leerPersonasLocales,
+    nuevoIdPersona,
+    refrescarPersonas,
+} from '../../lib/personasOffline.js';
 import { CacheFreshnessBadge, ModalField, PendienteBadge } from './comunes';
 import { EMPTY_PERSONA, addMouseSwipe, handleCopyText, handleShareText, pToText } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconQR, IconShare } from './iconos';
@@ -134,7 +138,7 @@ const ModalDetallePersona = ({ persona: p, onClose, onEdit, onDelete, onQR, onTo
     );
 };
 
-const ModalPersona = ({ onClose, onGuardado, editData }) => {
+const ModalPersona = ({ onClose, onGuardado, editData, personas }) => {
     const [form, setForm] = useState(editData
         ? { cedula: editData.cedula, nombres: editData.nombres, empresa: editData.empresa || '', cargo: editData.cargo || '', departamento: editData.departamento || '', nominativo: editData.nominativo || '' }
         : EMPTY_PERSONA
@@ -147,21 +151,32 @@ const ModalPersona = ({ onClose, onGuardado, editData }) => {
         setError('');
     };
 
+    // Guardado al instante, con o sin internet: el cambio queda en el dispositivo
+    // y se sube cuando haya conexión (lib/personasOffline.js).
     const handleSubmit = async () => {
-        if (!form.cedula || !form.nombres) { setError('Cédula y nombres son obligatorios'); return; }
+        const cedula = form.cedula.trim();
+        if (!cedula || !form.nombres.trim()) { setError('Cédula y nombres son obligatorios'); return; }
+        if (loading) return;
+        if (!editData && personas.some(p => (p.cedula || '').trim() === cedula)) {
+            setError('Esa cédula ya está registrada');
+            return;
+        }
         setLoading(true);
         try {
-            if (editData?._id) {
-                await api.put(`/personas/${editData._id}`, form);
+            if (editData?._operacion) {
+                // Registrada desde un movimiento sin conexión y aún sin subir: se corrige en su cola
+                await actualizarOperacion(editData._id, { ...form, cedula: editData.cedula });
+            } else if (editData?._id) {
+                // El servidor no cambia la cédula al editar: se conserva la original
+                const { _pendiente, ...actual } = editData;
+                await encolarCambioPersona({ tipo: 'editar', doc: { ...actual, ...form, cedula: editData.cedula } });
             } else {
-                // Sin conexión queda guardada en el dispositivo y se sube al volver internet
-                await registrarPersona(form);
+                await encolarCambioPersona({ tipo: 'crear', doc: { ...form, cedula, _id: nuevoIdPersona() } });
             }
             onGuardado();
             onClose();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Error al guardar');
-        } finally {
+        } catch {
+            setError('No se pudo guardar en este dispositivo');
             setLoading(false);
         }
     };
@@ -440,30 +455,40 @@ export const PantallaPersonas = () => {
     const personaSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
     const [detailPersona, setDetailPersona] = useState(null);
 
+    // Lo que se ve es siempre la copia del dispositivo: la última lista del servidor
+    // más los cambios que todavía no se suben. Además, las personas registradas sin
+    // conexión desde un movimiento, que esperan en la cola de operaciones.
+    const mostrarLocales = async () => {
+        const [locales, pendientes, desdeMovimientos] = await Promise.all([
+            leerPersonasLocales().catch(() => []),
+            idsPersonasPendientes().catch(() => new Set()),
+            getOperacionesPendientes('persona').catch(() => []),
+        ]);
+        const enCola = desdeMovimientos.map(op => ({ ...op.payload, _id: op.uuid, _pendiente: true, _operacion: true, _error: op.error }));
+        const cedulasEnCola = new Set(enCola.map(p => p.cedula));
+        const lista = [
+            ...enCola,
+            ...locales
+                .filter(p => p._id && !cedulasEnCola.has(p.cedula))
+                .map(p => (pendientes.has(p._id) ? { ...p, _pendiente: true } : p)),
+        ];
+        setPersonas(lista);
+        return lista;
+    };
+
     const cargar = async () => {
-        setLoading(true);
-        setFromCache(false);
-        // Personas registradas sin conexión que todavía no se suben
-        const pendientes = (await getOperacionesPendientes('persona').catch(() => []))
-            .map(op => ({ ...op.payload, _id: op.uuid, _pendiente: true, _error: op.error }));
-        const conPendientes = lista => {
-            const cedulas = new Set(pendientes.map(p => p.cedula));
-            return [...pendientes, ...lista.filter(p => !cedulas.has(p.cedula))];
-        };
+        // Primero lo local, para no esperar a la red
+        const locales = await mostrarLocales();
+        if (locales.length) setLoading(false);
         try {
-            const { data } = await api.get('/personas');
-            setPersonas(conPendientes(data.personas));
-            data.personas.forEach(p => cachePersona(p).catch(() => {}));
-            await touchCatalogMeta('personas');
+            await refrescarPersonas();
+            await mostrarLocales();
+            setFromCache(false);
         } catch {
-            // Sin conexión: mostrar lo último que se tenga cacheado localmente
-            try {
-                const cached = await getPersonasCache();
-                setPersonas(conPendientes(cached));
-                setFromCache(cached.length > 0);
-                const meta = await getCatalogMeta('personas');
-                setCachedAt(meta?.cachedAt || null);
-            } catch { /* se queda en lista vacía */ }
+            // Sin conexión: se sigue con la copia local
+            setFromCache(locales.length > 0);
+            const meta = await getCatalogMeta('personas').catch(() => null);
+            setCachedAt(meta?.cachedAt || null);
         } finally {
             setLoading(false);
         }
@@ -471,11 +496,16 @@ export const PantallaPersonas = () => {
 
     useEffect(() => { cargar(); }, []);
 
-    // Recargar cuando una persona pendiente se sube (o se rechaza)
+    // Tras subir una cola (aquí o desde otra pantalla) la copia local ya trae los IDs del servidor
     useEffect(() => {
-        const onOperacion = e => { if (e.detail?.tipo === 'persona') cargar(); };
+        const onOperacion = e => { if (e.detail?.tipo === 'persona') mostrarLocales(); };
+        const onPersonas = () => { mostrarLocales(); };
         window.addEventListener('flujo:operaciones', onOperacion);
-        return () => window.removeEventListener('flujo:operaciones', onOperacion);
+        window.addEventListener('flujo:personas', onPersonas);
+        return () => {
+            window.removeEventListener('flujo:operaciones', onOperacion);
+            window.removeEventListener('flujo:personas', onPersonas);
+        };
     }, []);
 
     const sq = search.toLowerCase();
@@ -487,9 +517,12 @@ export const PantallaPersonas = () => {
             (p.departamento || '').toLowerCase().includes(sq))
         : personas;
 
-    const handleDelete = async (id, cedula) => {
-        deleteCachedPersona(cedula).catch(() => {});
-        try { await api.delete(`/personas/${id}`); cargar(); } catch { }
+    // Eliminación al instante; queda en cola hasta que el servidor la confirme
+    const handleDelete = async p => {
+        if (!p) return;
+        setPersonas(prev => prev.filter(x => x._id !== p._id));
+        if (p._operacion) await descartarOperacion(p._id).catch(() => {});
+        else await encolarCambioPersona({ tipo: 'borrar', id: p._id, clave: p.cedula }).catch(() => {});
     };
 
     const pQrData = p => [
@@ -552,7 +585,7 @@ export const PantallaPersonas = () => {
                                                 <button className="plist__act-btn" title="Copiar"    onClick={() => { handleCopyText(pToText(p)); setSwipedPersonaId(null); }}><IconCopy /></button>
                                                 <button className="plist__act-btn" title="Compartir" onClick={() => { handleShareText(pToText(p)); setSwipedPersonaId(null); }}><IconShare /></button>
                                                 <button className="plist__act-btn" title="Ver QR"    onClick={() => { setQrPersona(p); setSwipedPersonaId(null); }}><IconQR /></button>
-                                                <button className="plist__act-btn plist__act-btn--danger" title="Eliminar" onClick={() => { handleDelete(p._id, p.cedula); setSwipedPersonaId(null); }}><IconMinus /></button>
+                                                <button className="plist__act-btn plist__act-btn--danger" title="Eliminar" onClick={() => { handleDelete(p); setSwipedPersonaId(null); }}><IconMinus /></button>
                                             </div>
                                             <div
                                                 className={`ftable__row ftable__cols-personas${isSwiped ? ' ftable__swiped-5' : ''}`}
@@ -608,8 +641,9 @@ export const PantallaPersonas = () => {
             {(showForm || editPersona) && (
                 <ModalPersona
                     onClose={() => { setShowForm(false); setEditPersona(null); }}
-                    onGuardado={cargar}
+                    onGuardado={mostrarLocales}
                     editData={editPersona}
+                    personas={personas}
                 />
             )}
             {showImport && (
@@ -623,12 +657,13 @@ export const PantallaPersonas = () => {
                     persona={detailPersona}
                     onClose={() => setDetailPersona(null)}
                     onEdit={per => { setEditPersona(per); setDetailPersona(null); }}
-                    onDelete={id => { handleDelete(id); setDetailPersona(null); }}
+                    onDelete={() => { handleDelete(detailPersona); setDetailPersona(null); }}
                     onQR={per => { setQrPersona(per); setDetailPersona(null); }}
                     onToggleAutorizado={async (id, autorizado) => {
                         const { data } = await api.put(`/personas/${id}/autorizar`, { autorizado });
                         setDetailPersona(data.persona);
                         setPersonas(prev => prev.map(per => per._id === id ? data.persona : per));
+                        cachePersona(data.persona).catch(() => {});
                     }}
                 />
             )}
