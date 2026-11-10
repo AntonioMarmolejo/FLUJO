@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PantallaFirmas } from './Firmas';
 import { PantallaPlataformas } from './Plataformas';
+import { PantallaDistancias } from './Distancias';
 import { AvisoIniciarFlujo } from './comunes';
 
 // ── Pantalla Utilidades ────────────────────────────────────
@@ -53,6 +54,11 @@ export const PantallaUtilidades = ({ turnoActivo, cargandoTurno, onDetalleChange
 
     // Los nominativos dependen del bloque del flujo: sin flujo se queda en el menú
     const faltaFlujo = detalle?.id === 'plataformas' && !turnoActivo;
+
+    // Distancias trae su propia cabecera con el botón de volver
+    if (detalle?.id === 'distancias') {
+        return <PantallaDistancias onVolver={() => setDetalle(null)} />;
+    }
 
     if (detalle && !faltaFlujo) {
         return (

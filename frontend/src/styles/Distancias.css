@@ -1,0 +1,885 @@
+/* ══════════════════════════════════════════════════════════
+   DISTANCIAS · vía de lastre
+   Fondos, textos y bordes salen de styles/tema.css (noche por defecto,
+   día con [data-theme="light"]). Los colores de cada estado de la vía se
+   definen abajo en .estado-via--*, uno para cada tema.
+══════════════════════════════════════════════════════════ */
+
+/* ── Colores por estado de la vía (modo noche) ── */
+.estado-via--buena {
+    --via-fg: #6fd69b;
+    --via-bg: rgba(46, 158, 91, 0.16);
+    --via-linea: #34b06a;
+    --via-punto: #34b06a;
+}
+.estado-via--regular {
+    --via-fg: #f5c451;
+    --via-bg: rgba(224, 161, 11, 0.16);
+    --via-linea: #e0a10b;
+    --via-punto: #e0a10b;
+}
+.estado-via--mala {
+    --via-fg: #f8938a;
+    --via-bg: rgba(239, 90, 76, 0.16);
+    --via-linea: #ef5a4c;
+    --via-punto: #ef5a4c;
+}
+.estado-via--cerrada {
+    --via-fg: #b4bac0;
+    --via-bg: rgba(139, 146, 152, 0.18);
+    --via-linea: #8b9298;
+    --via-punto: transparent;
+}
+
+/* ── Modo día: los colores del diseño original ── */
+[data-theme="light"] .estado-via--buena {
+    --via-fg: #1e6e41;
+    --via-bg: #e2f2e8;
+    --via-linea: #2e9e5b;
+    --via-punto: #2e9e5b;
+}
+[data-theme="light"] .estado-via--regular {
+    --via-fg: #7a4f06;
+    --via-bg: #fbeed2;
+    --via-linea: #e0a10b;
+    --via-punto: #e0a10b;
+}
+[data-theme="light"] .estado-via--mala {
+    --via-fg: #a62b25;
+    --via-bg: #fbe4e1;
+    --via-linea: #d9483b;
+    --via-punto: #d9483b;
+}
+[data-theme="light"] .estado-via--cerrada {
+    --via-fg: #434950;
+    --via-bg: #e8eaec;
+    --via-linea: #8b9298;
+    --via-punto: transparent;
+}
+
+/* ── Colores propios de la pantalla ── */
+.dist {
+    --dist-alerta-bg: rgba(248, 113, 113, 0.12);
+    --dist-alerta-fg: #fca5a5;
+    --dist-velo: rgba(0, 0, 0, 0.6);
+
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--texto);
+}
+[data-theme="light"] .dist {
+    --dist-alerta-bg: #fbe4e1;
+    --dist-alerta-fg: #7e1f1a;
+    --dist-velo: rgba(18, 22, 19, 0.42);
+}
+
+/* ── Cabecera ── */
+.dist__cabecera {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.dist__volver {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--borde-3);
+    background: var(--fondo-2);
+    color: var(--texto);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+}
+.dist__volver:hover {
+    background: var(--fondo-hover);
+}
+.dist__titulos {
+    flex: 1;
+    min-width: 0;
+}
+.dist__titulo {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+.dist__subtitulo {
+    font-size: 13px;
+    color: var(--texto-tenue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dist__rol {
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto-3);
+    background: var(--fondo-4);
+    border: 1px solid var(--borde-3);
+    border-radius: 99px;
+    padding: 5px 10px;
+}
+
+/* ── Secciones ── */
+.dist__seccion {
+    background: var(--fondo-2);
+    border: 1px solid var(--borde-3);
+    border-radius: 18px;
+}
+.dist__seccion-titulo {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* ── Diagrama de la vía ── */
+.dist__seccion.dist__seccion--via {
+    overflow: hidden;
+}
+.dist__via-cab {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 14px 16px 0;
+}
+.dist__leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: var(--texto-tenue);
+}
+.dist__leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dist__leyenda-muestra {
+    width: 16px;
+    height: 5px;
+    border-radius: 9px;
+    background: var(--via-linea);
+}
+.dist__leyenda-muestra.estado-via--cerrada {
+    height: 0;
+    border-radius: 0;
+    background: none;
+    border-top: 3px dashed var(--via-linea);
+}
+.dist__diagrama-scroll {
+    overflow-x: auto;
+}
+.dist__diagrama {
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 40px 40px;
+    width: max-content;
+    min-width: 100%;
+}
+.dist__nodo {
+    position: relative;
+    flex: none;
+    width: 30px;
+    padding-top: 20px;
+}
+.dist__nodo-punto {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--fondo-2);
+    color: var(--texto);
+    border: 2px solid var(--texto);
+    transition: all 0.2s;
+}
+.dist__nodo-nombre {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--texto);
+    transition: color 0.2s;
+}
+.dist__nodo.dist__nodo--extremo .dist__nodo-punto {
+    background: var(--texto);
+    color: var(--fondo-2);
+}
+.dist__nodo.dist__nodo--extremo .dist__nodo-nombre {
+    font-weight: 700;
+}
+.dist__nodo.dist__nodo--fuera .dist__nodo-punto {
+    border-color: var(--borde-6);
+    color: var(--texto-muy-apagado);
+}
+.dist__nodo.dist__nodo--fuera .dist__nodo-nombre {
+    color: var(--texto-apagado);
+}
+.dist__enlace {
+    transition: opacity 0.2s;
+}
+.dist__enlace.dist__enlace--fuera {
+    opacity: 0.28;
+}
+.dist__enlace-etiqueta {
+    height: 20px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto-3);
+    white-space: nowrap;
+}
+.dist__enlace-carril {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+}
+.dist__enlace-linea {
+    flex: 1;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--via-linea);
+    transition: height 0.2s;
+}
+.dist__enlace-linea.dist__enlace-linea--ruta {
+    height: 9px;
+}
+.dist__enlace-linea.estado-via--cerrada {
+    height: 0;
+    border-radius: 0;
+    background: none;
+    border-top: 3px dashed var(--via-linea);
+}
+.dist__enlace-linea.dist__enlace-linea--hueco {
+    height: 0;
+    border-radius: 0;
+    background: none;
+    border-top: 2px dotted var(--borde-7);
+}
+
+.dist__diagrama.dist__diagrama--compacto {
+    padding: 4px 40px 30px;
+}
+.dist__via-vacia {
+    margin: 0;
+    padding: 18px 16px 22px;
+    font-size: 14px;
+    color: var(--texto-tenue);
+}
+
+/* Desvíos: una tira corta por cada acceso que sale de la vía */
+.dist__desvios {
+    border-top: 1px solid var(--borde-3);
+    padding-top: 12px;
+}
+.dist__desvios-titulo {
+    margin: 0 16px 2px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--texto-3);
+}
+
+/* ── Calculadora ── */
+.dist__calc {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.dist__calc-selectores {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: end;
+    gap: 8px;
+}
+.dist__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto-tenue);
+    min-width: 0;
+}
+.dist__select-caja {
+    position: relative;
+}
+.dist__select {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-input);
+    padding: 0 30px 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--texto);
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+.dist__select-chevron {
+    position: absolute;
+    right: 10px;
+    top: 16px;
+    pointer-events: none;
+    color: var(--texto-tenue);
+    line-height: 0;
+}
+.dist__intercambiar {
+    width: 44px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-2);
+    color: var(--texto);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+}
+.dist__intercambiar:hover {
+    background: var(--fondo-hover);
+}
+.dist__resultado {
+    background: var(--fondo-input);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.dist__resultado.dist__resultado--vacio {
+    padding: 20px 16px;
+    font-size: 14px;
+    color: var(--texto-tenue);
+    text-align: center;
+}
+.dist__resultado-etiqueta {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto-tenue);
+}
+.dist__resultado-tiempo {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+}
+.dist__resultado-tiempo.dist__resultado-tiempo--sin {
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--texto-tenue);
+}
+.dist__resultado-datos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 14px;
+    color: var(--texto-3);
+}
+.dist__resultado-datos strong {
+    font-weight: 700;
+    color: var(--texto);
+}
+.dist__desglose {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.dist__desglose-barra,
+.dist__desglose-etiquetas {
+    display: flex;
+    gap: 3px;
+}
+.dist__desglose-barra {
+    height: 10px;
+}
+.dist__desglose-parte {
+    flex-basis: 0;
+    min-width: 4px;
+    border-radius: 99px;
+    background: var(--via-linea);
+}
+.dist__desglose-etiquetas {
+    font-size: 11px;
+    color: var(--texto-tenue);
+}
+.dist__desglose-etiqueta {
+    flex-basis: 0;
+    min-width: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dist__resultado-casos {
+    font-size: 13px;
+    color: var(--texto-3);
+    padding-top: 10px;
+    border-top: 1px solid var(--borde-3);
+}
+.dist__alerta {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--dist-alerta-bg);
+    color: var(--dist-alerta-fg);
+    border-radius: 12px;
+    padding: 12px;
+}
+.dist__alerta.dist__alerta--compacta {
+    display: block;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 10px 12px;
+    text-align: left;
+}
+.dist__alerta-icono {
+    flex: none;
+    margin-top: 1px;
+}
+.dist__alerta-titulo {
+    font-size: 14px;
+    font-weight: 700;
+}
+.dist__alerta-texto {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* ── Lista de tramos ── */
+.dist__tramos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.dist__tramos-cab {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 4px 2px 0;
+}
+.dist__tramos-titulo {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+.dist__tramos-total {
+    font-size: 13px;
+    color: var(--texto-tenue);
+}
+.dist__tramo {
+    background: var(--fondo-2);
+    border: 1px solid var(--borde-3);
+    border-radius: 16px;
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s;
+}
+.dist__tramo.dist__tramo--ruta {
+    border-color: var(--borde-7);
+}
+.dist__tramo-cab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.dist__tramo-titulo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 15px;
+    font-weight: 700;
+}
+.dist__en-ruta {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--texto);
+    background: var(--fondo-hover);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+.dist__tramo-acciones {
+    display: flex;
+    gap: 2px;
+    margin: -6px -6px -6px 0;
+}
+.dist__icono-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--texto-3);
+}
+.dist__icono-btn:hover {
+    background: var(--fondo-hover);
+}
+.dist__icono-btn.dist__icono-btn--peligro:hover {
+    background: var(--dist-alerta-bg);
+    color: var(--peligro);
+}
+.dist__tramo-datos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    font-size: 14px;
+    color: var(--texto-3);
+}
+.dist__tramo-tiempo {
+    font-weight: 700;
+    color: var(--texto);
+}
+.dist__tramo-estado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+.dist__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 99px;
+    border: 0;
+    background: var(--via-bg);
+    color: var(--via-fg);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+}
+.dist__chip.dist__chip--boton {
+    height: 36px;
+    padding: 0 10px 0 12px;
+    cursor: pointer;
+}
+.dist__chip-punto {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--via-punto);
+    border: 2px solid var(--via-linea);
+}
+.dist__tramo-actualizado {
+    font-size: 12px;
+    color: var(--texto-tenue);
+}
+.dist__nota {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--texto-3);
+    background: var(--fondo-input);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+.dist__vacio {
+    background: var(--fondo-2);
+    border: 1px dashed var(--borde-6);
+    border-radius: 16px;
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--texto-tenue);
+}
+
+/* ── Hoja inferior (estado de la vía y formulario) ── */
+.dist__velo {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: var(--dist-velo);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s;
+}
+.dist__velo.dist__velo--visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.dist__hoja {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    z-index: 61;
+    width: 100%;
+    max-width: 430px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--fondo-2);
+    border: 1px solid var(--borde-3);
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: var(--texto);
+    /* Cerrada: fuera de pantalla e invisible (sin que asome la sombra), una vez
+       termina de bajar */
+    transform: translate(-50%, calc(100% + 40px));
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s linear 0.3s;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.18);
+}
+.dist__hoja.dist__hoja--abierta {
+    transform: translate(-50%, 0);
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+        transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+        visibility 0s;
+}
+.dist__hoja-asa {
+    flex: none;
+    width: 40px;
+    height: 5px;
+    border-radius: 9px;
+    background: var(--borde-6);
+    margin: 0 auto;
+}
+.dist__hoja-titulo {
+    font-size: 19px;
+    font-weight: 700;
+}
+.dist__hoja-sub {
+    font-size: 14px;
+    color: var(--texto-tenue);
+    margin-top: 2px;
+}
+.dist__opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.dist__opcion {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 64px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 2px solid var(--borde-3);
+    background: var(--fondo-2);
+    color: var(--texto);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+.dist__opcion.dist__opcion--sel {
+    border-color: var(--acento);
+    background: var(--fondo-input);
+}
+.dist__opcion-muestra {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--via-punto);
+    border: 2px solid var(--via-linea);
+}
+.dist__opcion-muestra.estado-via--cerrada {
+    border-style: dashed;
+}
+.dist__opcion-textos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.dist__opcion-nombre {
+    font-size: 16px;
+    font-weight: 700;
+}
+.dist__opcion-desc {
+    font-size: 13px;
+    color: var(--texto-tenue);
+}
+.dist__opcion-radio {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--borde-6);
+    display: grid;
+    place-items: center;
+}
+.dist__opcion-radio-punto {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--acento);
+    opacity: 0;
+}
+.dist__opcion.dist__opcion--sel .dist__opcion-radio {
+    border-color: var(--acento);
+}
+.dist__opcion.dist__opcion--sel .dist__opcion-radio-punto {
+    opacity: 1;
+}
+.dist__campo.dist__campo--form {
+    font-size: 13px;
+    color: var(--texto-3);
+}
+.dist__input {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-input);
+    padding: 0 12px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--texto);
+    font-family: inherit;
+}
+.dist__input:focus {
+    outline: none;
+    border-color: var(--acento);
+}
+.dist__input.dist__input--area {
+    height: auto;
+    padding: 10px 12px;
+    font-weight: 400;
+    resize: vertical;
+}
+.dist__input.dist__input--lectura {
+    background: var(--fondo-hover);
+    color: var(--texto-3);
+}
+.dist__input.dist__input--error {
+    border-color: var(--peligro);
+}
+.dist__ayuda {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--texto-tenue);
+}
+.dist__ayuda.dist__ayuda--suelta {
+    font-size: 13px;
+}
+.dist__error {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--peligro);
+}
+/* Selector "Vía principal / Desvío" del formulario */
+.dist__tipo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 14px;
+    background: var(--fondo-input);
+}
+.dist__tipo-opcion {
+    height: 40px;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    color: var(--texto-3);
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+}
+.dist__tipo-opcion.dist__tipo-opcion--sel {
+    background: var(--fondo-2);
+    color: var(--texto);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+.dist__select.dist__select--form {
+    font-weight: 500;
+}
+.dist__select.dist__input--error {
+    border-color: var(--peligro);
+}
+.dist__form-fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.dist__hoja-botones {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+}
+.dist__btn {
+    height: 50px;
+    border-radius: 14px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-2);
+    color: var(--texto);
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+}
+.dist__btn:hover {
+    background: var(--fondo-hover);
+}
+.dist__btn.dist__btn--primario {
+    border: 0;
+    background: var(--acento);
+    color: #fff;
+}
+.dist__btn.dist__btn--primario:hover {
+    filter: brightness(1.08);
+}
+
+/* ── Aviso flotante ── */
+.dist__toast {
+    position: fixed;
+    left: 50%;
+    bottom: 140px;
+    z-index: 70;
+    transform: translate(-50%, 12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+    background: var(--texto);
+    color: var(--fondo-2);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 16px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+.dist__toast.dist__toast--visible {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}

@@ -81,8 +81,10 @@ export const crearCatalogoOffline = ({ ruta, lista, clave, cache, pendientes, ev
                     await enviarCambio(cambio);
                 } catch (err) {
                     const status = err.response?.status;
+                    // El admin restringió quién edita (Distancias): el cambio no se aplicará
+                    const restringido = status === 403 && err.response.data?.code === 'EDICION_RESTRINGIDA';
                     // Sin red, servidor caído o sin acceso por ahora: sigue en cola, en orden
-                    if (!status || status >= 500 || [401, 403, 429].includes(status)) break;
+                    if (!restringido && (!status || status >= 500 || [401, 403, 429].includes(status))) break;
                     const existente = err.response.data?.existing;
                     if (status === 409 && cambio.tipo === 'crear' && existente?._id) {
                         // Ya estaba registrado (por ejemplo, desde un movimiento): los datos

@@ -5,6 +5,7 @@ import { syncFlujoWorkers } from '../lib/flujoWorkersOffline.js';
 import { syncVehiculos } from '../lib/vehiculosOffline.js';
 import { syncPersonas } from '../lib/personasOffline.js';
 import { syncExtensiones } from '../lib/extensionesOffline.js';
+import { syncTramos } from '../lib/tramosOffline.js';
 
 // Sube la cola offline de turnos, firmas y personas desde cualquier pantalla:
 // al volver la conexión, al recuperar el foco y cada 30 s como respaldo.
@@ -19,6 +20,7 @@ const SyncOperaciones = () => {
             syncVehiculos().catch(() => {});
             syncPersonas().catch(() => {});
             syncExtensiones().catch(() => {});
+            syncTramos().catch(() => {});
         };
         const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
         sync();

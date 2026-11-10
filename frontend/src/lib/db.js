@@ -156,4 +156,26 @@ db.version(11).stores({
     extensionesPending: '++seq',
 });
 
+// v12: tramos de la vía (pantalla Distancias) y su cola de cambios sin conexión
+db.version(12).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+    vehiculosPending: '++seq',
+    personasPending: '++seq',
+    extensionesPending: '++seq',
+    tramosCache: '_id, updatedAt',
+    tramosPending: '++seq',
+});
+
 export default db;

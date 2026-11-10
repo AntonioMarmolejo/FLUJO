@@ -17,6 +17,8 @@ import calendarioGrupoRoutes from './src/routes/calendarioGrupo.routes.js';
 import adminRoutes from './src/routes/admin.routes.js';
 import webauthnRoutes from './src/routes/webauthn.routes.js';
 import comentarioRoutes from './src/routes/comentario.routes.js';
+import tramoRoutes from './src/routes/tramo.routes.js';
+import ajusteRoutes from './src/routes/ajuste.routes.js';
 
 dotenv.config();
 connectDB().then(migrarBloquesAprobados).then(migrarPasskeys);
@@ -50,6 +52,8 @@ app.use('/api/calendarios', calendarioGrupoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/webauthn', webauthnRoutes);
 app.use('/api/comentarios', comentarioRoutes);
+app.use('/api/tramos', tramoRoutes);
+app.use('/api/ajustes', ajusteRoutes);
 
 // Health check
 app.get('/', (_req, res) => res.json({ message: '🚀 Flujo API corriendo' }));

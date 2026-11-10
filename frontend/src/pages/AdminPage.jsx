@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUES_DATA } from '../data/bloques.js';
+import { OPCIONES_EDITORES_DISTANCIAS, cargarAjustes, guardarEditoresDistancias, leerAjustesLocales } from '../lib/ajustes.js';
 import '../styles/AdminPage.css';
 import { SkeletonComentarios, SkeletonUsuarios } from '../components/Skeleton';
 
@@ -100,6 +101,54 @@ const TIPO_COMENTARIO = {
     opinion:    { label: 'Opinión',    tono: 'purple' },
     sugerencia: { label: 'Sugerencia', tono: 'green' },
     error:      { label: 'Error',      tono: 'red' },
+};
+
+// Ajustes generales: por ahora, quién puede modificar la vía en Distancias
+const AjustesAdmin = () => {
+    const [editores, setEditores] = useState(() => leerAjustesLocales().distanciasEditores);
+    const [guardando, setGuardando] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        cargarAjustes().then(a => setEditores(a.distanciasEditores)).catch(() => {});
+    }, []);
+
+    const elegir = async id => {
+        if (id === editores || guardando) return;
+        const anterior = editores;
+        setEditores(id);
+        setGuardando(true);
+        setError('');
+        try {
+            await guardarEditoresDistancias(id);
+        } catch (e) {
+            setEditores(anterior);
+            setError(e.response?.data?.message || 'No se pudo guardar. Revisa la conexión.');
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    return (
+        <div className="adm__lista">
+            <div className="adm__comentario">
+                <div className="adm__fila-titulo">
+                    <span className="adm__nombre">Distancias · quién puede modificar la vía</span>
+                </div>
+                <div className="adm__ayuda">Agregar, editar y eliminar tramos y desvíos, y cambiar el estado de la vía. Todos pueden ver las distancias y usar la calculadora.</div>
+                <div className="adm__checks adm__checks--separados">
+                    {OPCIONES_EDITORES_DISTANCIAS.map(o => (
+                        <label key={o.id} className="adm__check">
+                            <input type="radio" name="distancias-editores" checked={editores === o.id}
+                                disabled={guardando} onChange={() => elegir(o.id)} />
+                            <span><strong>{o.label}</strong><br /><span className="adm__ayuda">{o.desc}</span></span>
+                        </label>
+                    ))}
+                </div>
+                {error && <div className="adm__error-texto">{error}</div>}
+            </div>
+        </div>
+    );
 };
 
 // Comentarios que los usuarios envían desde "Enviar comentarios" en el menú
@@ -385,12 +434,12 @@ export default function AdminPage() {
 
                 {/* Secciones */}
                 <div className="adm__secciones">
-                    {[['usuarios', 'Usuarios'], ['comentarios', `Comentarios${comentariosSinLeer ? ` (${comentariosSinLeer})` : ''}`]].map(([id, label]) => (
+                    {[['usuarios', 'Usuarios'], ['comentarios', `Comentarios${comentariosSinLeer ? ` (${comentariosSinLeer})` : ''}`], ['ajustes', 'Ajustes']].map(([id, label]) => (
                         <button key={id} className={`adm__seccion${seccion === id ? ' adm__seccion--activa' : ''}`} onClick={() => setSeccion(id)}>{label}</button>
                     ))}
                 </div>
 
-                {seccion === 'comentarios' ? <ComentariosAdmin onSinLeer={setComentariosSinLeer} /> : (<>
+                {seccion === 'ajustes' ? <AjustesAdmin /> : seccion === 'comentarios' ? <ComentariosAdmin onSinLeer={setComentariosSinLeer} /> : (<>
 
                 {/* Stats */}
                 {stats && (
