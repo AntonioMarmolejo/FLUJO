@@ -23,18 +23,33 @@ export const searchVehiculos = async (req, res) => {
 };
 
 // POST /api/vehiculos
+// El dispositivo puede mandar el _id: si la app reenvía la misma creación (porque se
+// perdió la respuesta sin conexión), se devuelve el vehículo ya creado en vez de otro.
 export const createVehiculo = async (req, res) => {
     try {
-        const { placa, marca, color, tipoVehiculo, empresa, caf } = req.body;
-        if (!placa) return res.status(400).json({ message: 'La placa es obligatoria' });
+        const { _id, placa, marca, color, tipoVehiculo, empresa, caf } = req.body;
+        if (!placa?.trim()) return res.status(400).json({ message: 'La placa es obligatoria' });
+        if (_id !== undefined && !/^[0-9a-f]{24}$/i.test(String(_id))) {
+            return res.status(400).json({ message: 'ID de vehículo inválido' });
+        }
+        if (_id) {
+            const existente = await Vehiculo.findById(_id);
+            if (existente) return res.json({ message: 'Vehículo ya registrado', vehiculo: existente });
+        }
 
         const vehiculo = await Vehiculo.create({
+            ...(_id ? { _id } : {}),
             placa: placa.trim().toUpperCase(),
             marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '',
             empresa: empresa || '', caf: caf || '',
         });
         res.status(201).json({ message: 'Vehículo registrado', vehiculo });
     } catch (error) {
+        // Dos envíos del mismo vehículo casi al mismo tiempo: el segundo choca con el primero
+        if (error.code === 11000 && req.body._id) {
+            const mismo = await Vehiculo.findById(req.body._id).catch(() => null);
+            if (mismo) return res.json({ message: 'Vehículo ya registrado', vehiculo: mismo });
+        }
         if (error.code === 11000) {
             // Devolver el vehículo existente para que el frontend pueda ofrecer edición
             const existing = await Vehiculo.findOne({ placa: (req.body.placa || '').trim().toUpperCase() }).catch(() => null);

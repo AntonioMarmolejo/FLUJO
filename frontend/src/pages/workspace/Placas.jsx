@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
-import { cacheVehiculo, getVehiculosCache, deleteCachedVehiculo, touchCatalogMeta, getCatalogMeta } from '../../lib/syncEngine.js';
+import { buscarPlacaLocal, getCatalogMeta } from '../../lib/syncEngine.js';
+import {
+    encolarCambioVehiculo,
+    leerVehiculosLocales,
+    nuevoIdVehiculo,
+    refrescarVehiculos,
+} from '../../lib/vehiculosOffline.js';
 import { CacheFreshnessBadge, ModalField, TextSugField } from './comunes';
 import {
     EMPTY_VEHICULO,
@@ -38,48 +44,44 @@ const ModalVehiculo = ({ onClose, onGuardado, editData }) => {
         setError('');
     };
 
-    const handleSubmit = async () => {
-        if (!form.placa) { setError('La placa es obligatoria'); return; }
-        setLoading(true);
-        setExistente(null);
+    // Guardado al instante, con o sin internet: el cambio queda en el dispositivo
+    // y se sube cuando haya conexión (lib/vehiculosOffline.js).
+    const guardarLocal = async cambio => {
         try {
-            if (editData?._id) {
-                const { data } = await api.put(`/vehiculos/${editData._id}`, form);
-                await cacheVehiculo(data.vehiculo).catch(() => {});
-                onGuardado(data.vehiculo);
-            } else {
-                const { data } = await api.post('/vehiculos', form);
-                await cacheVehiculo(data.vehiculo).catch(() => {});
-                onGuardado(data.vehiculo);
-            }
+            await encolarCambioVehiculo(cambio);
+            onGuardado();
             onClose();
-        } catch (err) {
-            const status = err.response?.status;
-            const msg    = err.response?.data?.message || 'Error al guardar';
-            if (status === 409 && err.response?.data?.existing) {
-                setExistente(err.response.data.existing);
-                setError('Esta placa ya está en la base de datos (fue creada al registrar un movimiento). Puedes actualizar sus datos:');
-            } else {
-                setError(msg);
-            }
-        } finally {
+        } catch {
+            setError('No se pudo guardar en este dispositivo');
             setLoading(false);
         }
     };
 
-    const handleEditarExistente = async () => {
-        if (!existente?._id) return;
+    const handleSubmit = async () => {
+        const placa = form.placa.trim().toUpperCase();
+        if (!placa) { setError('La placa es obligatoria'); return; }
+        if (loading) return;
         setLoading(true);
-        try {
-            const { data } = await api.put(`/vehiculos/${existente._id}`, form);
-            await cacheVehiculo(data.vehiculo).catch(() => {});
-            onGuardado(data.vehiculo);
-            onClose();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Error al guardar');
-        } finally {
-            setLoading(false);
+        setExistente(null);
+        if (editData?._id) {
+            // El servidor no cambia la placa al editar: se conserva la original
+            await guardarLocal({ tipo: 'editar', doc: { ...editData, ...form, placa: editData.placa } });
+            return;
         }
+        const yaRegistrado = await buscarPlacaLocal(placa).catch(() => null);
+        if (yaRegistrado) {
+            setExistente(yaRegistrado);
+            setError('Esta placa ya está en la base de datos (puede haberse creado al registrar un movimiento). Puedes actualizar sus datos:');
+            setLoading(false);
+            return;
+        }
+        await guardarLocal({ tipo: 'crear', doc: { ...form, placa, _id: nuevoIdVehiculo() } });
+    };
+
+    const handleEditarExistente = async () => {
+        if (!existente?._id || loading) return;
+        setLoading(true);
+        await guardarLocal({ tipo: 'editar', doc: { ...existente, ...form, placa: existente.placa } });
     };
 
     const fp = { onChange: handleChange, autoFilled: false };
@@ -434,29 +436,30 @@ export const PantallaPlacasDB = () => {
     const [detalleId, setDetalleId] = useState(null);   // ID del vehículo en modal detalle
     const vehSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
 
+    // Lo que se ve es siempre la copia del dispositivo: la última lista del
+    // servidor más los cambios que todavía no se suben.
+    const mostrarLocales = async () => {
+        const locales = await leerVehiculosLocales().catch(() => []);
+        setVehiculos(locales);
+        return locales;
+    };
+
     const cargar = async () => {
-        setLoading(true);
         setLoadError(false);
-        setFromCache(false);
+        // Primero lo local, para no esperar a la red
+        const locales = await mostrarLocales();
+        if (locales.length) setLoading(false);
         try {
-            const { data } = await api.get('/vehiculos');
-            setVehiculos(data.vehiculos);
-            // Actualizar caché offline con todos los vehículos recibidos
-            data.vehiculos.forEach(v => cacheVehiculo(v).catch(() => {}));
-            await touchCatalogMeta('vehiculos');
+            await refrescarVehiculos();
+            await mostrarLocales();
+            setFromCache(false);
         } catch {
-            // Sin conexión: intentar cargar desde caché local
-            try {
-                const cached = await getVehiculosCache();
-                if (cached.length > 0) {
-                    setVehiculos(cached);
-                    setFromCache(true);
-                    const meta = await getCatalogMeta('vehiculos');
-                    setCachedAt(meta?.cachedAt || null);
-                } else {
-                    setLoadError(true);
-                }
-            } catch {
+            // Sin conexión: se sigue con la copia local
+            if (locales.length) {
+                setFromCache(true);
+                const meta = await getCatalogMeta('vehiculos').catch(() => null);
+                setCachedAt(meta?.cachedAt || null);
+            } else {
                 setLoadError(true);
             }
         } finally {
@@ -466,19 +469,14 @@ export const PantallaPlacasDB = () => {
 
     useEffect(() => { cargar(); }, []);
 
-    // Actualización optimista local tras guardar (sin recargar todo)
-    const onGuardado = (savedVehiculo) => {
-        if (!savedVehiculo) { cargar(); return; }
-        setVehiculos(prev => {
-            const idx = prev.findIndex(v => v._id === savedVehiculo._id);
-            if (idx >= 0) {
-                const next = [...prev];
-                next[idx] = savedVehiculo;
-                return next;
-            }
-            return [...prev, savedVehiculo].sort((a, b) => a.placa.localeCompare(b.placa));
-        });
-    };
+    // Tras subir la cola (aquí o desde otra pantalla) la copia local ya trae los IDs del servidor
+    useEffect(() => {
+        const onSync = () => { mostrarLocales(); };
+        window.addEventListener('flujo:vehiculos', onSync);
+        return () => window.removeEventListener('flujo:vehiculos', onSync);
+    }, []);
+
+    const onGuardado = () => { mostrarLocales(); };
 
     const sq = search.toLowerCase();
     const filtrados = sq
@@ -489,11 +487,10 @@ export const PantallaPlacasDB = () => {
             (v.conductor || '').toLowerCase().includes(sq))
         : vehiculos;
 
-    // Eliminación optimista: quita la fila de inmediato, luego sincroniza con el servidor
+    // Eliminación al instante; queda en cola hasta que el servidor la confirme
     const handleDelete = async (id, placa) => {
         setVehiculos(prev => prev.filter(v => v._id !== id));
-        deleteCachedVehiculo(placa).catch(() => {});
-        try { await api.delete(`/vehiculos/${id}`); } catch { }
+        await encolarCambioVehiculo({ tipo: 'borrar', id, placa }).catch(() => {});
     };
 
     const qrData = v => [

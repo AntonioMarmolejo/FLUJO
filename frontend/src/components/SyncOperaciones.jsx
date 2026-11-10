@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { syncPendingOperaciones } from '../lib/syncEngine.js';
 import { syncFlujoWorkers } from '../lib/flujoWorkersOffline.js';
+import { syncVehiculos } from '../lib/vehiculosOffline.js';
 
 // Sube la cola offline de turnos, firmas y personas desde cualquier pantalla:
 // al volver la conexión, al recuperar el foco y cada 30 s como respaldo.
@@ -13,6 +14,7 @@ const SyncOperaciones = () => {
         const sync = () => {
             syncPendingOperaciones().catch(() => {});
             syncFlujoWorkers().catch(() => {});
+            syncVehiculos().catch(() => {});
         };
         const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
         sync();

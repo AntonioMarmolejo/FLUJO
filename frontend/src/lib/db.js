@@ -99,4 +99,22 @@ db.version(8).stores({
     flujoWorkersPending: '++seq',
 });
 
+// v9: cola de cambios de Placas de vehículos sin conexión (la copia local es vehiculosCache)
+db.version(9).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+    vehiculosPending: '++seq',
+});
+
 export default db;
