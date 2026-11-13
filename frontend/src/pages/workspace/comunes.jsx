@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PANEL_LABELS, formatRelativeTime } from './helpers';
 
@@ -14,49 +14,91 @@ export const PendienteBadge = ({ error, onDescartar }) => (
     </span>
 );
 
-// ── Botón de subir con gesto ─────────────────────────────
-// Toque corto: sube al inicio. Mantener presionado (o empezar a arrastrar):
-// muestra flechas alrededor y, sin soltar, se arrastra hacia la opción
-// deseada (cambiar de pestaña, ir abajo...). Funciona con dedo y mouse.
-const GESTO_ANGULO = { right: 0, upright: 45, up: 90, upleft: 135, left: 180, down: -90 };
-
-const GESTO_FLECHA = { right: '→', upright: '↗', up: '↑', upleft: '↖', left: '←', down: '↓' };
-
-const GESTO_RADIO = 74;
-
-const GESTO_OFFSET = {
-    right: [GESTO_RADIO, 0], left: [-GESTO_RADIO, 0],
-    up: [0, -GESTO_RADIO], down: [0, GESTO_RADIO * 0.8],
-    upright: [GESTO_RADIO * 0.72, -GESTO_RADIO * 0.72], upleft: [-GESTO_RADIO * 0.72, -GESTO_RADIO * 0.72],
+// ── Botón de subir con menú en abanico ───────────────────
+// Toque corto: sube al inicio. Mantener presionado abre un abanico de opciones
+// hacia la izquierda (arriba, otras pestañas, abajo):
+//   · sin soltar, se arrastra hacia una opción y al soltar se ejecuta;
+//   · si se suelta sin arrastrar, el abanico queda abierto para tocar la opción.
+// Funciona con dedo y mouse. opciones: [{ id, label, icono, action }], en orden
+// de arriba hacia abajo.
+const ICONOS_ABANICO = {
+    arriba: <path d="M12 19V7M6 11l6-6 6 6M5 3h14" />,
+    abajo: <path d="M12 5v12M6 13l6 6 6-6M5 21h14" />,
+    movimientos: <path d="M4 6h16M4 12h10M4 18h7" />,
+    bitacora: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 9v12" /></>,
+    registro: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" /><path d="M14 2v6h6M9 13h6M9 17h4" /></>,
 };
 
-// Opción hacia la que apunta el arrastre: la de ángulo más cercano, si el
-// arrastre es lo bastante largo y no se aleja más de 60° de ninguna.
-const elegirOpcionGesto = (dx, dy, opciones) => {
-    if (Math.hypot(dx, dy) < 28) return null;
-    const angulo = Math.atan2(-dy, dx) * 180 / Math.PI;
-    let mejor = null;
-    let menor = Infinity;
-    for (const o of opciones) {
-        let d = Math.abs(angulo - GESTO_ANGULO[o.dir]) % 360;
+const ABANICO_RADIO = 118;
+const ABANICO_DESDE = 90;           // primera opción: justo encima del botón
+const ABANICO_MIN_ARRASTRE = 30;    // px de arrastre antes de elegir una opción
+
+// Borde superior de la barra de navegación inferior (o de la pantalla)
+const limiteInferior = () => document.querySelector('.ws__navbar')?.getBoundingClientRect().top ?? window.innerHeight;
+
+// El abanico baja por la izquierda solo hasta donde hay espacio: sin pisar la
+// barra de navegación inferior. 180° = a la izquierda, 270° = debajo.
+const anguloFinalAbanico = cy => {
+    const espacio = limiteInferior() - 30 - cy;
+    const s = Math.max(-1, Math.min(1, espacio / ABANICO_RADIO));
+    return Math.max(165, Math.min(270, 180 + (Math.asin(s) * 180) / Math.PI));
+};
+
+const armarAbanico = (opciones, cy) => {
+    const hasta = anguloFinalAbanico(cy);
+    const paso = opciones.length > 1 ? (hasta - ABANICO_DESDE) / (opciones.length - 1) : 0;
+    return opciones.map((o, i) => {
+        const angulo = ABANICO_DESDE + paso * i;
+        const rad = (angulo * Math.PI) / 180;
+        return {
+            ...o, angulo,
+            x: Math.round(Math.cos(rad) * ABANICO_RADIO),
+            y: Math.round(-Math.sin(rad) * ABANICO_RADIO),
+            // La de arriba lleva la etiqueta encima; las demás, a su izquierda
+            etiquetaArriba: angulo < 105,
+        };
+    });
+};
+
+// Opción hacia la que apunta el arrastre: la de ángulo más cercano
+const opcionArrastrada = (dx, dy, items) => {
+    if (Math.hypot(dx, dy) < ABANICO_MIN_ARRASTRE || !items.length) return null;
+    const angulo = ((Math.atan2(-dy, dx) * 180) / Math.PI + 360) % 360;
+    const paso = items.length > 1 ? Math.abs(items[1].angulo - items[0].angulo) : 60;
+    let mejor = null, menor = Infinity;
+    for (const it of items) {
+        let d = Math.abs(angulo - it.angulo) % 360;
         if (d > 180) d = 360 - d;
-        if (d < menor) { menor = d; mejor = o; }
+        if (d < menor) { menor = d; mejor = it; }
     }
-    return menor <= 60 ? mejor : null;
+    return menor <= Math.max(30, paso / 2 + 12) ? mejor : null;
 };
 
 export const ScrollTopButton = ({ opciones, onTap }) => {
-    const [menu, setMenu] = useState(null); // { cx, cy } centro del botón
+    const [menu, setMenu] = useState(null); // { cx, cy, items, fijo }
     const [activa, setActiva] = useState(null);
     const gesto = useRef(null);
 
-    const abrirMenu = () => {
+    const cerrar = () => { setMenu(null); setActiva(null); };
+
+    useEffect(() => {
+        if (!menu?.fijo) return;
+        const onTecla = e => { if (e.key === 'Escape') cerrar(); };
+        window.addEventListener('keydown', onTecla);
+        return () => window.removeEventListener('keydown', onTecla);
+    }, [menu?.fijo]);
+
+    const abrir = () => {
         const g = gesto.current;
         if (!g || g.abierto) return;
         g.abierto = true;
         clearTimeout(g.timer);
         navigator.vibrate?.(12);
-        setMenu({ cx: g.cx, cy: g.cy });
+        setMenu({
+            cx: g.cx, cy: g.cy, items: armarAbanico(opciones, g.cy), fijo: false,
+            // Del círculo guía solo se ve la mitad izquierda, sin pisar la barra inferior
+            recorteGuia: `inset(0 ${ABANICO_RADIO}px ${Math.max(0, g.cy + ABANICO_RADIO - limiteInferior() + 6)}px 0)`,
+        });
     };
 
     const onPointerDown = e => {
@@ -66,17 +108,26 @@ export const ScrollTopButton = ({ opciones, onTap }) => {
         gesto.current = {
             x0: e.clientX, y0: e.clientY,
             cx: r.left + r.width / 2, cy: r.top + r.height / 2,
-            abierto: false, timer: setTimeout(abrirMenu, 280),
+            abierto: false, movido: false,
+            // Con el abanico ya abierto, tocar el botón lo cierra
+            yaAbierto: !!menu,
+            timer: menu ? null : setTimeout(abrir, 280),
         };
     };
 
     const onPointerMove = e => {
         const g = gesto.current;
-        if (!g) return;
+        if (!g || g.yaAbierto) return;
         const dx = e.clientX - g.x0;
         const dy = e.clientY - g.y0;
-        if (!g.abierto && Math.hypot(dx, dy) > 12) abrirMenu();
-        if (g.abierto) setActiva(elegirOpcionGesto(dx, dy, opciones)?.dir || null);
+        if (Math.hypot(dx, dy) > 12) {
+            g.movido = true;
+            if (!g.abierto) abrir();
+        }
+        if (g.abierto) {
+            const items = armarAbanico(opciones, g.cy);
+            setActiva(opcionArrastrada(dx, dy, items)?.id || null);
+        }
     };
 
     const terminar = (e, cancelado) => {
@@ -84,49 +135,52 @@ export const ScrollTopButton = ({ opciones, onTap }) => {
         if (!g) return;
         clearTimeout(g.timer);
         gesto.current = null;
-        if (g.abierto) {
-            const op = cancelado ? null : elegirOpcionGesto(e.clientX - g.x0, e.clientY - g.y0, opciones);
-            setMenu(null);
-            setActiva(null);
-            op?.action();
-        } else if (!cancelado) {
-            onTap();
-        }
+        if (g.yaAbierto) { cerrar(); return; }
+        if (!g.abierto) { if (!cancelado) onTap(); return; }
+        const op = cancelado ? null : opcionArrastrada(e.clientX - g.x0, e.clientY - g.y0, armarAbanico(opciones, g.cy));
+        if (op) { cerrar(); op.action(); return; }
+        // Se mantuvo presionado sin arrastrar: queda abierto para tocar la opción
+        if (!g.movido && !cancelado) { setActiva(null); setMenu(m => m && { ...m, fijo: true }); return; }
+        cerrar();
     };
 
-    // Las opciones se mantienen dentro de la pantalla aunque el botón esté cerca del borde
-    const posicion = dir => {
-        const [ox, oy] = GESTO_OFFSET[dir];
-        return {
-            left: Math.min(Math.max(menu.cx + ox, 56), window.innerWidth - 56),
-            top: Math.min(Math.max(menu.cy + oy, 28), window.innerHeight - 28),
-        };
-    };
+    const elegir = op => { cerrar(); op.action(); };
 
     return (
         <>
             <button
-                className={`scroll__top-btn${menu ? ' scroll__top-btn--gesto' : ''}`}
-                title="Volver arriba · mantén presionado y arrastra para más opciones"
+                className={`scroll__top-btn${menu ? ' scroll__top-btn--abierto' : ''}`}
+                aria-label="Volver arriba (mantén presionado para más opciones)"
+                aria-expanded={!!menu}
+                title="Volver arriba · mantén presionado para más opciones"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={e => terminar(e, false)}
                 onPointerCancel={e => terminar(e, true)}
-                onClick={e => { if (e.detail === 0) onTap(); /* teclado */ }}
+                onClick={e => { if (e.detail === 0) (menu ? cerrar() : onTap()); /* teclado */ }}
                 onContextMenu={e => e.preventDefault()}
             >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <svg className="scroll__top-icono" width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </button>
             {menu && (
-                <div className="scroll__gesto-capa">
-                    {opciones.map(o => (
-                        <span key={o.dir} style={posicion(o.dir)}
-                            className={`scroll__gesto-op${activa === o.dir ? ' scroll__gesto-op--activa' : ''}`}>
-                            <span className="scroll__gesto-flecha">{GESTO_FLECHA[o.dir]}</span>
-                            {o.label}
-                        </span>
+                <div className={`abanico${menu.fijo ? ' abanico--fijo' : ''}`}>
+                    <div className="abanico__fondo" onClick={cerrar} />
+                    <div className="abanico__guia" style={{ left: menu.cx, top: menu.cy, width: ABANICO_RADIO * 2, height: ABANICO_RADIO * 2, clipPath: menu.recorteGuia }} />
+                    {menu.items.map((it, i) => (
+                        <div key={it.id}
+                            className={`abanico__opcion${activa === it.id ? ' abanico__opcion--activa' : ''}`}
+                            style={{ left: menu.cx, top: menu.cy, '--x': `${it.x}px`, '--y': `${it.y}px`, animationDelay: `${i * 35}ms` }}>
+                            <span className={`abanico__etiqueta${it.etiquetaArriba ? ' abanico__etiqueta--arriba' : ''}`}>{it.label}</span>
+                            <button type="button" className="abanico__boton" aria-label={it.label}
+                                tabIndex={menu.fijo ? 0 : -1} onClick={() => elegir(it)}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    {ICONOS_ABANICO[it.icono] || ICONOS_ABANICO.arriba}
+                                </svg>
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}

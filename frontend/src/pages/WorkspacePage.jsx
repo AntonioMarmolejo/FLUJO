@@ -273,25 +273,20 @@ const WorkspacePage = () => {
         setDetailMovIdx(idx);
     };
 
-    // Opciones del gesto del botón de subir. En el inicio, las pestañas
-    // quedan a la izquierda o derecha según su orden (Movimientos | Bitácora |
-    // Registro): la más cercana en horizontal y la siguiente en diagonal.
+    // Opciones del abanico del botón de subir, de arriba hacia abajo: Arriba,
+    // en el inicio las otras dos pestañas (en su orden), y Abajo.
     const ORDEN_VISTAS = ['movimientos', 'bitacora', 'registro'];
     const NOMBRE_VISTA = { movimientos: 'Movimientos', bitacora: 'Bitácora', registro: 'Registro' };
-    const opcionesScrollGesto = (() => {
-        const opciones = [
-            { dir: 'up', label: 'Arriba', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-            { dir: 'down', label: 'Abajo', action: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }) },
-        ];
-        if (tabActiva !== 'inicio') return opciones;
-        const ir = vista => () => { setVistaInicio(vista); window.scrollTo({ top: 0 }); };
-        const i = ORDEN_VISTAS.indexOf(vistaInicio);
-        const izquierda = ORDEN_VISTAS.slice(0, i).reverse();
-        const derecha = ORDEN_VISTAS.slice(i + 1);
-        [['left', izquierda[0]], ['upleft', izquierda[1]], ['right', derecha[0]], ['upright', derecha[1]]]
-            .forEach(([dir, vista]) => { if (vista) opciones.push({ dir, label: NOMBRE_VISTA[vista], action: ir(vista) }); });
-        return opciones;
-    })();
+    const opcionesScrollGesto = [
+        { id: 'arriba', label: 'Arriba', icono: 'arriba', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+        ...(tabActiva === 'inicio'
+            ? ORDEN_VISTAS.filter(v => v !== vistaInicio).map(v => ({
+                id: v, label: NOMBRE_VISTA[v], icono: v,
+                action: () => { setVistaInicio(v); window.scrollTo({ top: 0 }); },
+            }))
+            : []),
+        { id: 'abajo', label: 'Abajo', icono: 'abajo', action: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }) },
+    ];
 
     const goToReg = id => { setVistaInicio('registro'); setHighlightRegId(id); };
     const goToMov = id => { setVistaInicio('movimientos'); setHighlightMovId(id); };
