@@ -34,10 +34,15 @@ export const formatoTiempo = m => {
 
 export const formatoNumero = n => Number(n).toLocaleString('es', { maximumFractionDigits: 1 });
 
-// "Plataforma A" → "A"; nombres largos → sus dos primeras letras
+// Sigla para el círculo de cada plataforma:
+// "Plataforma A" / "PAD C" → "A" / "C"; "EPF", "CGD" → igual; "Puerto Nuevo" → "PN"
 export const nombreCorto = nombre => {
-    const s = String(nombre).replace(/^Plataforma\s+/i, '');
-    return s.length > 2 ? s.slice(0, 2).toUpperCase() : s;
+    const s = String(nombre).trim().replace(/^(Plataforma|PAD)\s+/i, '');
+    if (s.length <= 3) return s.toUpperCase();
+    const palabras = s.split(/\s+/).filter(Boolean);
+    return palabras.length > 1
+        ? (palabras[0][0] + palabras[1][0]).toUpperCase()
+        : s.slice(0, 2).toUpperCase();
 };
 
 // Acepta milisegundos o la fecha del servidor (texto ISO)

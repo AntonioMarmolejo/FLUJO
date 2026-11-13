@@ -10,6 +10,7 @@ import {
     refrescarTramos,
 } from '../../lib/tramosOffline.js';
 import { CacheFreshnessBadge, PendienteBadge } from './comunes';
+import { MapaVia } from './MapaVia';
 import { Sk } from '../../components/Skeleton';
 import {
     ESTADOS,
@@ -40,47 +41,6 @@ const FORM_VACIO = { from: '', to: '', km: '', vmin: '', vmax: '' };
 
 const IconoChevron = ({ tam = 16 }) => (
     <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-);
-
-// ── Diagrama: una tira de plataformas unidas por tramos ───
-// ruta: { valida, nodos: Set, ids: Set } para resaltar el camino elegido
-const Tira = ({ nodos, enlaces, ruta, origen, destino, compacta }) => (
-    <div className="dist__diagrama-scroll">
-        <div className={`dist__diagrama${compacta ? ' dist__diagrama--compacto' : ''}`}>
-            {nodos.map((n, k) => {
-                const t = enlaces[k];
-                const extremo = ruta.valida && (n === origen || n === destino);
-                const fuera = ruta.valida && !ruta.nodos.has(n);
-                const enlaceFuera = ruta.valida && (!t || !ruta.ids.has(t._id));
-                const cerrado = t?.cond === 'Cerrada';
-                return [
-                    <div key={'n' + k} className={[
-                        'dist__nodo',
-                        extremo ? 'dist__nodo--extremo' : fuera && 'dist__nodo--fuera',
-                    ].filter(Boolean).join(' ')}>
-                        <div className="dist__nodo-punto">{nombreCorto(n)}</div>
-                        <div className="dist__nodo-nombre">{n}</div>
-                    </div>,
-                    k < enlaces.length && (
-                        <div key={'e' + k}
-                            className={`dist__enlace${enlaceFuera ? ' dist__enlace--fuera' : ''}`}
-                            style={{ flex: `${t ? t.km : 4} 0 ${t ? Math.round(Math.max(110, t.km * 20)) : 110}px` }}>
-                            <div className="dist__enlace-etiqueta">
-                                {t ? `${num(t.km)} km · ${cerrado ? 'Cerrada' : fmt(minutos(t))}` : 'Sin tramo'}
-                            </div>
-                            <div className="dist__enlace-carril">
-                                <div className={[
-                                    'dist__enlace-linea',
-                                    t ? claseEstado(t.cond) : 'dist__enlace-linea--hueco',
-                                    t && ruta.valida && !enlaceFuera && 'dist__enlace-linea--ruta',
-                                ].filter(Boolean).join(' ')} />
-                            </div>
-                        </div>
-                    ),
-                ];
-            })}
-        </div>
-    </div>
 );
 
 // ── Calculadora ───────────────────────────────────────────
@@ -418,6 +378,13 @@ export const PantallaDistancias = ({ onVolver }) => {
     const ruta = calculo.valida
         ? { ...calculo, ids: new Set(calculo.tramos.map(t => t._id)) }
         : { ...calculo, nodos: new Set(), ids: new Set() };
+    // Tocar una plataforma del mapa la usa como destino (si era el origen, se intercambian)
+    const elegirEnMapa = nombre => {
+        if (nombre === destino) return;
+        if (nombre === origen) { setOrigen(destino); setDestino(origen); return; }
+        setDestino(nombre);
+    };
+
     // Si la ruta abarca toda la red, marcar "En ruta" no aporta nada
     const marcarRuta = ruta.ids.size > 0 && ruta.ids.size < tramos.length;
 
@@ -548,17 +515,22 @@ export const PantallaDistancias = ({ onVolver }) => {
                     <h2 className="dist__titulo">Distancias</h2>
                     <div className="dist__subtitulo">
                         Vía de lastre · {plataformas.length} {plataformas.length === 1 ? 'plataforma' : 'plataformas'} · {num(totalKm)} km
+                        {!puedeEditar && ' · Solo lectura'}
                     </div>
                 </div>
-                <span className="dist__rol">{puedeEditar ? 'Editor' : 'Solo lectura'}</span>
             </header>
 
             {desdeCache && <CacheFreshnessBadge cachedAt={cachedAt} onRefresh={cargar} />}
 
             {cargando && tramos.length === 0 ? <SkeletonTramos /> : (<>
+                {/* Calculadora arriba: lo que se elige se resalta enseguida en el mapa */}
+                <Calculadora plataformas={plataformas} desvios={plataformasDesvio} origen={origen} destino={destino} ruta={ruta}
+                    onOrigen={setOrigen} onDestino={setDestino}
+                    onIntercambiar={() => { setOrigen(destino); setDestino(origen); }} />
+
                 <section className="dist__seccion dist__seccion--via">
                     <div className="dist__via-cab">
-                        <h3 className="dist__seccion-titulo">Vía principal</h3>
+                        <h3 className="dist__seccion-titulo">Mapa de la vía</h3>
                         <div className="dist__leyenda">
                             {ESTADOS.map(e => (
                                 <span key={e} className="dist__leyenda-item">
@@ -567,26 +539,18 @@ export const PantallaDistancias = ({ onVolver }) => {
                             ))}
                         </div>
                     </div>
-                    {nodosPrincipal.length ? (
-                        <Tira nodos={nodosPrincipal} enlaces={enlacesPrincipal} ruta={ruta} origen={origen} destino={destino} />
+                    {tramos.length ? (
+                        <>
+                            <MapaVia tramos={tramos} ruta={ruta} origen={origen} destino={destino}
+                                onElegir={elegirEnMapa} />
+                            {plataformas.length > 1 && <p className="dist__mapa-ayuda">Toca una plataforma para calcular el viaje hasta ella.</p>}
+                        </>
                     ) : (
                         <p className="dist__via-vacia">
                             {puedeEditar ? 'Aún no hay tramos. Toca + para agregar el primero de la vía principal.' : 'Aún no hay tramos registrados.'}
                         </p>
                     )}
-                    {desvios.length > 0 && (
-                        <div className="dist__desvios">
-                            <h4 className="dist__desvios-titulo">Desvíos</h4>
-                            {desvios.map(t => (
-                                <Tira key={t._id} nodos={[t.from, t.to]} enlaces={[t]} ruta={ruta} origen={origen} destino={destino} compacta />
-                            ))}
-                        </div>
-                    )}
                 </section>
-
-                <Calculadora plataformas={plataformas} desvios={plataformasDesvio} origen={origen} destino={destino} ruta={ruta}
-                    onOrigen={setOrigen} onDestino={setDestino}
-                    onIntercambiar={() => { setOrigen(destino); setDestino(origen); }} />
 
                 <section className="dist__tramos">
                     <div className="dist__tramos-cab">
