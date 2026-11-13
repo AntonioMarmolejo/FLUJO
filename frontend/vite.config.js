@@ -38,10 +38,13 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
                 runtimeCaching: [
                     {
-                        // Jefes Inmediatos, Placas, Personas, Extensiones y Distancias guardan su propia copia (lib/flujoWorkersOffline.js,
-                        // lib/catalogoOffline.js): una respuesta vieja de esta caché parecería venir del servidor
+                        // Jefes Inmediatos, Placas, Personas, Extensiones, Distancias y los movimientos
+                        // del flujo guardan su propia copia (lib/flujoWorkersOffline.js, lib/catalogoOffline.js,
+                        // useMovimientosTurno.js): con señal lenta, esta caché devolvería una lista vieja como
+                        // si fuera del servidor y la pantalla perdería lo registrado después
                         urlPattern: ({ url, request }) => url.pathname.startsWith('/api/')
                             && !url.pathname.startsWith('/api/flujo-workers')
+                            && url.pathname !== '/api/movimientos'
                             && url.pathname !== '/api/vehiculos'
                             && url.pathname !== '/api/personas'
                             && url.pathname !== '/api/extensiones'

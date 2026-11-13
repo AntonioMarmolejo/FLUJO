@@ -178,4 +178,28 @@ db.version(12).stores({
     tramosPending: '++seq',
 });
 
+// v13: última copia de los movimientos de cada flujo (puesto|bloque|fecha), para
+// que con señal mala, sin conexión o al recargar se vea todo lo ya registrado
+db.version(13).stores({
+    movimientosPending: 'uuid, synced, fecha, createdAt',
+    vehiculosCache: 'placa, updatedAt',
+    personasCache: 'cedula, updatedAt',
+    edicionesPending: 'id, synced, createdAt',
+    extensionesCache: '_id, updatedAt',
+    catalogMeta: 'catalogo',
+    authVault: 'id',
+    borradosPending: 'id, createdAt',
+    firmasCache: '_id, updatedAt',
+    nominativosCache: '_id, bloque, updatedAt',
+    operacionesPending: 'uuid, tipo, createdAt',
+    flujoWorkersCache: 'id',
+    flujoWorkersPending: '++seq',
+    vehiculosPending: '++seq',
+    personasPending: '++seq',
+    extensionesPending: '++seq',
+    tramosCache: '_id, updatedAt',
+    tramosPending: '++seq',
+    movimientosTurnoCache: 'clave, guardadoEn',
+});
+
 export default db;

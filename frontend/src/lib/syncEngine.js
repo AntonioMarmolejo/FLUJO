@@ -63,6 +63,21 @@ export const syncPendingMovimientos = async (onSynced) => {
     }
 };
 
+// ── Copia local de los movimientos de cada flujo ─────────
+// Lo último que se mostró de un flujo (puesto|bloque|fecha): con señal mala, sin
+// conexión o tras recargar, la lista arranca desde aquí en vez de quedar vacía.
+const COPIA_FLUJO_DIAS = 7;
+
+export const guardarMovimientosFlujo = async (clave, movimientos) => {
+    const ahora = Date.now();
+    await db.movimientosTurnoCache.put({ clave, movimientos, guardadoEn: ahora });
+    // Las copias de flujos viejos ya no hacen falta
+    await db.movimientosTurnoCache.where('guardadoEn').below(ahora - COPIA_FLUJO_DIAS * 864e5).delete();
+};
+
+export const leerMovimientosFlujo = async (clave) =>
+    (await db.movimientosTurnoCache.get(clave))?.movimientos || [];
+
 // Agrega un movimiento a la cola offline
 export const encolarMovimiento = async ({ uuid, payload, hora, fecha }) => {
     await db.movimientosPending.add({
@@ -135,19 +150,23 @@ export const getBorradosPendientesIds = async () => {
     return rows.map(r => r.id);
 };
 
+// Devuelve cuántos borrados se confirmaron
 export const syncPendingBorrados = async () => {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine) return 0;
     const pending = await db.borradosPending.toArray();
+    let confirmados = 0;
     for (const { id } of pending) {
         try {
             await api.delete(`/movimientos/${id}`);
             await db.borradosPending.delete(id);
+            confirmados++;
         } catch (err) {
             // Si el servidor dice que ya no existe, el borrado ya se cumplió
-            if (err.response?.status === 404) await db.borradosPending.delete(id);
+            if (err.response?.status === 404) { await db.borradosPending.delete(id); confirmados++; }
             // si no, se reintentará en el próximo ciclo
         }
     }
+    return confirmados;
 };
 
 // Elimina un item de la cola (solo los ya sincronizados o cancelados)

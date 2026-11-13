@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import {
+    guardarMovimientosFlujo,
+    leerMovimientosFlujo,
     encolarMovimiento,
     subirMovimientoPendiente,
     cancelarMovimientoPendiente,
@@ -50,43 +52,84 @@ export const useMovimientosTurno = (userId, isPending) => {
         return () => window.removeEventListener('flujo:operaciones', onOperacion);
     }, [userId]);
 
-    const cargarDatos = async () => {
+    // Sube cada vez que un movimiento se confirma o se borra en el servidor. Una
+    // lista pedida antes de ese cambio ya está vieja: no se usa y se pide de nuevo.
+    const version = useRef(0);
+    const marcarCambio = () => { version.current++; };
+    // Flujo al que pertenece la lista en pantalla (al cambiar de flujo no se mezclan)
+    const claveEnPantalla = useRef(null);
+
+    const fechaTurno = turnoActivo && (turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual));
+    const claveTurno = turnoActivo && `${turnoActivo.puesto}|${turnoActivo.bloque}|${fechaTurno}`;
+
+    const cargarDatos = () => cargarFlujo(0);
+    const cargarFlujo = async intento => {
         if (!turnoActivo) return;
-        const turnoFecha = turnoActivo.fecha || getTurnoFecha(turnoActivo.turnoActual);
-        try {
-            const mRes = await api.get(`/movimientos?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`);
-            // No volver a mostrar un movimiento que el usuario ya borró pero que
-            // todavía no se confirmó contra el servidor (borrado en cola offline).
+        const { puesto, bloque } = turnoActivo;
+        const clave = claveTurno;
+
+        // Movimientos de ESTE flujo que siguen en la cola del dispositivo, menos
+        // los que ya aparecen confirmados (se comparan por su ID del dispositivo)
+        const leerCola = async confirmados => {
+            const uuids = new Set(confirmados.map(m => m.clientUUID).filter(Boolean));
+            const ids = new Set(confirmados.map(m => m._id));
+            return (await getPendingMovimientos())
+                .filter(i => i.fecha === fechaTurno && i.payload?.puesto === puesto && i.payload?.bloque === bloque)
+                .filter(i => !uuids.has(i.uuid) && !ids.has(i.uuid))
+                .map(i => ({ _id: i.uuid, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
+        };
+        // No volver a mostrar lo que el usuario borró y aún no se confirma en el servidor
+        const sinBorrados = async lista => {
             const borrados = new Set(await getBorradosPendientesIds());
-            const serverMovs = mRes.data.movimientos.filter(m => !borrados.has(m._id));
-            const serverIds = new Set(serverMovs.map(m => m._id));
-            const pending = await getPendingMovimientos();
-            const pendingItems = pending
-                .filter(item => !serverIds.has(item.uuid))
-                .map(item => ({ _id: item.uuid, _pending: true, hora: item.hora, fecha: item.fecha, ...item.payload }));
-            setMovimientos([...serverMovs, ...pendingItems]);
-            api.get(`/movimientos/stats?puesto=${turnoActivo.puesto}&bloque=${turnoActivo.bloque}&fecha=${turnoFecha}`)
+            return lista.filter(m => !borrados.has(m._id));
+        };
+
+        // 1. Lo que el dispositivo ya tenía de este flujo, al instante (solo si la
+        //    pantalla aún no muestra nada: lo que está en pantalla es más reciente)
+        const guardados = await sinBorrados(await leerMovimientosFlujo(clave).catch(() => []));
+        const colaInicial = await leerCola(guardados);
+        const mismoFlujo = claveEnPantalla.current === clave;
+        claveEnPantalla.current = clave;
+        setMovimientos(prev => (mismoFlujo && prev.length ? prev : [...guardados, ...colaInicial]));
+
+        // 2. La lista del servidor
+        const versionPedida = version.current;
+        try {
+            const mRes = await api.get(`/movimientos?puesto=${puesto}&bloque=${bloque}&fecha=${fechaTurno}`, { timeout: 20_000 });
+            if (versionPedida !== version.current && intento < 3) return cargarFlujo(intento + 1);
+            const serverMovs = await sinBorrados(mRes.data.movimientos);
+            setMovimientos([...serverMovs, ...await leerCola(serverMovs)]);
+            api.get(`/movimientos/stats?puesto=${puesto}&bloque=${bloque}&fecha=${fechaTurno}`)
                 .then(sRes => setDiasActivos(sRes.data.diasActivos ?? 0))
                 .catch(() => {});
         } catch {
-            // Sin conexión: conservar confirmados + cola Dexie
-            const pending = await getPendingMovimientos();
+            // Sin conexión o señal mala: nunca se quita nada de lo que ya se veía.
+            // Se juntan lo confirmado en pantalla, la copia del dispositivo y la cola.
+            const cola = await getPendingMovimientos();
+            const colaFlujo = cola.filter(i => i.fecha === fechaTurno && i.payload?.puesto === puesto && i.payload?.bloque === bloque);
             setMovimientos(prev => {
-                const confirmed = prev.filter(m => !m._pending);
-                const confirmedIds = new Set(confirmed.map(m => m._id));
-                const queueItems = pending
-                    .filter(i => !confirmedIds.has(i.uuid))
+                const confirmados = prev.filter(m => !m._pending);
+                const vistos = new Set(confirmados.map(m => m._id));
+                const todos = [...confirmados, ...guardados.filter(m => !vistos.has(m._id))];
+                const uuids = new Set(todos.map(m => m.clientUUID).filter(Boolean));
+                const enCola = colaFlujo
+                    .filter(i => !uuids.has(i.uuid))
                     .map(i => ({ _id: i.uuid, _pending: true, hora: i.hora, fecha: i.fecha, ...i.payload }));
-                return [...confirmed, ...queueItems];
+                return [...todos, ...enCola];
             });
         }
     };
 
-    const claveTurno = turnoActivo && `${turnoActivo.puesto}|${turnoActivo.bloque}|${turnoActivo.fecha}`;
     useEffect(() => {
         cargarDatos().finally(() => setCargadoPara(claveTurno));
     }, [turnoActivo]);
     const cargando = !turnoResuelto || (!!turnoActivo && cargadoPara !== claveTurno);
+
+    // Copia en el dispositivo de lo confirmado que se ve, para la próxima carga
+    useEffect(() => {
+        if (!claveTurno || cargadoPara !== claveTurno) return;
+        guardarMovimientosFlujo(claveTurno, movimientos.filter(m => !m._pending)).catch(() => {});
+    }, [movimientos, claveTurno, cargadoPara]);
 
     // Sincronización offline: reintenta la cola Dexie cuando vuelve la conexión,
     // cuando la pestaña recupera el foco (el navegador puede pausar el intervalo
@@ -95,6 +138,7 @@ export const useMovimientosTurno = (userId, isPending) => {
         if (!turnoActivo || isPending) return;
         const onSynced = ({ uuid, serverId, cancelado }) => {
             if (cancelado) return; // el usuario ya lo borró localmente mientras se subía
+            marcarCambio();
             setMovimientos(prev => prev.map(m => m._id === uuid ? { ...m, _id: serverId, _pending: false } : m));
         };
         const onSyncedEdicion = (id, movData) => {
@@ -104,7 +148,7 @@ export const useMovimientosTurno = (userId, isPending) => {
             if (navigator.onLine) {
                 syncPendingMovimientos(onSynced);
                 syncPendingEdiciones(onSyncedEdicion);
-                syncPendingBorrados();
+                syncPendingBorrados().then(n => { if (n) marcarCambio(); });
             }
         };
         const onVisibility = () => { if (document.visibilityState === 'visible') sync(); };
@@ -125,6 +169,7 @@ export const useMovimientosTurno = (userId, isPending) => {
     };
 
     const confirmarMovimiento = (tempId, realMov) => {
+        marcarCambio();
         setMovimientos(prev => prev.map(m => m._id === tempId ? realMov : m));
     };
 
@@ -150,6 +195,7 @@ export const useMovimientosTurno = (userId, isPending) => {
         await encolarBorrado(id);
         try {
             await api.delete(`/movimientos/${id}`);
+            marcarCambio();
             await cancelarBorradoEncolado(id);
         } catch {
             // Queda en la cola; el motor de sincronización lo reintentará
@@ -169,6 +215,7 @@ export const useMovimientosTurno = (userId, isPending) => {
             await Promise.all(confirmedIds.map(id => encolarBorrado(id)));
             try {
                 await api.delete('/movimientos/batch', { data: { ids: confirmedIds } });
+                marcarCambio();
                 await Promise.all(confirmedIds.map(id => cancelarBorradoEncolado(id)));
             } catch {
                 // Quedan en la cola; el motor de sincronización las reintentará una por una
