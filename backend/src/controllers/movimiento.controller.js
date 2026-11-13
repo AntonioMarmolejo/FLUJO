@@ -1,5 +1,6 @@
 import Movimiento from '../models/Movimiento.model.js';
 import Vehiculo from '../models/Vehiculo.model.js';
+import Turno from '../models/Turno.model.js';
 import { tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
@@ -224,11 +225,38 @@ const diasDesde = async (matchBase, anio, mes) => {
         { $sort: { fecha: -1 } },
     ]);
 
+    // Día o noche: lo que el usuario eligió al crear el flujo (y los cambios de
+    // turno que haya registrado ese día), no la hora a la que se abrió o se
+    // registró el primer movimiento. En la vista de Puestos un mismo día puede
+    // tener el flujo de día de un guardia y el de noche de otro.
+    const turnosPorFecha = new Map();
+    const flujos = await Turno.find(
+        { ...matchBase, fecha: { $in: docs.map(d => d.fecha) } },
+        'fecha turnoInicial cambios.a'
+    ).lean();
+    flujos.forEach(t => {
+        const set = turnosPorFecha.get(t.fecha) || new Set();
+        set.add(t.turnoInicial);
+        (t.cambios || []).forEach(c => c.a && set.add(c.a));
+        turnosPorFecha.set(t.fecha, set);
+    });
+
     return docs.map(d => {
-        const primeraHora = [...d.horas].sort()[0] || '12:00';
-        const earliestHour = parseInt(primeraHora.split(':')[0], 10);
-        const isDiurno = earliestHour >= 6 && earliestHour < 18;
-        return { fecha: d.fecha, ingresos: d.ingresos, salidas: d.salidas, petro: d.petro, isDiurno };
+        const elegidos = turnosPorFecha.get(d.fecha);
+        let turnos;
+        if (elegidos?.size) {
+            turnos = ['diurno', 'nocturno'].filter(t => elegidos.has(t));
+        } else {
+            // Días antiguos sin flujo guardado: se deduce por la hora del primer movimiento
+            const primeraHora = [...d.horas].sort()[0] || '12:00';
+            const hora = parseInt(primeraHora.split(':')[0], 10);
+            turnos = [hora >= 6 && hora < 18 ? 'diurno' : 'nocturno'];
+        }
+        return {
+            fecha: d.fecha, ingresos: d.ingresos, salidas: d.salidas, petro: d.petro,
+            turnos,
+            isDiurno: turnos[0] === 'diurno', // compatibilidad con versiones anteriores de la app
+        };
     });
 };
 

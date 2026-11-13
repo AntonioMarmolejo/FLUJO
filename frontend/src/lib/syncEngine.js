@@ -399,7 +399,11 @@ export const iniciarTurnoOffline = async (datos, usuarioId) => {
 
     let turno;
     let esCambio = false;
-    if (vigente && vigente.puesto === datos.puesto && vigente.bloque === datos.bloque) {
+    // El nocturno de ayer (vigente hasta las 06:00) solo continúa si se eligió
+    // noche; si se eligió día se abre el flujo de hoy, igual que en el servidor
+    const continua = vigente && vigente.puesto === datos.puesto && vigente.bloque === datos.bloque
+        && (vigente.fecha === fecha || datos.turno === 'nocturno');
+    if (continua) {
         esCambio = true;
         turno = {
             ...vigente,

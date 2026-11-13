@@ -615,9 +615,13 @@ export const PantallaFlujos = ({ turnoActivo, hasPermiso, isAdmin, genQuery, gen
             <div key={d.fecha} className="flujo__card" onClick={abrir}>
                 <div className="flujo__card-info">
                     <div className="flujo__fecha">
-                        <span className={`flujo__turno-icono${d.isDiurno ? ' flujo__turno-icono--diurno' : ''}`}>
-                            {d.isDiurno ? <IconSun size={14} /> : <IconMoon size={14} />}
-                        </span>
+                        {/* Lo que se eligió al crear el flujo (sol y luna si hubo cambio de turno) */}
+                        {(d.turnos || [d.isDiurno ? 'diurno' : 'nocturno']).map(t => (
+                            <span key={t} className={`flujo__turno-icono${t === 'diurno' ? ' flujo__turno-icono--diurno' : ''}`}
+                                title={t === 'diurno' ? 'Flujo de día' : 'Flujo de noche'}>
+                                {t === 'diurno' ? <IconSun size={14} /> : <IconMoon size={14} />}
+                            </span>
+                        ))}
                         {fechaLarga}
                     </div>
                     <div className="flujo__stats">

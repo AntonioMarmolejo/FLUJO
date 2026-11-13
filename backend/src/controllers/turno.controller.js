@@ -34,9 +34,11 @@ export const iniciarTurno = async (req, res) => {
         const horaInicio = /^\d{2}:\d{2}$/.test(req.body.horaInicio || '') ? req.body.horaInicio : getHoraActual();
         const horaECU = getHoraECU();
 
-        // Buscar turno activo de hoy; si es madrugada (00-05) también revisar nocturno de ayer
+        // Buscar turno activo de hoy. De madrugada (00-05), si se eligió noche, se
+        // continúa el nocturno de ayer; si se eligió día, se abre el flujo de hoy
+        // (manda lo que elige el usuario, no la hora a la que abre el flujo).
         let turnoExistente = await Turno.findOne({ usuario: req.user._id, puesto, bloque, fecha, activo: true });
-        if (!turnoExistente && horaECU < 6) {
+        if (!turnoExistente && horaECU < 6 && turno === 'nocturno') {
             turnoExistente = await Turno.findOne({
                 usuario: req.user._id, puesto, bloque,
                 fecha: getFechaAyer(), turnoActual: 'nocturno', activo: true,
