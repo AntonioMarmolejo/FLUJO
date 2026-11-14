@@ -1,0 +1,428 @@
+/* EN CAMINO (EnCamino.jsx): barra en el borde izquierdo de Inicio y cajón con
+   los vehículos que vienen hacia la garita. Noche por defecto; día abajo. */
+
+.camino {
+    --camino-fondo: #151517;
+    --camino-fila: #1c1d2a;
+    --camino-relleno: rgba(129, 140, 248, 0.2);
+    --camino-crono-fondo: rgba(129, 140, 248, 0.18);
+    --camino-ambar: #fbbf24;
+    --camino-ambar-fondo: rgba(245, 158, 11, 0.2);
+    --camino-mas-borde: rgba(129, 140, 248, 0.6);
+    --camino-mas-fondo: rgba(129, 140, 248, 0.1);
+    --camino-primario-texto: #0d0d14;
+    --camino-velo: rgba(0, 0, 0, 0.6);
+
+    /* Ocupa la misma columna que la app y recorta el cajón cerrado */
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 45;
+}
+[data-theme="light"] .camino {
+    --camino-fondo: #ffffff;
+    --camino-fila: #f3f5fb;
+    --camino-relleno: rgba(79, 70, 229, 0.13);
+    --camino-crono-fondo: rgba(79, 70, 229, 0.12);
+    --camino-ambar: #b45309;
+    --camino-ambar-fondo: rgba(245, 158, 11, 0.22);
+    --camino-mas-borde: rgba(79, 70, 229, 0.5);
+    --camino-mas-fondo: rgba(79, 70, 229, 0.06);
+    --camino-primario-texto: #ffffff;
+    --camino-velo: rgba(17, 24, 39, 0.4);
+}
+/* Mismos anchos de columna que .ws__wrapper en tableta y escritorio */
+@media (max-width: 480px) {
+    .camino {
+        max-width: 100%;
+    }
+}
+@media (min-width: 640px) {
+    .camino {
+        max-width: 768px;
+    }
+}
+@media (min-width: 1024px) {
+    .camino {
+        max-width: 1080px;
+    }
+}
+
+/* Fondo oscuro detrás del cajón (su opacidad sigue al arrastre) */
+.camino__velo {
+    position: absolute;
+    inset: 0;
+    background: var(--camino-velo);
+    transition: opacity 0.28s ease;
+    touch-action: pan-y;
+}
+.camino__velo.camino__velo--arrastre {
+    transition: none;
+}
+
+/* ── Cajón ── */
+.camino__cajon {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(calc(100% - 52px), 400px);
+    display: flex;
+    background: var(--camino-fondo);
+    border-right: 1px solid var(--borde-3);
+    border-radius: 0 24px 24px 0;
+    transform: translateX(-100%);
+    transition:
+        transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.28s;
+    pointer-events: auto;
+    touch-action: pan-y;
+}
+.camino__cajon.camino__cajon--abierto {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+}
+.camino__cajon.camino__cajon--arrastre {
+    transition: none;
+}
+.camino__contenido {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 14px 14px;
+}
+
+/* La barra: pegada al borde derecho del cajón, a la altura del botón + */
+.camino__barra {
+    position: absolute;
+    left: 100%;
+    bottom: 76px;
+    width: 28px;
+    height: 64px;
+    margin-left: -1px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: none;
+    outline: none;
+}
+.camino__barra-linea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    border-radius: 0 6px 6px 0;
+    background: var(--acento);
+    box-shadow: 0 0 12px rgba(129, 140, 248, 0.45);
+}
+.camino__barra:focus-visible .camino__barra-linea {
+    outline: 2px solid var(--acento-suave);
+    outline-offset: 2px;
+}
+.camino__barra-punto {
+    position: absolute;
+    left: 2px;
+    top: -6px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--aviso);
+    border: 2px solid var(--fondo-app);
+}
+
+/* ── Cabecera ── */
+.camino__cab {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 4px 14px;
+}
+.camino__titulo {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--texto-4);
+}
+.camino__total {
+    color: var(--acento);
+}
+.camino__subtitulo {
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--texto-tenue);
+}
+.camino__cerrar {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    border: 1px solid var(--borde-3);
+    background: var(--fondo-3);
+    color: var(--texto);
+    cursor: pointer;
+}
+
+/* ── Filas ── */
+.camino__lista {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.camino__fila {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 66px;
+    padding: 10px 10px 10px 12px;
+    border-radius: 12px;
+    border-left: 3px solid var(--acento);
+    background: var(--camino-fila);
+    overflow: hidden;
+}
+/* El fondo de cada fila es la barra de progreso */
+.camino__relleno {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background: var(--camino-relleno);
+    transition: width 1s linear;
+}
+.camino__crono,
+.camino__info,
+.camino__mas {
+    position: relative;
+}
+.camino__crono {
+    flex-shrink: 0;
+    min-width: 66px;
+    height: 44px;
+    padding: 0 8px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--camino-crono-fondo);
+    color: var(--acento);
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.camino__info {
+    flex: 1;
+    min-width: 0;
+}
+.camino__placa {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--texto);
+}
+/* La placa nunca se parte por el guion */
+.camino__placa > span:first-child {
+    white-space: nowrap;
+}
+.camino__retraso {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--camino-ambar);
+    background: var(--camino-ambar-fondo);
+    border-radius: 6px;
+    padding: 2px 7px;
+}
+.camino__ruta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 3px;
+    font-size: 13.5px;
+    color: var(--texto-3);
+}
+.camino__ruta-texto {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.camino__de-paso {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--texto);
+    border: 1px solid var(--borde-6);
+    background: var(--fondo-hover);
+    border-radius: 99px;
+    padding: 1px 8px;
+}
+.camino__mas {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    border: 1.5px solid var(--camino-mas-borde);
+    background: var(--camino-mas-fondo);
+    color: var(--acento);
+    cursor: pointer;
+}
+
+/* Retrasado: relleno ámbar al 100 % y cronómetro ámbar */
+.camino__fila.camino__fila--retrasado {
+    border-left-color: var(--aviso);
+}
+.camino__fila.camino__fila--retrasado .camino__relleno {
+    background: var(--camino-ambar-fondo);
+}
+.camino__fila.camino__fila--retrasado .camino__crono {
+    background: var(--camino-ambar-fondo);
+    color: var(--camino-ambar);
+}
+
+/* Registrar la llegada: la fila se abre en línea */
+.camino__fila.camino__fila--confirmar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--camino-mas-borde);
+    border-left: 3px solid var(--acento);
+}
+.camino__fila--retrasado.camino__fila--confirmar {
+    border-left-color: var(--aviso);
+}
+.camino__confirmar-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.camino__confirmar-titulo {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--texto-3);
+}
+.camino__crono.camino__crono--pildora {
+    min-width: 0;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 99px;
+    font-size: 13px;
+}
+.camino__placa-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 52px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--acento);
+    background: var(--fondo-app);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    outline: none;
+}
+.camino__confirmar-botones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.camino__btn {
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-3);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.camino__btn.camino__btn--primario {
+    border-color: var(--acento);
+    background: var(--acento);
+    color: var(--camino-primario-texto);
+}
+.camino__btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Más de 3 vehículos: el resto tras un botón fantasma */
+.camino__ver-mas {
+    flex-shrink: 0;
+    height: 52px;
+    border-radius: 12px;
+    border: 1.5px dashed var(--borde-6);
+    background: transparent;
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.camino__pie {
+    padding: 14px 0 4px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--texto-tenue);
+}
+.camino__aviso {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 52px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--texto);
+    color: var(--fondo-app);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+        opacity 0.2s,
+        transform 0.2s;
+    pointer-events: none;
+}
+.camino__aviso.camino__aviso--visible {
+    opacity: 1;
+    transform: translateY(0);
+}

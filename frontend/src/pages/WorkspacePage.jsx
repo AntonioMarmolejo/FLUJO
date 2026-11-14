@@ -20,6 +20,7 @@ import { PantallaPersonas } from './workspace/Personas';
 import { PantallaPlacasDB } from './workspace/Placas';
 import { PantallaUtilidades } from './workspace/Utilidades';
 import { AccesoRestringido, AvisoIniciarFlujo, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
+import { EnCamino } from './workspace/EnCamino';
 import {
     DASH_FILTROS,
     DRAWER_TABS,
@@ -627,6 +628,9 @@ const WorkspacePage = () => {
                     </div>
                 </>
             )}
+
+            {/* EN CAMINO: barra en el borde izquierdo de Inicio y su cajón */}
+            {tabActiva === 'inicio' && !selectMode && <EnCamino />}
 
             {/* Modales */}
             {/* Mientras el turno carga no se avisa: si existe, el formulario se abre solo */}
