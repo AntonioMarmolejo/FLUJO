@@ -477,18 +477,57 @@
     font-size: 13px;
     color: var(--texto-tenue);
 }
+/* Tarjeta compacta: al deslizarla a la derecha deja ver sus acciones (como en movimientos) */
+.dist__tramo-caja {
+    --dist-acciones: 152px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+}
+.dist__tramo-caja.dist__tramo-caja--lectura {
+    --dist-acciones: 48px;
+}
 .dist__tramo {
+    position: relative;
+    z-index: 1;
     background: var(--fondo-2);
     border: 1px solid var(--borde-3);
-    border-radius: 16px;
-    padding: 14px 14px 12px;
+    border-radius: 14px;
+    padding: 9px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    transition: border-color 0.2s;
+    gap: 5px;
+    cursor: pointer;
+    touch-action: pan-y;
+    user-select: none;
+    transform: translateX(0);
+    transition:
+        transform 0.25s ease,
+        border-color 0.2s;
 }
 .dist__tramo.dist__tramo--ruta {
     border-color: var(--borde-7);
+}
+.dist__tramo.dist__tramo--deslizada {
+    transform: translateX(var(--dist-acciones));
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.dist__tramo-acciones {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--dist-acciones);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+}
+/* Botón de estado: un punto con el color del estado actual de la vía */
+.mov__act-btn.dist__act-estado .dist__chip-punto {
+    width: 12px;
+    height: 12px;
 }
 .dist__tramo-cab {
     display: flex;
@@ -501,8 +540,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 8px;
-    font-size: 15px;
+    gap: 3px 6px;
+    font-size: 14px;
     font-weight: 700;
 }
 .dist__en-ruta {
@@ -521,45 +560,19 @@
     border-radius: 6px;
     padding: 1px 6px;
 }
-.dist__tramo-acciones {
-    display: flex;
-    gap: 2px;
-    margin: -6px -6px -6px 0;
-}
-.dist__icono-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 0;
-    background: transparent;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    color: var(--texto-3);
-}
-.dist__icono-btn:hover {
-    background: var(--fondo-hover);
-}
-.dist__icono-btn.dist__icono-btn--peligro:hover {
-    background: var(--dist-alerta-bg);
-    color: var(--peligro);
-}
 .dist__tramo-datos {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
-    font-size: 14px;
+    align-items: center;
+    gap: 4px 10px;
+    font-size: 13px;
     color: var(--texto-3);
 }
 .dist__tramo-tiempo {
+    flex-shrink: 0;
+    font-size: 14px;
     font-weight: 700;
     color: var(--texto);
-}
-.dist__tramo-estado {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
 }
 .dist__chip {
     display: inline-flex;
@@ -575,10 +588,15 @@
     font-weight: 700;
     font-family: inherit;
 }
-.dist__chip.dist__chip--boton {
-    height: 36px;
-    padding: 0 10px 0 12px;
-    cursor: pointer;
+.dist__chip.dist__chip--mini {
+    height: 22px;
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+.dist__chip.dist__chip--mini .dist__chip-punto {
+    width: 7px;
+    height: 7px;
 }
 .dist__chip-punto {
     width: 9px;
@@ -588,16 +606,22 @@
     border: 2px solid var(--via-linea);
 }
 .dist__tramo-actualizado {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--texto-tenue);
 }
+/* La nota ocupa como mucho dos líneas en la tarjeta (completa al compartir) */
 .dist__nota {
-    font-size: 13px;
-    line-height: 1.4;
+    font-size: 12px;
+    line-height: 1.35;
     color: var(--texto-3);
     background: var(--fondo-input);
-    border-radius: 10px;
-    padding: 8px 10px;
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .dist__vacio {
     background: var(--fondo-2);

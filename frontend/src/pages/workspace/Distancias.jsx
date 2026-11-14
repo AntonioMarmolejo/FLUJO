@@ -10,6 +10,8 @@ import {
     refrescarTramos,
 } from '../../lib/tramosOffline.js';
 import { CacheFreshnessBadge, PendienteBadge } from './comunes';
+import { addMouseSwipe, handleShareText } from './helpers';
+import { IconMinus, IconPencil, IconShare } from './iconos';
 import { MapaVia } from './MapaVia';
 import { Sk } from '../../components/Skeleton';
 import {
@@ -143,47 +145,71 @@ const Calculadora = ({ plataformas, desvios, origen, destino, ruta, onOrigen, on
 );
 
 // ── Tarjeta de tramo ──────────────────────────────────────
-const TarjetaTramo = ({ t, enRuta, pendiente, editable, onEstado, onEditar, onEliminar }) => {
+// Texto para compartir un tramo (WhatsApp, etc.)
+const textoTramo = t => [
+    `${esDesvio(t) ? 'Desvío' : 'Tramo'} ${nombreTramo(t)}`,
+    `Distancia: ${num(t.km)} km · ${num(t.vmin)}–${num(t.vmax)} km/h`,
+    `Estado de la vía: ${t.cond}${t.cond === 'Cerrada' ? ' (sin paso)' : ` · ≈ ${fmt(minutos(t))}`}`,
+    t.note && `Nota: ${t.note}`,
+    `Actualizado ${hace(t.at)}${t.by ? ` por ${t.by}` : ''}`,
+].filter(Boolean).join('\n');
+
+// Compacta; al deslizarla hacia la derecha muestra sus acciones (como en movimientos)
+const TarjetaTramo = ({ t, enRuta, pendiente, editable, deslizada, onDeslizar, gestoRef, onEstado, onEditar, onEliminar }) => {
     const cerrado = t.cond === 'Cerrada';
-    const chip = <><span className="dist__chip-punto" />{t.cond}</>;
+    const accion = fn => () => { onDeslizar(null); fn(); };
+    const alSoltar = dx => {
+        if (deslizada) { if (dx < -30) onDeslizar(null); }
+        else if (dx > 55) onDeslizar(t._id);
+    };
     return (
-        <article className={`dist__tramo${enRuta ? ' dist__tramo--ruta' : ''}`}>
-            <div className="dist__tramo-cab">
-                <div className="dist__tramo-titulo">
-                    <span>{nombreTramo(t)}</span>
-                    {t.esY && <span className="dist__marca-y" title="Termina en una bifurcación en Y">Y</span>}
-                    {enRuta &&<span className="dist__en-ruta">En ruta</span>}
-                    {pendiente && <PendienteBadge />}
-                </div>
+        <div className={`dist__tramo-caja${editable ? '' : ' dist__tramo-caja--lectura'}`}>
+            <div className="dist__tramo-acciones" onClick={e => e.stopPropagation()}>
                 {editable && (
-                    <div className="dist__tramo-acciones">
-                        <button className="dist__icono-btn" aria-label="Editar tramo" onClick={onEditar}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                        </button>
-                        <button className="dist__icono-btn dist__icono-btn--peligro" aria-label="Eliminar tramo" onClick={onEliminar}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" /></svg>
-                        </button>
-                    </div>
-                )}
-            </div>
-            <div className="dist__tramo-datos">
-                <span>{num(t.km)} km</span>
-                <span>{num(t.vmin)}–{num(t.vmax)} km/h</span>
-                {esDesvio(t) && <span>{t.lado === 'izquierda' ? '← Izquierda' : 'Derecha →'}</span>}
-                <span className="dist__tramo-tiempo">{cerrado ? 'Sin paso' : `≈ ${fmt(minutos(t))}`}</span>
-            </div>
-            <div className="dist__tramo-estado">
-                {editable ? (
-                    <button className={`dist__chip dist__chip--boton ${claseEstado(t.cond)}`} aria-label="Cambiar estado de la vía" onClick={onEstado}>
-                        {chip}<IconoChevron tam={14} />
+                    <button className={`mov__act-btn dist__act-estado ${claseEstado(t.cond)}`} title="Estado de la vía" aria-label="Estado de la vía" onClick={accion(onEstado)}>
+                        <span className="dist__chip-punto" />
                     </button>
-                ) : (
-                    <span className={`dist__chip ${claseEstado(t.cond)}`}>{chip}</span>
                 )}
-                <span className="dist__tramo-actualizado">Actualizado {hace(t.at)} · {nombreFirma(t.by)}</span>
+                {editable && <button className="mov__act-btn" title="Editar" aria-label="Editar" onClick={accion(onEditar)}><IconPencil /></button>}
+                <button className="mov__act-btn" title="Compartir" aria-label="Compartir" onClick={accion(() => handleShareText(textoTramo(t)))}><IconShare /></button>
+                {editable && <button className="mov__act-btn mov__act-btn--danger" title="Eliminar" aria-label="Eliminar" onClick={accion(onEliminar)}><IconMinus /></button>}
             </div>
-            {t.note && <div className="dist__nota">{t.note}</div>}
-        </article>
+            <article
+                className={`dist__tramo${enRuta ? ' dist__tramo--ruta' : ''}${deslizada ? ' dist__tramo--deslizada' : ''}`}
+                onTouchStart={e => { gestoRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, moved: false, vertScroll: false }; }}
+                onTouchMove={e => {
+                    const dx = e.touches[0].clientX - gestoRef.current.startX;
+                    const dy = e.touches[0].clientY - gestoRef.current.startY;
+                    if (!gestoRef.current.moved && !gestoRef.current.vertScroll) {
+                        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                        if (Math.abs(dy) > Math.abs(dx)) { gestoRef.current.vertScroll = true; return; }
+                        gestoRef.current.moved = true;
+                    }
+                }}
+                onTouchEnd={e => { if (gestoRef.current.moved) alSoltar(e.changedTouches[0].clientX - gestoRef.current.startX); }}
+                onMouseDown={e => addMouseSwipe(gestoRef, alSoltar).onMouseDown(e)}
+                onClick={() => {
+                    if (gestoRef.current?.didDrag) { gestoRef.current.didDrag = false; return; }
+                    onDeslizar(deslizada ? null : t._id);
+                }}
+            >
+                <div className="dist__tramo-cab">
+                    <div className="dist__tramo-titulo">
+                        <span className="dist__tramo-nombre">{nombreTramo(t)}</span>
+                        {t.esY && <span className="dist__marca-y" title="Termina en una bifurcación en Y">Y</span>}
+                        {enRuta && <span className="dist__en-ruta">En ruta</span>}
+                        {pendiente && <PendienteBadge />}
+                    </div>
+                    <span className="dist__tramo-tiempo">{cerrado ? 'Sin paso' : `≈ ${fmt(minutos(t))}`}</span>
+                </div>
+                <div className="dist__tramo-datos">
+                    <span className={`dist__chip dist__chip--mini ${claseEstado(t.cond)}`}><span className="dist__chip-punto" />{t.cond}</span>
+                    <span>{num(t.km)} km · {num(t.vmin)}–{num(t.vmax)} km/h{esDesvio(t) ? ` · ${t.lado === 'izquierda' ? '← Izq.' : 'Der. →'}` : ''}</span>
+                </div>
+                {t.note && <div className="dist__nota">{t.note}</div>}
+                <div className="dist__tramo-actualizado">Actualizado {hace(t.at)} · {nombreFirma(t.by)}</div>
+            </article>
+        </div>
     );
 };
 
@@ -340,6 +366,8 @@ export const PantallaDistancias = ({ onVolver }) => {
     const [hoja, setHoja] = useState(null);          // { tipo: 'estado', id, cond, note } | { tipo: 'form', modo, tipoTramo... }
     const [hojaAbierta, setHojaAbierta] = useState(false);
     const [borrarId, setBorrarId] = useState(null);
+    const [deslizadaId, setDeslizadaId] = useState(null);   // tarjeta con sus acciones a la vista
+    const gesto = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false, didDrag: false });
     const [aviso, setAviso] = useState({ texto: '', visible: false });
     const temporizador = useRef(null);
 
@@ -536,6 +564,7 @@ export const PantallaDistancias = ({ onVolver }) => {
         <TarjetaTramo key={t._id} t={t} editable={puedeEditar}
             pendiente={pendientes.has(t._id)}
             enRuta={marcarRuta && ruta.ids.has(t._id)}
+            deslizada={deslizadaId === t._id} onDeslizar={setDeslizadaId} gestoRef={gesto}
             onEstado={() => abrirEstado(t)}
             onEditar={() => abrirEdicion(t)}
             onEliminar={() => setBorrarId(t._id)} />
