@@ -117,6 +117,16 @@ export const listarPlataformas = tramos => {
     return lista;
 };
 
+// Bifurcaciones en Y: puntos donde la vía se separa. No son plataformas (no se
+// eligen como origen ni destino), pero sirven para medir dónde empieza cada desvío.
+export const nodosY = tramos => new Set(tramos.filter(t => t.esY).map(t => t.to));
+
+// Plataformas que se pueden elegir en la calculadora (todas menos las Y)
+export const listarDestinos = tramos => {
+    const ys = nodosY(tramos);
+    return listarPlataformas(tramos).filter(p => !ys.has(p));
+};
+
 // Camino más corto en número de tramos entre dos plataformas (búsqueda en anchura)
 const buscarCamino = (tramos, origen, destino) => {
     const previo = new Map([[origen, null]]);
@@ -140,7 +150,7 @@ const buscarCamino = (tramos, origen, destino) => {
 
 // Tiempo de viaje entre dos plataformas, por la vía principal y los desvíos que haga falta
 export const calcularRuta = (tramos, origen, destino) => {
-    const plataformas = listarPlataformas(tramos);
+    const plataformas = listarDestinos(tramos);
     if (!plataformas.includes(origen) || !plataformas.includes(destino) || origen === destino) {
         return { valida: false, motivo: plataformas.length < 2 ? 'Agrega tramos para calcular tiempos.' : 'Elige un origen y un destino distintos.' };
     }
@@ -167,10 +177,10 @@ export const calcularRuta = (tramos, origen, destino) => {
 
 // Tras agregar, editar o borrar: origen y destino deben seguir existiendo y ser distintos
 export const ajustarExtremos = (tramos, origen, destino) => {
-    const plataformas = listarPlataformas(tramos);
+    const plataformas = listarDestinos(tramos);
     const { nodos } = armarPrincipal(tramos);
     const o = plataformas.includes(origen) ? origen : (plataformas[0] || '');
-    const finPrincipal = nodos[nodos.length - 1] || plataformas[plataformas.length - 1] || '';
+    const finPrincipal = [...nodos].reverse().find(n => plataformas.includes(n)) || plataformas[plataformas.length - 1] || '';
     const d = plataformas.includes(destino) && destino !== o ? destino : (finPrincipal !== o ? finPrincipal : (plataformas.find(p => p !== o) || ''));
     return { origen: o, destino: d };
 };
@@ -224,7 +234,8 @@ export const validarTramo = (form, existentes) => {
     if (!(vmin > 0)) e.vmin = 'Ingresa una velocidad válida.';
     if (!(vmax > 0)) e.vmax = 'Ingresa una velocidad válida.';
     else if (vmin > 0 && vmin >= vmax) e.vmax = 'Debe ser mayor que la mínima.';
-    return Object.keys(e).length ? { errores: e } : { datos: { from, to, km, vmin, vmax } };
+    const extra = { esY: !!form.esY, lado: form.lado === 'izquierda' ? 'izquierda' : 'derecha' };
+    return Object.keys(e).length ? { errores: e } : { datos: { from, to, km, vmin, vmax, ...extra } };
 };
 
 // Edita un tramo. Si cambia el nombre de una plataforma, se cambia en toda la red.

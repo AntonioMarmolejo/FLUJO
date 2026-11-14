@@ -173,7 +173,7 @@
 }
 .mapa__svg {
     display: block;
-    min-width: 100%;
+    margin: 0 auto;
     overflow: visible;
 }
 .mapa__linea {
@@ -258,6 +258,20 @@
 }
 .mapa__plataforma.mapa__plataforma--fuera {
     opacity: 0.4;
+}
+/* Bifurcación en Y: punto pequeño, sin sigla y sin elegirse como destino */
+.mapa__plataforma.mapa__plataforma--y {
+    cursor: default;
+}
+.mapa__punto.mapa__punto--y {
+    fill: var(--texto);
+    stroke: var(--fondo-2);
+    stroke-width: 2;
+}
+.mapa__nombre.mapa__nombre--y {
+    font-size: 12px;
+    font-weight: 500;
+    fill: var(--texto-3);
 }
 .dist__mapa-ayuda {
     margin: 0;
@@ -498,6 +512,14 @@
     background: var(--fondo-hover);
     border-radius: 6px;
     padding: 2px 6px;
+}
+.dist__marca-y {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--texto-3);
+    border: 1px solid var(--borde-7);
+    border-radius: 6px;
+    padding: 1px 6px;
 }
 .dist__tramo-acciones {
     display: flex;

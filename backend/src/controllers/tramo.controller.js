@@ -18,6 +18,8 @@ const leerDatos = (b) => {
             from, to, km, vmin, vmax, cond,
             note: String(b.note ?? '').trim().slice(0, 500),
             orden: Number.isFinite(Number(b.orden)) ? Number(b.orden) : 0,
+            esY: b.esY === true,
+            lado: b.lado === 'izquierda' ? 'izquierda' : 'derecha',
         },
     };
 };

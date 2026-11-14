@@ -14,6 +14,10 @@ const tramoSchema = new mongoose.Schema(
         cond: { type: String, enum: ['Buena', 'Regular', 'Mala', 'Cerrada'], default: 'Buena' },
         note: { type: String, trim: true, default: '' },
         orden: { type: Number, default: 0 },
+        // El destino del tramo es una bifurcación en Y (no una plataforma): de ahí salen desvíos
+        esY: { type: Boolean, default: false },
+        // Hacia qué lado sale el desvío de la vía principal (solo dibujo del mapa)
+        lado: { type: String, enum: ['derecha', 'izquierda'], default: 'derecha' },
         // Última vez que cambió el estado de la vía o su nota, y quién lo hizo
         at: { type: Date, default: Date.now },
         by: { type: String, trim: true, default: '' },

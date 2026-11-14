@@ -23,8 +23,10 @@ import {
     formatoNumero as num,
     formatoTiempo as fmt,
     hace,
+    listarDestinos,
     listarPlataformas,
     minutos,
+    nodosY,
     nombreCorto,
     nombreFirma,
     ordenarDesvios,
@@ -37,7 +39,18 @@ import '../../styles/Distancias.css';
 
 const claseEstado = estado => `estado-via estado-via--${estado.toLowerCase()}`;
 const nombreTramo = t => `${t.from} → ${t.to}`;
-const FORM_VACIO = { from: '', to: '', km: '', vmin: '', vmax: '' };
+const FORM_VACIO = { from: '', to: '', km: '', vmin: '', vmax: '', esY: false, lado: 'derecha' };
+
+// Selector de dos o más opciones en una sola fila (tipo de tramo, destino, lado)
+const Segmentos = ({ etiqueta, valor, opciones, onChange }) => (
+    <div className="dist__tipo" role="radiogroup" aria-label={etiqueta}>
+        {opciones.map(([id, label]) => (
+            <button key={id} type="button" role="radio" aria-checked={valor === id}
+                className={`dist__tipo-opcion${valor === id ? ' dist__tipo-opcion--sel' : ''}`}
+                onClick={() => onChange(id)}>{label}</button>
+        ))}
+    </div>
+);
 
 const IconoChevron = ({ tam = 16 }) => (
     <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
@@ -138,7 +151,8 @@ const TarjetaTramo = ({ t, enRuta, pendiente, editable, onEstado, onEditar, onEl
             <div className="dist__tramo-cab">
                 <div className="dist__tramo-titulo">
                     <span>{nombreTramo(t)}</span>
-                    {enRuta && <span className="dist__en-ruta">En ruta</span>}
+                    {t.esY && <span className="dist__marca-y" title="Termina en una bifurcación en Y">Y</span>}
+                    {enRuta &&<span className="dist__en-ruta">En ruta</span>}
                     {pendiente && <PendienteBadge />}
                 </div>
                 {editable && (
@@ -155,6 +169,7 @@ const TarjetaTramo = ({ t, enRuta, pendiente, editable, onEstado, onEditar, onEl
             <div className="dist__tramo-datos">
                 <span>{num(t.km)} km</span>
                 <span>{num(t.vmin)}–{num(t.vmax)} km/h</span>
+                {esDesvio(t) && <span>{t.lado === 'izquierda' ? '← Izquierda' : 'Derecha →'}</span>}
                 <span className="dist__tramo-tiempo">{cerrado ? 'Sin paso' : `≈ ${fmt(minutos(t))}`}</span>
             </div>
             <div className="dist__tramo-estado">
@@ -239,7 +254,7 @@ const CampoForm = ({ etiqueta, valor, error, onChange, ayuda, soloLectura, decim
     </label>
 );
 
-const HojaFormulario = ({ form, puedeElegirTipo, desdeFijo, salidas, onTipo, onCampo, onCancelar, onGuardar }) => {
+const HojaFormulario = ({ form, puedeElegirTipo, desdeFijo, salidas, ys, eligeLado, onTipo, onCampo, onCancelar, onGuardar }) => {
     const e = form.err || {};
     const esNuevo = form.modo === 'nuevo';
     const desvio = form.tipo === 'desvio';
@@ -249,13 +264,8 @@ const HojaFormulario = ({ form, puedeElegirTipo, desdeFijo, salidas, onTipo, onC
                 {esNuevo ? (desvio ? 'Nuevo desvío' : 'Nuevo tramo') : (desvio ? 'Editar desvío' : 'Editar tramo')}
             </div>
             {puedeElegirTipo && (
-                <div className="dist__tipo" role="radiogroup" aria-label="Tipo de tramo">
-                    {[['principal', 'Vía principal'], ['desvio', 'Desvío']].map(([id, label]) => (
-                        <button key={id} role="radio" aria-checked={form.tipo === id}
-                            className={`dist__tipo-opcion${form.tipo === id ? ' dist__tipo-opcion--sel' : ''}`}
-                            onClick={() => onTipo(id)}>{label}</button>
-                    ))}
-                </div>
+                <Segmentos etiqueta="Tipo de tramo" valor={form.tipo} onChange={onTipo}
+                    opciones={[['principal', 'Vía principal'], ['desvio', 'Desvío']]} />
             )}
             {desvio ? (
                 <label className="dist__campo dist__campo--form">
@@ -263,12 +273,12 @@ const HojaFormulario = ({ form, puedeElegirTipo, desdeFijo, salidas, onTipo, onC
                     <div className="dist__select-caja">
                         <select className={`dist__select dist__select--form${e.from ? ' dist__input--error' : ''}`}
                             value={form.from} onChange={ev => onCampo('from', ev.target.value)}>
-                            <option value="">Elige una plataforma</option>
-                            {salidas.map(p => <option key={p} value={p}>{p}</option>)}
+                            <option value="">Elige una plataforma o una Y</option>
+                            {salidas.map(p => <option key={p} value={p}>{ys.has(p) ? `${p} (Y)` : p}</option>)}
                         </select>
                         <span className="dist__select-chevron"><IconoChevron /></span>
                     </div>
-                    <span className="dist__ayuda">Plataforma de la vía donde empieza el acceso.</span>
+                    <span className="dist__ayuda">Plataforma o bifurcación en Y donde empieza el acceso.</span>
                     {e.from && <span className="dist__error">{e.from}</span>}
                 </label>
             ) : (
@@ -276,8 +286,28 @@ const HojaFormulario = ({ form, puedeElegirTipo, desdeFijo, salidas, onTipo, onC
                     soloLectura={desdeFijo} placeholder="Ej.: Campamento"
                     ayuda={desdeFijo && 'El tramo nuevo se agrega al final de la vía principal.'} />
             )}
-            <CampoForm etiqueta={desvio ? 'Hasta (plataforma)' : 'Hasta'} valor={form.to} error={e.to}
-                onChange={v => onCampo('to', v)} placeholder={desvio ? 'Ej.: Plataforma C' : 'Ej.: Puerto Nuevo'} />
+            {desvio && (
+                <div className="dist__campo dist__campo--form">
+                    Sale hacia
+                    {eligeLado ? (<>
+                        <Segmentos etiqueta="Lado del desvío" valor={form.lado} onChange={v => onCampo('lado', v)}
+                            opciones={[['izquierda', '← Izquierda'], ['derecha', 'Derecha →']]} />
+                        <span className="dist__ayuda">Lado de la vía principal por el que sale, yendo del campamento hacia Puerto Nuevo.</span>
+                    </>) : (
+                        <span className="dist__ayuda">Sigue el mismo lado del desvío del que sale.</span>
+                    )}
+                </div>
+            )}
+            <div className="dist__campo dist__campo--form">
+                Llega a
+                <Segmentos etiqueta="A qué llega el tramo" valor={form.esY ? 'y' : 'plataforma'}
+                    onChange={v => onCampo('esY', v === 'y')}
+                    opciones={[['plataforma', 'Plataforma'], ['y', 'Una Y (bifurcación)']]} />
+                {form.esY && <span className="dist__ayuda">Punto donde la vía se separa. De ahí podrás sacar desvíos; no aparece en la calculadora.</span>}
+            </div>
+            <CampoForm etiqueta={form.esY ? 'Nombre de la Y' : desvio ? 'Hasta (plataforma)' : 'Hasta'} valor={form.to} error={e.to}
+                onChange={v => onCampo('to', v)}
+                placeholder={form.esY ? 'Ej.: Y del Edén' : desvio ? 'Ej.: Plataforma C' : 'Ej.: Puerto Nuevo'} />
             <CampoForm etiqueta="Distancia (km)" valor={form.km} error={e.km} onChange={v => onCampo('km', v)} decimal placeholder="0" />
             <div className="dist__form-fila">
                 <CampoForm etiqueta="Vel. mínima (km/h)" valor={form.vmin} error={e.vmin} onChange={v => onCampo('vmin', v)} decimal placeholder="0" />
@@ -363,8 +393,11 @@ export const PantallaDistancias = ({ onVolver }) => {
     const { nodos: nodosPrincipal, enlaces: enlacesPrincipal } = armarPrincipal(tramos);
     const principales = enlacesPrincipal.filter(Boolean);
     const desvios = ordenarDesvios(tramos, nodosPrincipal);
+    // Todos los puntos de la red (plataformas y Y) y, aparte, los que se eligen en la calculadora
     const plataformas = listarPlataformas(tramos);
-    const plataformasDesvio = new Set(plataformas.filter(p => !nodosPrincipal.includes(p)));
+    const ys = nodosY(tramos);
+    const destinos = listarDestinos(tramos);
+    const plataformasDesvio = new Set(destinos.filter(p => !nodosPrincipal.includes(p)));
     const totalKm = tramos.reduce((a, t) => a + t.km, 0);
 
     // Origen y destino siempre válidos cuando la red cambia
@@ -432,7 +465,8 @@ export const PantallaDistancias = ({ onVolver }) => {
     const abrirEdicion = t => {
         setHoja({
             tipo: 'form', modo: 'editar', id: t._id, tipoTramo: esDesvio(t) ? 'desvio' : 'principal',
-            from: t.from, to: t.to, km: String(t.km), vmin: String(t.vmin), vmax: String(t.vmax), err: {},
+            from: t.from, to: t.to, km: String(t.km), vmin: String(t.vmin), vmax: String(t.vmax),
+            esY: !!t.esY, lado: t.lado === 'izquierda' ? 'izquierda' : 'derecha', err: {},
         });
         setHojaAbierta(true);
     };
@@ -452,6 +486,8 @@ export const PantallaDistancias = ({ onVolver }) => {
         const ramas = ramasDe(tramos, t.to);
         return plataformas.filter(p => p !== t.to && !ramas.has(p));
     })();
+    // El lado solo se elige si el desvío sale de la vía principal; si sale de otro desvío, sigue su lado
+    const formEligeLado = hoja?.tipo === 'form' && (!hoja.from || nodosPrincipal.includes(hoja.from));
 
     const guardarFormulario = async () => {
         const esNuevo = hoja.modo === 'nuevo';
@@ -514,7 +550,7 @@ export const PantallaDistancias = ({ onVolver }) => {
                 <div className="dist__titulos">
                     <h2 className="dist__titulo">Distancias</h2>
                     <div className="dist__subtitulo">
-                        Vía de lastre · {plataformas.length} {plataformas.length === 1 ? 'plataforma' : 'plataformas'} · {num(totalKm)} km
+                        Vía de lastre · {destinos.length} {destinos.length === 1 ? 'plataforma' : 'plataformas'} · {num(totalKm)} km
                         {!puedeEditar && ' · Solo lectura'}
                     </div>
                 </div>
@@ -524,7 +560,7 @@ export const PantallaDistancias = ({ onVolver }) => {
 
             {cargando && tramos.length === 0 ? <SkeletonTramos /> : (<>
                 {/* Calculadora arriba: lo que se elige se resalta enseguida en el mapa */}
-                <Calculadora plataformas={plataformas} desvios={plataformasDesvio} origen={origen} destino={destino} ruta={ruta}
+                <Calculadora plataformas={destinos} desvios={plataformasDesvio} origen={origen} destino={destino} ruta={ruta}
                     onOrigen={setOrigen} onDestino={setDestino}
                     onIntercambiar={() => { setOrigen(destino); setDestino(origen); }} />
 
@@ -543,7 +579,12 @@ export const PantallaDistancias = ({ onVolver }) => {
                         <>
                             <MapaVia tramos={tramos} ruta={ruta} origen={origen} destino={destino}
                                 onElegir={elegirEnMapa} />
-                            {plataformas.length > 1 && <p className="dist__mapa-ayuda">Toca una plataforma para calcular el viaje hasta ella.</p>}
+                            {destinos.length > 1 && (
+                                <p className="dist__mapa-ayuda">
+                                    Toca una plataforma para calcular el viaje hasta ella.
+                                    {ys.size > 0 && ' Los puntos pequeños son bifurcaciones en Y.'}
+                                </p>
+                            )}
                         </>
                     ) : (
                         <p className="dist__via-vacia">
@@ -590,7 +631,7 @@ export const PantallaDistancias = ({ onVolver }) => {
                 {hoja?.tipo === 'form' && (
                     <HojaFormulario form={{ ...hoja, tipo: hoja.tipoTramo }}
                         puedeElegirTipo={hoja.modo === 'nuevo' && plataformas.length > 0}
-                        desdeFijo={formDesdeFijo} salidas={salidasDesvio}
+                        desdeFijo={formDesdeFijo} salidas={salidasDesvio} ys={ys} eligeLado={formEligeLado}
                         onTipo={cambiarTipo} onCampo={cambiarCampo}
                         onCancelar={cerrarHoja} onGuardar={guardarFormulario} />
                 )}
