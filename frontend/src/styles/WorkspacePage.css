@@ -7025,3 +7025,61 @@
 .perfil__install-note.perfil__install-note--junto {
     margin-top: 2px;
 }
+
+/* ── EN CAMINO ─────────────────────────────────────────────
+   INGRESO registrado desde EN CAMINO, y garitas como destino de una SALIDA */
+.mov__instanciado {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: rgba(129, 140, 248, 0.16);
+    color: var(--acento-suave);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    vertical-align: middle;
+}
+[data-theme="light"] .mov__instanciado {
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--acento);
+}
+.encamino-destino {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: -4px 0 12px;
+}
+.encamino-destino__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.encamino-destino__chip {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 99px;
+    border: 1px solid var(--borde-6);
+    background: var(--fondo-3);
+    color: var(--texto-3);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.encamino-destino__chip.encamino-destino__chip--sel {
+    border-color: var(--acento);
+    background: rgba(129, 140, 248, 0.16);
+    color: var(--texto);
+}
+[data-theme="light"] .encamino-destino__chip.encamino-destino__chip--sel {
+    background: rgba(79, 70, 229, 0.1);
+}
+.encamino-destino__ayuda {
+    font-size: 12px;
+    color: var(--texto-tenue);
+}
+.encamino-destino__ayuda strong {
+    color: var(--acento);
+}

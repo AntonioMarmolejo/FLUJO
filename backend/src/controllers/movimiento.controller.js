@@ -13,6 +13,40 @@ const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const vehiculoFields = ({ marca, color, tipoVehiculo, empresa, conductor, cedula }) =>
     ({ marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '', empresa: empresa || '', conductor: conductor || '', cedula: cedula || '' });
 
+// ── EN CAMINO ─────────────────────────────────────────────
+// Una SALIDA hacia otra garita del bloque aparece en EN CAMINO de las garitas
+// por las que pasa, como máximo durante esta cantidad de minutos.
+const EN_CAMINO_MIN = 60;
+const texto = (v, max = 60) => String(v ?? '').trim().slice(0, max);
+
+// Valida el tránsito que arma la app al registrar la SALIDA (ver frontend lib/garitas.js)
+const leerTransito = (t, ahora = Date.now()) => {
+    if (!t || typeof t !== 'object') return undefined;
+    const origen = texto(t.origen), destino = texto(t.destino);
+    if (!origen || !destino || origen === destino) return undefined;
+    const tiempos = (Array.isArray(t.tiempos) ? t.tiempos : []).slice(0, 30).map(x => {
+        const min = x?.min == null || x.min === '' ? null : Number(x.min);
+        return { garita: texto(x?.garita), min: Number.isFinite(min) ? Math.max(0, Math.round(min)) : null };
+    }).filter(x => x.garita && x.garita !== origen);
+    if (tiempos[tiempos.length - 1]?.garita !== destino) tiempos.push({ garita: destino, min: null });
+    // La hora de salida la pone el dispositivo (puede subirse más tarde, sin conexión)
+    let salidaAt = new Date(t.salidaAt).getTime();
+    if (!Number.isFinite(salidaAt) || salidaAt > ahora + 10 * 60e3 || salidaAt < ahora - 7 * 864e5) salidaAt = ahora;
+    return { origen, destino, salidaAt: new Date(salidaAt), tiempos, estado: 'en_camino', vistos: [], cerradoAt: null };
+};
+
+// Datos del vehículo que el INGRESO registrado desde EN CAMINO toma de la SALIDA
+const CAMPOS_INSTANCIA = ['marca', 'color', 'tipoVehiculo', 'empresa', 'conductor', 'cedula', 'guia', 'quienAutoriza', 'empresaAutoriza'];
+
+// La garita registró la llegada: deja de verlo en EN CAMINO; si era el destino, el tránsito se cierra
+const marcarLlegada = async (salida, garita) => {
+    const g = texto(garita);
+    if (!g) return;
+    const update = { $addToSet: { 'transito.vistos': g } };
+    if (g === salida.transito.destino) update.$set = { 'transito.estado': 'llegado', 'transito.cerradoAt': new Date() };
+    await Movimiento.updateOne({ _id: salida._id, 'transito.estado': 'en_camino' }, update);
+};
+
 // POST /api/movimientos
 export const crearMovimiento = async (req, res) => {
     try {
@@ -26,7 +60,7 @@ export const crearMovimiento = async (req, res) => {
             if (existing) return res.status(201).json({ message: 'Movimiento ya registrado', movimiento: existing });
         }
 
-        const movimiento = await Movimiento.create({
+        const datos = {
             usuario: req.user._id, puesto, bloque, tipo,
             placa: placa.trim().toUpperCase(),
             marca: marca || '', color: color || '', tipoVehiculo: tipoVehiculo || '',
@@ -36,11 +70,32 @@ export const crearMovimiento = async (req, res) => {
             guia: guia || '', guias: guias || [], quienAutoriza: quienAutoriza || '', empresaAutoriza: empresaAutoriza || '',
             documento: documento || '', documentoNombre: documentoNombre || '', documentoTipo: documentoTipo || '',
             hora: horaCliente || getHora(), fecha: req.body.fecha || getFecha(),
-        });
+        };
+        // SALIDA hacia otra garita: queda en EN CAMINO
+        if (tipo === 'salida') {
+            const transito = leerTransito(req.body.transito);
+            if (transito) datos.transito = transito;
+        }
+        // INGRESO registrado desde EN CAMINO: completa los datos con los de la SALIDA
+        // (aunque la haya registrado otro guardia del bloque)
+        let salida = null;
+        const { instanciadoDe } = req.body;
+        if (tipo === 'ingreso' && /^[0-9a-f]{24}$/i.test(String(instanciadoDe || ''))) {
+            salida = await Movimiento.findOne({ _id: instanciadoDe, bloque, tipo: 'salida' });
+            if (salida) {
+                datos.instanciadoDe = salida._id;
+                CAMPOS_INSTANCIA.forEach(c => { if (!datos[c]) datos[c] = salida[c] || ''; });
+                if (!genero) datos.genero = salida.genero || 'm';
+                if (!datos.guias.length && salida.guias?.length) datos.guias = salida.guias;
+            }
+        }
+
+        const movimiento = await Movimiento.create(datos);
+        if (salida?.transito) await marcarLlegada(salida, req.body.garitaLlegada);
 
         await Vehiculo.findOneAndUpdate(
             { placa: movimiento.placa },
-            vehiculoFields(req.body),
+            vehiculoFields(datos),
             { upsert: true, new: true }
         );
 
@@ -55,6 +110,69 @@ export const crearMovimiento = async (req, res) => {
             const existing = await Movimiento.findOne({ clientUUID: req.body.clientUUID, usuario: req.user._id });
             if (existing) return res.status(201).json({ message: 'Movimiento ya registrado', movimiento: existing });
         }
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// GET /api/movimientos/en-camino?bloque=12&garita=PAD-E
+// Salidas de CUALQUIER guardia del bloque que vienen hacia esta garita o pasan
+// por ella, sin cerrar y de la última hora. Solo placa, ruta y hora.
+export const getEnCamino = async (req, res) => {
+    try {
+        const bloque = texto(req.query.bloque, 10), garita = texto(req.query.garita);
+        if (!bloque || !garita) return res.status(400).json({ message: 'Bloque y garita son obligatorios' });
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
+        const salidas = await Movimiento.find({
+            bloque, tipo: 'salida',
+            'transito.estado': 'en_camino',
+            'transito.salidaAt': { $gte: new Date(Date.now() - EN_CAMINO_MIN * 60e3) },
+            'transito.tiempos.garita': garita,
+            'transito.origen': { $ne: garita },
+            'transito.vistos': { $ne: garita },
+        }).select('placa transito').sort({ 'transito.salidaAt': 1 }).limit(200).lean();
+        res.json({
+            ahora: Date.now(),   // para corregir la diferencia de reloj del dispositivo
+            enCamino: salidas.map(s => ({
+                _id: s._id, placa: s.placa,
+                origen: s.transito.origen, destino: s.transito.destino,
+                salidaAt: s.transito.salidaAt, tiempos: s.transito.tiempos,
+            })),
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// POST /api/movimientos/transito  { id, accion: 'cancelar' | 'destino', transito? }
+// Desde la garita de origen: cancelar el tránsito o cambiar su destino.
+// Cancelar no borra la SALIDA: sigue en el historial.
+export const actualizarTransito = async (req, res) => {
+    try {
+        const { id, accion } = req.body;
+        if (!/^[0-9a-f]{24}$/i.test(String(id || ''))) return res.status(400).json({ message: 'Movimiento inválido' });
+        const mov = await Movimiento.findOne({ _id: id, usuario: req.user._id, tipo: 'salida' });
+        if (!mov?.transito) return res.status(404).json({ message: 'La salida no está en tránsito' });
+        if (!tieneBloque(req.user, mov.bloque)) return denegarBloque(res);
+        if (mov.transito.estado !== 'en_camino') {
+            return res.status(409).json({
+                message: mov.transito.estado === 'llegado' ? 'El vehículo ya llegó a su destino' : 'El tránsito ya estaba cancelado',
+                movimiento: mov,
+            });
+        }
+        if (accion === 'cancelar') {
+            mov.transito.estado = 'cancelado';
+            mov.transito.cerradoAt = new Date();
+        } else if (accion === 'destino') {
+            const nuevo = leerTransito({ ...req.body.transito, origen: mov.transito.origen, salidaAt: mov.transito.salidaAt });
+            if (!nuevo) return res.status(400).json({ message: 'Destino no válido' });
+            mov.transito = { ...nuevo, vistos: mov.transito.vistos };
+            mov.destino = nuevo.destino;
+        } else {
+            return res.status(400).json({ message: 'Acción no válida' });
+        }
+        await mov.save();
+        res.json({ message: 'Tránsito actualizado', movimiento: mov });
+    } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }
 };

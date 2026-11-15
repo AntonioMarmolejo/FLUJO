@@ -38,6 +38,24 @@ const movimientoSchema = new mongoose.Schema(
         hora: { type: String, required: true },
         fecha: { type: String, required: true },
         clientUUID: { type: String, default: null },
+        // EN CAMINO: una SALIDA hacia otra garita del bloque queda "en tránsito".
+        // La ven las garitas por las que pasa (tiempos) durante 1 hora como máximo.
+        transito: {
+            type: new mongoose.Schema({
+                origen: { type: String, trim: true },            // garita donde salió
+                destino: { type: String, trim: true },           // garita a la que va
+                salidaAt: { type: Date },                        // momento real de la salida
+                // Garitas de la ruta en orden, con los minutos esperados desde la salida
+                // (min null si Distancias no tiene la ruta). La última es el destino.
+                tiempos: [{ _id: false, garita: { type: String, trim: true }, min: { type: Number, default: null } }],
+                estado: { type: String, enum: ['en_camino', 'llegado', 'cancelado'], default: 'en_camino' },
+                vistos: [{ type: String, trim: true }],          // garitas que ya registraron su llegada
+                cerradoAt: { type: Date, default: null },
+            }, { _id: false }),
+            default: undefined,
+        },
+        // INGRESO registrado desde EN CAMINO: la SALIDA de la que viene
+        instanciadoDe: { type: mongoose.Schema.Types.ObjectId, ref: 'Movimiento', default: null },
     },
     { timestamps: true }
 );
@@ -45,6 +63,8 @@ const movimientoSchema = new mongoose.Schema(
 // Acelera los filtros por usuario/puesto/bloque/fecha que usa la pantalla de Flujos
 // (listado por años, meses y días, y el detalle de un día puntual).
 movimientoSchema.index({ usuario: 1, puesto: 1, bloque: 1, fecha: 1 });
+// EN CAMINO: salidas en tránsito del bloque, las más recientes
+movimientoSchema.index({ bloque: 1, 'transito.estado': 1, 'transito.salidaAt': -1 });
 // Último movimiento de una placa (precarga de destino/actividad en el formulario).
 movimientoSchema.index({ usuario: 1, placa: 1, createdAt: -1 });
 

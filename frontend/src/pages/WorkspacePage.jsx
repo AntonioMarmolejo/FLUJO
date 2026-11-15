@@ -21,6 +21,8 @@ import { PantallaPlacasDB } from './workspace/Placas';
 import { PantallaUtilidades } from './workspace/Utilidades';
 import { AccesoRestringido, AvisoIniciarFlujo, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
 import { EnCamino } from './workspace/EnCamino';
+import { garitaDePuesto } from '../lib/garitas.js';
+import { encolarOperacion, syncPendingOperaciones } from '../lib/syncEngine.js';
 import {
     DASH_FILTROS,
     DRAWER_TABS,
@@ -66,6 +68,20 @@ const WorkspacePage = () => {
         agregarOptimista: handleGuardadoOptimista, confirmarMovimiento: handleMovimientoConfirmado,
         editarLocal, borrar: handleDelete, borrarVarios, cambiarHora, guardarIngreso,
     } = useMovimientosTurno(user?.id, isPending);
+
+    // EN CAMINO, desde la garita de origen: cancelar el tránsito o cambiar su destino.
+    // Se ve al instante y la operación se sube por la cola (también sin conexión).
+    const accionTransito = async (mov, accion, datos) => {
+        const transito = accion === 'cancelar'
+            ? { ...mov.transito, estado: 'cancelado', cerradoAt: new Date().toISOString() }
+            : { ...mov.transito, ...datos, estado: 'en_camino' };
+        editarLocal({ _id: mov._id, transito, ...(accion === 'destino' && { destino: datos.destino }) });
+        await encolarOperacion('transito', { id: mov._id, accion, ...(datos && { transito: datos }) });
+        syncPendingOperaciones().catch(() => {});
+        return transito;
+    };
+    const garitaEnCamino = turnoActivo ? garitaDePuesto(turnoActivo.bloque, turnoActivo.puesto) : null;
+    const puedeRegistrar = isAdmin || (!isPending && hasPermiso('movimientos') && (!turnoActivo || tieneBloque(turnoActivo.bloque)));
 
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
@@ -630,7 +646,15 @@ const WorkspacePage = () => {
             )}
 
             {/* EN CAMINO: barra en el borde izquierdo de Inicio y su cajón */}
-            {tabActiva === 'inicio' && !selectMode && <EnCamino />}
+            {tabActiva === 'inicio' && !selectMode && garitaEnCamino && puedeRegistrar && (
+                <EnCamino key={`${turnoActivo.bloque}|${garitaEnCamino}`}
+                    bloque={turnoActivo.bloque} puesto={turnoActivo.puesto} garita={garitaEnCamino}
+                    fecha={turnoActivo.fecha}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
+                    movimientos={movimientos}
+                    agregarOptimista={handleGuardadoOptimista}
+                    confirmarMovimiento={handleMovimientoConfirmado} />
+            )}
 
             {/* Modales */}
             {/* Mientras el turno carga no se avisa: si existe, el formulario se abre solo */}
@@ -663,6 +687,7 @@ const WorkspacePage = () => {
                     mov={detailMov}
                     onClose={() => { setDetailMov(null); setDetailMovIdx(null); }}
                     onEdit={handleEdit} onDelete={handleDelete} onCopy={handleCopy} onShare={handleShare}
+                    onTransito={accionTransito}
                     hasPrev={detailMovIdx !== null && detailMovIdx > 0}
                     hasNext={detailMovIdx !== null && detailMovIdx < sortedMovs.length - 1}
                     onPrev={() => { const ni = detailMovIdx - 1; setDetailMovIdx(ni); setDetailMov(sortedMovs[ni]); }}
@@ -679,7 +704,8 @@ const WorkspacePage = () => {
             )}
             {registroDetailMov && (
                 <ModalDetalle mov={registroDetailMov} onClose={() => setRegistroDetailMov(null)}
-                    onEdit={m => { handleEdit(m); setRegistroDetailMov(null); }} onDelete={id => { handleDelete(id); setRegistroDetailMov(null); }} onCopy={handleCopy} onShare={handleShare} />
+                    onEdit={m => { handleEdit(m); setRegistroDetailMov(null); }} onDelete={id => { handleDelete(id); setRegistroDetailMov(null); }} onCopy={handleCopy} onShare={handleShare}
+                    onTransito={accionTransito} />
             )}
             {showRegistroConfig && (
                 <ModalRegistroConfig config={registroConfig} onSave={handleSaveRegistroConfig} onClose={() => setShowRegistroConfig(false)} />

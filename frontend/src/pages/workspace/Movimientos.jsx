@@ -4,8 +4,9 @@ import { buscarPersonaLocal, registrarPersona } from '../../lib/syncEngine.js';
 import { ModalField } from './comunes';
 import { CFG_DEFAULTS, addMouseSwipe, getHoraLocal } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
+import { TransitoDetalle } from './TransitoDetalle';
 
-export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, hasPrev, hasNext, onPrev, onNext, counter }) => {
+export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, onTransito, hasPrev, hasNext, onPrev, onNext, counter }) => {
     const isIngreso = mov.tipo === 'ingreso';
     const SK = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
 
@@ -35,6 +36,7 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                             {isIngreso ? 'INGRESO' : 'SALIDA'}
                         </span>
                         <span className="movdet__placa">{mov.placa}</span>
+                        {mov.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
                     </div>
                     <button className="movdet__cerrar" onClick={onClose}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -47,6 +49,9 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                 <div className="movdet__fecha-row">
                     <span className="movdet__fecha">{mov.fecha}</span>
                 </div>
+
+                {/* ── EN CAMINO: tránsito de una SALIDA hacia otra garita ── */}
+                {!isIngreso && mov.transito && <TransitoDetalle key={mov._id} mov={mov} onTransito={onTransito} />}
 
                 {/* ── Grid de campos ── */}
                 {campos.length > 0 && (
@@ -532,6 +537,7 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                                 <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                 {' · '}
                                 <span className="mov__placa-code">{m.placa}</span>
+                                {m.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
                                 {(m.conductor || m.cedula) && (
                                     <>{' · '}<span className="mov__coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
                                 )}
@@ -542,6 +548,7 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                                     <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                     {' · '}
                                     <span className="mov__placa-code">{m.placa}</span>
+                                    {m.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
                                     {m.empresa && <>{' · '}<span className="mov__empresa-r1">{m.empresa}</span></>}
                                 </div>
                                 <div className="mov__info-r2">

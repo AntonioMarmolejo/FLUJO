@@ -1,0 +1,216 @@
+/* Tránsito de una SALIDA en su detalle (TransitoDetalle.jsx). Noche por defecto; día abajo. */
+.transito {
+    --transito-fondo: #1a1b26;
+    --transito-borde: rgba(129, 140, 248, 0.35);
+    --transito-barra: rgba(129, 140, 248, 0.18);
+    --transito-ambar: #fbbf24;
+    --transito-peligro-fondo: rgba(248, 113, 113, 0.12);
+    --transito-peligro-borde: rgba(248, 113, 113, 0.55);
+
+    margin: 4px 14px 14px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--transito-borde);
+    background: var(--transito-fondo);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+[data-theme="light"] .transito {
+    --transito-fondo: #f5f6fd;
+    --transito-borde: rgba(79, 70, 229, 0.3);
+    --transito-barra: rgba(79, 70, 229, 0.14);
+    --transito-ambar: #b45309;
+    --transito-peligro-fondo: rgba(220, 38, 38, 0.06);
+    --transito-peligro-borde: rgba(220, 38, 38, 0.45);
+}
+.transito.transito--cerrado {
+    border-color: var(--borde-3);
+}
+
+.transito__cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.transito__titulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--acento);
+}
+.transito--cerrado .transito__titulo {
+    color: var(--texto-3);
+}
+.transito__crono {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: var(--texto-tenue);
+    font-variant-numeric: tabular-nums;
+}
+.transito__crono strong {
+    color: var(--texto);
+    font-size: 15px;
+}
+.transito--retrasado .transito__crono strong {
+    color: var(--transito-ambar);
+}
+
+.transito__barra {
+    height: 7px;
+    border-radius: 99px;
+    background: var(--transito-barra);
+    overflow: hidden;
+}
+.transito__barra-relleno {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--acento);
+    transition: width 1s linear;
+}
+.transito--retrasado .transito__barra-relleno {
+    background: var(--aviso);
+}
+
+.transito__datos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+}
+.transito__etiqueta {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--texto-tenue);
+}
+.transito__valor {
+    margin-top: 3px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--texto);
+}
+.transito__nota {
+    font-size: 13px;
+    color: var(--texto-tenue);
+}
+.transito__nota.transito__nota--error {
+    color: var(--peligro);
+}
+
+.transito__botones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.transito__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-3);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.transito__btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.transito__btn.transito__btn--peligro {
+    border-color: var(--transito-peligro-borde);
+    background: var(--transito-peligro-fondo);
+    color: var(--peligro);
+}
+.transito__elegir {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.transito__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.transito__chip {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 99px;
+    border: 1px solid var(--transito-borde);
+    background: var(--fondo-2);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Confirmación de "Cancelar tránsito": hoja inferior */
+.transito__velo.modal__overlay {
+    align-items: flex-end;
+    z-index: 60;
+}
+.transito__confirmar {
+    width: 100%;
+    max-width: 430px;
+    padding: 22px 20px 20px;
+    border-radius: 24px;
+    border: 1px solid var(--borde-5);
+    background: var(--fondo-2);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.transito__confirmar-icono {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--transito-peligro-fondo, rgba(248, 113, 113, 0.12));
+    color: var(--peligro);
+}
+.transito__confirmar-titulo {
+    margin: 4px 0 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--texto);
+}
+.transito__confirmar-texto {
+    margin: 0 0 6px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--texto-3);
+}
+.transito__confirmar-texto strong {
+    color: var(--texto);
+}
+.transito__confirmar-si,
+.transito__confirmar-no {
+    min-height: 50px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.transito__confirmar-si {
+    border: 0;
+    background: var(--peligro);
+    color: #ffffff;
+}
+.transito__confirmar-no {
+    border: 1px solid var(--borde-5);
+    background: transparent;
+    color: var(--texto);
+}

@@ -4,12 +4,16 @@ import {
     deleteMovimiento, batchDeleteMovimientos, updateMovimiento,
     getFlujoAnios, getFlujoMeses, getFlujoDias, deleteMovimientosPorFecha, buscarMovimientos, getUltimoMovimientoPlaca,
     getBloquePuestos, getBloqueAnios, getBloqueMeses, getBloqueDias, getBloqueDia,
+    getEnCamino, actualizarTransito,
 } from '../controllers/movimiento.controller.js';
 import { protect, requirePanel, requirePuestosBloque } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
 router.post('/', protect, requirePanel('movimientos'), crearMovimiento);
+// EN CAMINO: lo que viene hacia mi garita y, desde el origen, cancelar o cambiar el destino
+router.get('/en-camino', protect, requirePanel('movimientos'), getEnCamino);
+router.post('/transito', protect, requirePanel('movimientos'), actualizarTransito);
 router.get('/', protect, getMovimientos);
 router.get('/stats', protect, getStats);
 router.get('/todos', protect, getMovimientosTodos);

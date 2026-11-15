@@ -11,6 +11,8 @@ import {
     buscarPersonaLocal,
     registrarPersona,
 } from '../../lib/syncEngine.js';
+import { leerTramosLocales } from '../../lib/tramosOffline.js';
+import { armarTransito, garitaDeLugar, garitaDePuesto, garitasDelBloque, momentoDeHora } from '../../lib/garitas.js';
 import { SuggestionField, TextSugField } from './comunes';
 import { EMPTY_FORM, TIPO_VEHICULO_OPTS, formatMov, getHoraLocal, getTurnoFecha, parseQR } from './helpers';
 
@@ -499,7 +501,14 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         // movimientos del turno nocturno queden agrupados bajo la misma fecha, incluso los
         // registrados después de medianoche.
         const fecha = fechaFlujo || getTurnoFecha(turnoActual);
-        const tempMov = { ...formFinal, _id: tempId, hora, fecha, _pending: true };
+        // SALIDA hacia otra garita del bloque: aparece en EN CAMINO de las garitas de su ruta
+        let transito = null;
+        if (formFinal.tipo === 'salida' && garitaDeLugar(bloque, formFinal.destino)) {
+            const tramos = await leerTramosLocales().catch(() => []);
+            const datos = armarTransito({ tramos, bloque, puesto, destino: formFinal.destino, salidaAt: horaManual ? momentoDeHora(horaManual) : Date.now() });
+            if (datos) transito = { ...datos, estado: 'en_camino', vistos: [] };
+        }
+        const tempMov = { ...formFinal, _id: tempId, hora, fecha, _pending: true, ...(transito && { transito }) };
 
         onGuardadoOptimista(tempMov);
         setForm(EMPTY_FORM);
@@ -512,7 +521,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         setGuardado(true);
         setTimeout(() => setGuardado(false), 2500);
 
-        const payload = { ...formFinal, puesto, bloque, fecha, hora, clientUUID: tempId };
+        const payload = { ...formFinal, puesto, bloque, fecha, hora, clientUUID: tempId, ...(transito && { transito }) };
         if (personaNotFound && form.cedula) {
             registrarPersona({ nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
         }
@@ -704,6 +713,30 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         onClearSugs={() => setDestinoSugs([])}
                         onClear={() => { setForm(f => ({ ...f, destino: '' })); setDestinoSugs([]); }}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
+                    {/* SALIDA desde una garita: el destino puede ser otra garita (EN CAMINO) */}
+                    {form.tipo === 'salida' && !editData && garitaDePuesto(bloque, puesto) && (() => {
+                        const propia = garitaDePuesto(bloque, puesto);
+                        const elegida = garitaDeLugar(bloque, form.destino);
+                        return (
+                            <div className="encamino-destino">
+                                <div className="encamino-destino__chips" role="group" aria-label="Garitas del bloque">
+                                    {garitasDelBloque(bloque).filter(g => g !== propia).map(g => (
+                                        <button key={g} type="button"
+                                            className={`encamino-destino__chip${elegida === g ? ' encamino-destino__chip--sel' : ''}`}
+                                            aria-pressed={elegida === g}
+                                            onClick={() => { setForm(f => ({ ...f, destino: g })); setDestinoSugs([]); }}>
+                                            {g}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="encamino-destino__ayuda">
+                                    {elegida && elegida !== propia
+                                        ? <>Aparecerá en <strong>EN CAMINO</strong> de {elegida} durante 1 hora.</>
+                                        : 'Elige una garita para que la vean llegar. Un destino escrito a mano no aparece en EN CAMINO.'}
+                                </div>
+                            </div>
+                        );
+                    })()}
                     <div className="modal__field">
                         <label>ACTIVIDAD / OBSERVACIÓN</label>
                         <div className="placa__wrapper">

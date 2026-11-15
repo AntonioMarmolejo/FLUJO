@@ -253,7 +253,7 @@ export const isCatalogStale = async (catalogo) => {
 // ── Cola offline de operaciones de garita ─────────────────
 // Abrir turno, registrar firmas y personas nuevas sin conexión: se guardan en
 // Dexie y se suben en orden cuando vuelve internet (ver SyncOperaciones).
-const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas', comentario: '/comentarios' };
+const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas', comentario: '/comentarios', transito: '/movimientos/transito' };
 
 // Rechazos que pueden cambiar si el admin devuelve el acceso: la operación
 // sigue en cola en vez de marcarse como fallida.
@@ -310,6 +310,12 @@ export const syncPendingOperaciones = async () => {
                 if (op.tipo === 'persona' && status === 409) {
                     await db.operacionesPending.delete(op.uuid);
                     notificarOperaciones({ tipo: op.tipo, uuid: op.uuid });
+                    continue;
+                }
+                // El tránsito ya se había cerrado (llegó o ya estaba cancelado): no queda nada por hacer
+                if (op.tipo === 'transito' && (status === 404 || status === 409)) {
+                    await db.operacionesPending.delete(op.uuid);
+                    notificarOperaciones({ tipo: op.tipo, uuid: op.uuid, data: err.response.data });
                     continue;
                 }
                 if (status === 401 || RECHAZO_TEMPORAL.includes(err.response.data?.code)) continue;

@@ -1,58 +1,60 @@
 import { useEffect, useRef, useState } from 'react';
+import api from '../../api/axios';
+import { encolarMovimiento, subirMovimientoPendiente } from '../../lib/syncEngine.js';
+import { EN_CAMINO_MIN, cronometro, minutosHasta } from '../../lib/garitas.js';
+import { getHoraLocal } from './helpers';
 import '../../styles/EnCamino.css';
 
-// EN CAMINO: vehículos que salieron de otra garita y vienen hacia la mía, con
-// cronómetro en vivo. Barra en el borde izquierdo de Inicio (a la altura del +)
-// que se arrastra para abrir el cajón.
-//
-// Paso 1 del plan: solo pantalla, con 5 vehículos de prueba. Se ven en desarrollo
-// (npm run dev) o, en la app publicada, con localStorage flujo_encamino_prueba = '1'.
-// Los datos reales (salidas de otros guardias del bloque) llegan en el paso 4.
+// EN CAMINO: vehículos que salieron de otra garita del bloque y vienen hacia la
+// mía (o pasan por ella), con cronómetro en vivo. Barra en el borde izquierdo de
+// Inicio (a la altura del +) que se arrastra para abrir el cajón.
+// Las salidas las registra cualquier guardia del bloque; aquí se ven solo placa,
+// ruta y hora, durante EN_CAMINO_MIN minutos como máximo.
 
 const MAX_FILAS = 3;
-const UMBRAL_ARRASTRE = 50;   // px para abrir o cerrar al soltar
+const UMBRAL_ARRASTRE = 50;      // px para abrir o cerrar al soltar
+const CADA_CUANTO_MS = 30000;    // consulta al servidor
 
-const GARITA_PRUEBA = 'PAD-E';
-const verPrueba = () => {
-    if (import.meta.env.DEV) return true;
-    try { return localStorage.getItem('flujo_encamino_prueba') === '1'; } catch { return false; }
-};
-const crearPrueba = () => {
-    const ahora = Date.now();
-    const v = (id, placa, origen, destino, esperadoMin, transcurridoSeg) =>
-        ({ id, placa, origen, destino, esperadoMin, salidaAt: ahora - transcurridoSeg * 1000 });
-    return [
-        v('p1', 'GBA-0917', 'G. Principal', 'PAD-E', 20, 11 * 60 + 42),
-        v('p2', 'PCX-4821', 'G. Principal', 'Campamento', 25, 4 * 60 + 5),
-        v('p3', 'MBA-1156', 'PAD-N', 'PAD-E', 18, 25 * 60 + 30),
-        v('p4', 'TBM-8955', 'PAD-K', 'PAD-E', 15, 2 * 60 + 10),
-        v('p5', 'PDF-7443', 'Puerto Nuevo', 'PAD-E', 30, 9 * 60),
-    ];
-};
-
-// 754 s → "12:34"; 3 754 s → "1:02:34"
-const cronometro = seg => {
-    const s = Math.max(0, Math.floor(seg));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
-    const dos = n => String(n).padStart(2, '0');
-    return h ? `${h}:${dos(m)}:${dos(r)}` : `${dos(m)}:${dos(r)}`;
-};
-
-// Progreso de cada vehículo: tiempo transcurrido ÷ tiempo esperado entre las garitas
+// Progreso de cada vehículo: tiempo transcurrido ÷ minutos esperados hasta MI garita
 const estadoDe = (v, ahora, garita) => {
-    const transcurrido = (ahora - v.salidaAt) / 1000;
-    const esperado = v.esperadoMin * 60;
+    const transcurrido = (ahora - new Date(v.salidaAt).getTime()) / 1000;
+    const min = minutosHasta(v, garita);
+    const esperado = min > 0 ? min * 60 : null;     // sin ruta en Distancias no hay progreso
     return {
         ...v,
+        id: v._id,
         transcurrido,
-        retrasado: transcurrido > esperado,
-        avance: Math.min(1, transcurrido / esperado),
+        retrasado: esperado != null && transcurrido > esperado,
+        avance: esperado ? Math.min(1, transcurrido / esperado) : 0,
         dePaso: v.destino !== garita,
     };
 };
 // Los retrasados primero (el que más lleva arriba); luego los que están por llegar
 const ordenar = (a, b) => (b.retrasado - a.retrasado)
-    || (a.retrasado ? b.transcurrido - a.transcurrido : b.avance - a.avance);
+    || (a.retrasado ? b.transcurrido - a.transcurrido : (b.avance - a.avance) || (b.transcurrido - a.transcurrido));
+
+// Última lista recibida, para verla sin conexión (cada vehículo igual vence a la hora)
+const leerCopia = clave => {
+    try { return JSON.parse(localStorage.getItem(clave)) || null; } catch { return null; }
+};
+
+// Registrar la llegada: un INGRESO por la misma cola que los demás movimientos
+// (aparece al instante y se sube cuando haya conexión). El servidor completa
+// conductor, empresa y demás datos con los de la SALIDA.
+const registrarLlegada = async ({ salida, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento }) => {
+    const tempId = crypto.randomUUID();
+    const hora = getHoraLocal();
+    const ingreso = { tipo: 'ingreso', placa, destino: ubiIngreso, actividad: '', instanciadoDe: salida._id };
+    agregarOptimista({ ...ingreso, _id: tempId, hora, fecha, _pending: true });
+    const payload = { ...ingreso, puesto, bloque, fecha, hora, clientUUID: tempId, garitaLlegada: garita };
+    await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
+    try {
+        const r = await subirMovimientoPendiente(tempId);
+        if (r?.movimiento) confirmarMovimiento(tempId, r.movimiento);
+    } catch {
+        // Ya está en la cola: se subirá cuando vuelva la conexión
+    }
+};
 
 const IconoAtras = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
@@ -102,9 +104,9 @@ const FilaCamino = ({ v, confirmando, placa, onPlaca, onAbrir, onCancelar, onReg
 };
 
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = () => {
-    const [garita] = useState(GARITA_PRUEBA);
-    const [vehiculos, setVehiculos] = useState(() => (verPrueba() ? crearPrueba() : []));
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento }) => {
+    const claveCopia = `flujo_encamino_${bloque}_${garita}`;
+    const [datos, setDatos] = useState(() => leerCopia(claveCopia) || { lista: [], desfase: 0 });
     const [ahora, setAhora] = useState(() => Date.now());
     const [abierto, setAbierto] = useState(false);
     const [arrastre, setArrastre] = useState(null);     // px mientras el dedo arrastra el cajón
@@ -116,14 +118,35 @@ export const EnCamino = () => {
     const gestoRef = useRef(null);
     const trasArrastreRef = useRef(false);
 
+    // Lo que viene hacia mi garita: al entrar, cada 30 s, al abrir el cajón y al volver la conexión
+    useEffect(() => {
+        let vigente = true;
+        const cargar = async () => {
+            try {
+                const { data } = await api.get('/movimientos/en-camino', { params: { bloque, garita } });
+                if (!vigente) return;
+                // desfase: diferencia entre el reloj del servidor y el del dispositivo
+                const nuevo = { lista: data.enCamino || [], desfase: (data.ahora || Date.now()) - Date.now() };
+                setDatos(nuevo);
+                try { localStorage.setItem(claveCopia, JSON.stringify(nuevo)); } catch { /* sin espacio */ }
+            } catch {
+                // Sin conexión: se sigue mostrando la última lista
+            }
+        };
+        cargar();
+        const id = setInterval(cargar, CADA_CUANTO_MS);
+        window.addEventListener('online', cargar);
+        return () => { vigente = false; clearInterval(id); window.removeEventListener('online', cargar); };
+    }, [bloque, garita, claveCopia, abierto]);
+
     // Cronómetros: cada segundo con el cajón abierto; cerrado basta para el punto ámbar
     useEffect(() => {
-        if (!vehiculos.length) return undefined;
+        if (!datos.lista.length) return undefined;
         const tic = () => setAhora(Date.now());
         const primero = setTimeout(tic, 0);   // al abrir, el tiempo se pone al día enseguida
         const id = setInterval(tic, abierto ? 1000 : 15000);
         return () => { clearTimeout(primero); clearInterval(id); };
-    }, [abierto, vehiculos.length]);
+    }, [abierto, datos.lista.length]);
 
     // Esc cierra; con el cajón abierto la página de atrás no se desplaza
     useEffect(() => {
@@ -141,7 +164,13 @@ export const EnCamino = () => {
         return () => clearTimeout(id);
     }, [aviso]);
 
-    const lista = vehiculos.map(v => estadoDe(v, ahora, garita)).sort(ordenar);
+    // Fuera: las que ya registré (aunque sigan en la cola sin subir) y las de hace más de 1 hora
+    const registradas = new Set(movimientos.filter(m => m.instanciadoDe).map(m => String(m.instanciadoDe)));
+    const ahoraServidor = ahora + datos.desfase;
+    const lista = datos.lista
+        .filter(v => !registradas.has(String(v._id)) && ahoraServidor - new Date(v.salidaAt).getTime() < EN_CAMINO_MIN * 60e3)
+        .map(v => estadoDe(v, ahoraServidor, garita))
+        .sort(ordenar);
     const hayRetrasados = lista.some(v => v.retrasado);
     const visibles = verTodos ? lista : lista.slice(0, MAX_FILAS);
     const ocultos = lista.length - MAX_FILAS;
@@ -220,11 +249,13 @@ export const EnCamino = () => {
     const fraccion = desplazamiento == null ? (abierto ? 1 : 0) : 1 + desplazamiento / ancho;   // 0 cerrado … 1 abierto
 
     const registrar = () => {
-        const v = lista.find(x => x.id === confirmando.id);
-        setVehiculos(vs => vs.filter(x => x.id !== confirmando.id));
+        const salida = lista.find(x => x.id === confirmando.id);
+        const placa = confirmando.placa.trim().toUpperCase();
+        if (!salida || !placa) return;
         setConfirmando(null);
-        setAviso(`Llegada de ${confirmando.placa.trim() || v?.placa} registrada · datos de prueba`);
-        if (vehiculos.length === 1) setAbierto(false);
+        setAviso(`${placa} registrado como INGRESO`);
+        if (lista.length === 1) setAbierto(false);
+        registrarLlegada({ salida, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento });
     };
 
     return (
