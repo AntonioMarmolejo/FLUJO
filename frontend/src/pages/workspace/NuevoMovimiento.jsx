@@ -539,6 +539,34 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         }
     };
 
+    // SALIDA desde una garita: todas las garitas del bloque como destino (EN CAMINO).
+    // Van entre la etiqueta y el campo DESTINO, para que la lista de destinos
+    // recientes (que se abre debajo del campo) nunca las tape.
+    const garitaPropia = garitaDePuesto(bloque, puesto);
+    const garitaElegida = garitaDeLugar(bloque, form.destino);
+    const garitasDestino = form.tipo === 'salida' && !editData && garitaPropia ? (
+        <div className="encamino-destino">
+            <div className="encamino-destino__chips" role="group" aria-label="Garitas del bloque">
+                {garitasDelBloque(bloque).map(g => (
+                    <button key={g} type="button"
+                        className={`encamino-destino__chip${garitaElegida === g ? ' encamino-destino__chip--sel' : ''}`}
+                        aria-pressed={garitaElegida === g}
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => { setForm(f => ({ ...f, destino: g })); setDestinoSugs([]); }}>
+                        {g}{g === garitaPropia && <span className="encamino-destino__aqui"> · aquí</span>}
+                    </button>
+                ))}
+            </div>
+            <div className="encamino-destino__ayuda">
+                {!garitaElegida
+                    ? 'Elige una garita para que la vean llegar. Un destino escrito a mano no aparece en EN CAMINO.'
+                    : garitaElegida === garitaPropia
+                        ? `${garitaPropia} es esta misma garita: no aparece en EN CAMINO.`
+                        : <>Aparecerá en <strong>EN CAMINO</strong> de {garitaElegida} durante 1 hora.</>}
+            </div>
+        </div>
+    ) : null;
+
     const fp = { onChange: handleChange, autoFilled };
 
     return (
@@ -708,35 +736,12 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         </div>
                     )}
                     <TextSugField name="destino" label="DESTINO" placeholder="Área o lugar"
+                        encabezado={garitasDestino}
                         value={form.destino} onChange={handleDestinoChange}
                         onFocus={() => setDestinoSugs(recentUnique('destino', form.destino))}
                         onClearSugs={() => setDestinoSugs([])}
                         onClear={() => { setForm(f => ({ ...f, destino: '' })); setDestinoSugs([]); }}
                         suggestions={destinoSugs} onSelect={s => { setForm(f => ({ ...f, destino: s })); setDestinoSugs([]); }} />
-                    {/* SALIDA desde una garita: el destino puede ser otra garita (EN CAMINO) */}
-                    {form.tipo === 'salida' && !editData && garitaDePuesto(bloque, puesto) && (() => {
-                        const propia = garitaDePuesto(bloque, puesto);
-                        const elegida = garitaDeLugar(bloque, form.destino);
-                        return (
-                            <div className="encamino-destino">
-                                <div className="encamino-destino__chips" role="group" aria-label="Garitas del bloque">
-                                    {garitasDelBloque(bloque).filter(g => g !== propia).map(g => (
-                                        <button key={g} type="button"
-                                            className={`encamino-destino__chip${elegida === g ? ' encamino-destino__chip--sel' : ''}`}
-                                            aria-pressed={elegida === g}
-                                            onClick={() => { setForm(f => ({ ...f, destino: g })); setDestinoSugs([]); }}>
-                                            {g}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="encamino-destino__ayuda">
-                                    {elegida && elegida !== propia
-                                        ? <>Aparecerá en <strong>EN CAMINO</strong> de {elegida} durante 1 hora.</>
-                                        : 'Elige una garita para que la vean llegar. Un destino escrito a mano no aparece en EN CAMINO.'}
-                                </div>
-                            </div>
-                        );
-                    })()}
                     <div className="modal__field">
                         <label>ACTIVIDAD / OBSERVACIÓN</label>
                         <div className="placa__wrapper">

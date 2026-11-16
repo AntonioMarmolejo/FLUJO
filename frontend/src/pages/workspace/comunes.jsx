@@ -243,11 +243,12 @@ export const SuggestionField = ({ name, label, required, placeholder, value, onC
     );
 };
 
-export const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, onClear, suggestions, onSelect, multiline }) => {
+export const TextSugField = ({ name, label, placeholder, value, onChange, onFocus, onClearSugs, onClear, suggestions, onSelect, multiline, encabezado }) => {
     const inputRef = useRef(null);
     return (
     <div className="modal__field">
         <label>{label}</label>
+        {encabezado}
         <div className="placa__wrapper">
             {multiline ? (
                 <textarea name={name} placeholder={placeholder || ''} value={value} onChange={onChange} onFocus={onFocus}

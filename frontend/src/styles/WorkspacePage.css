@@ -7049,7 +7049,11 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: -4px 0 12px;
+    margin: 2px 0 10px;
+}
+.encamino-destino__aqui {
+    font-weight: 500;
+    color: var(--texto-tenue);
 }
 .encamino-destino__chips {
     display: flex;
