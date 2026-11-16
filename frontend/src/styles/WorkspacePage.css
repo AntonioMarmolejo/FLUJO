@@ -7112,3 +7112,8 @@
 .reporte-camino__chips {
     margin-bottom: 8px;
 }
+
+/* El + encima de las ventanas de detalle (para registrar sin cerrarlas) */
+.ws__speed-dial.ws__speed-dial--encima {
+    z-index: 55;
+}

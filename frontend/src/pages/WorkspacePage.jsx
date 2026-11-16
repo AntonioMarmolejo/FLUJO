@@ -312,6 +312,9 @@ const WorkspacePage = () => {
         }));
     };
 
+    // Alguna ventana de detalle abierta (movimiento, registro o bitácora)
+    const detalleAbierto = !!detailMov || !!registroDetailMov || bitDetailIdx !== null;
+
     const opcionesScrollGesto = [
         { id: 'arriba', label: 'Arriba', icono: 'arriba', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
         ...(tabActiva === 'inicio'
@@ -596,7 +599,7 @@ const WorkspacePage = () => {
             </div>
 
             {/* FABs — solo en inicio / movimientos */}
-            {tabActiva === 'inicio' && vistaInicio === 'movimientos' && !selectMode && (
+            {tabActiva === 'inicio' && vistaInicio === 'movimientos' && !selectMode && !detalleAbierto && (
                 <>
                     {fabOpen && showShareMenu && (
                         <div className="share__menu">
@@ -688,24 +691,6 @@ const WorkspacePage = () => {
             )}
 
             {/* Modales */}
-            {/* Mientras el turno carga no se avisa: si existe, el formulario se abre solo */}
-            {showModal && !turnoActivo && !cargandoMovimientos && (
-                <AvisoIniciarFlujo
-                    detalle="Para registrar vehículos necesitas iniciar un flujo."
-                    onCerrar={() => setShowModal(false)}
-                />
-            )}
-            {showModal && turnoActivo && (
-                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
-                    fechaFlujo={turnoActivo.fecha}
-                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
-                    ubiSalida={PUESTO_SALIDA_DEFAULT[turnoActivo.puesto] || ''}
-                    onClose={() => setShowModal(false)}
-                    onGuardado={cargarDatos}
-                    onGuardadoOptimista={handleGuardadoOptimista}
-                    onMovimientoConfirmado={handleMovimientoConfirmado}
-                    movimientos={movimientos} />
-            )}
             {editMov && turnoActivo && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
                     fechaFlujo={turnoActivo.fecha}
@@ -761,6 +746,39 @@ const WorkspacePage = () => {
                     onClose={() => setEditIngresoBit(null)}
                     onGuardar={handleGuardarIngreso}
                 />
+            )}
+
+            {/* Con un detalle abierto, el + sigue a mano encima de él: se registran los
+                vehículos que llegan sin cerrar lo que se está consultando */}
+            {tabActiva === 'inicio' && detalleAbierto && puedeRegistrar && !showModal && (
+                <div className="ws__speed-dial ws__speed-dial--encima">
+                    <button className="ws__dial-trigger" title="Nuevo movimiento" aria-label="Registrar un nuevo movimiento"
+                        onClick={() => setShowModal(true)}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+            )}
+
+            {/* Nuevo movimiento: después de los detalles, así se abre por encima del que esté abierto */}
+            {/* Mientras el turno carga no se avisa: si existe, el formulario se abre solo */}
+            {showModal && !turnoActivo && !cargandoMovimientos && (
+                <AvisoIniciarFlujo
+                    detalle="Para registrar vehículos necesitas iniciar un flujo."
+                    onCerrar={() => setShowModal(false)}
+                />
+            )}
+            {showModal && turnoActivo && (
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
+                    fechaFlujo={turnoActivo.fecha}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
+                    ubiSalida={PUESTO_SALIDA_DEFAULT[turnoActivo.puesto] || ''}
+                    onClose={() => setShowModal(false)}
+                    onGuardado={cargarDatos}
+                    onGuardadoOptimista={handleGuardadoOptimista}
+                    onMovimientoConfirmado={handleMovimientoConfirmado}
+                    movimientos={movimientos} />
             )}
 
             {/* Banner cuenta pendiente */}
