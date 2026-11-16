@@ -297,12 +297,27 @@ const WorkspacePage = () => {
     // en el inicio las otras dos pestañas (en su orden), y Abajo.
     const ORDEN_VISTAS = ['movimientos', 'bitacora', 'registro'];
     const NOMBRE_VISTA = { movimientos: 'Movimientos', bitacora: 'Bitácora', registro: 'Registro' };
+    // Cambiar de vista desde el abanico sin perder el lugar: se conserva la altura
+    // relativa (si estaba a la mitad de Movimientos, queda a la mitad de Bitácora),
+    // porque cada vista tiene un largo distinto.
+    const cambiarVistaMismaAltura = v => {
+        const raiz = document.documentElement;
+        const max = raiz.scrollHeight - window.innerHeight;
+        const proporcion = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+        setVistaInicio(v);
+        // Dos cuadros: el primero pinta la vista nueva, el segundo ya tiene su largo real
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            const nuevoMax = Math.max(0, raiz.scrollHeight - window.innerHeight);
+            window.scrollTo({ top: Math.round(proporcion * nuevoMax) });
+        }));
+    };
+
     const opcionesScrollGesto = [
         { id: 'arriba', label: 'Arriba', icono: 'arriba', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
         ...(tabActiva === 'inicio'
             ? ORDEN_VISTAS.filter(v => v !== vistaInicio).map(v => ({
                 id: v, label: NOMBRE_VISTA[v], icono: v,
-                action: () => { setVistaInicio(v); window.scrollTo({ top: 0 }); },
+                action: () => cambiarVistaMismaAltura(v),
             }))
             : []),
         { id: 'abajo', label: 'Abajo', icono: 'abajo', action: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }) },
