@@ -196,7 +196,8 @@ export const PantallaPlataformas = ({ turnoActivo, search = '' }) => {
     const [cachedAt, setCachedAt] = useState(null);
     const [menuAbierto, setMenuAbierto] = useState(false);
     const [seccionesAbiertas, setSeccionesAbiertas] = useState({ puesto: true, locacion: true });
-    const [vistaGrid, setVistaGrid] = useState(true);
+    // Los nominativos se muestran en lista por defecto; la cuadrícula se elige con el botón
+    const [vistaGrid, setVistaGrid] = useState(false);
     const [form, setForm] = useState(null); // null | 'nueva' | {nominativo a editar}
     const [importMsg, setImportMsg] = useState('');
     const [swipedId, setSwipedId] = useState(null);
