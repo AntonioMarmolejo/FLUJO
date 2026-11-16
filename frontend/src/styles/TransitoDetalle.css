@@ -214,3 +214,97 @@
     background: transparent;
     color: var(--texto);
 }
+
+/* ── Línea compacta en el detalle (lo demás va en la ventana) ── */
+.transito-linea {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 28px);
+    margin: 2px 14px 10px;
+    padding: 9px 10px 11px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--borde-3);
+    background: var(--fondo-3);
+    color: var(--acento);
+    font-family: inherit;
+    text-align: left;
+    overflow: hidden;
+    cursor: pointer;
+}
+.transito-linea__titulo {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 700;
+}
+.transito-linea__titulo > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.transito-linea .transito__crono {
+    font-size: 13px;
+}
+.transito-linea .transito__crono strong {
+    font-size: 14px;
+}
+.transito-linea__mas {
+    flex-shrink: 0;
+    display: grid;
+    color: var(--texto-tenue);
+}
+/* Barra fina de progreso en el borde inferior */
+.transito-linea__barra {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--acento);
+    transition: width 1s linear;
+}
+.transito-linea.transito--retrasado .transito__crono strong {
+    color: var(--aviso);
+}
+.transito-linea.transito--retrasado .transito-linea__barra {
+    background: var(--aviso);
+}
+.transito-linea.transito--cerrado {
+    color: var(--texto-3);
+}
+
+/* ── Ventana con toda la información ── */
+.transito.transito--hoja {
+    width: 100%;
+    max-width: 430px;
+    margin: 0;
+    padding: 18px 18px 20px;
+    border-radius: 24px;
+}
+.transito__hoja-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: -2px;
+}
+.transito__hoja-placa {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--texto);
+}
+.transito__hoja-cerrar {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 0;
+    background: var(--fondo-hover);
+    color: var(--texto-3);
+    cursor: pointer;
+}
