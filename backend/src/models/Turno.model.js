@@ -66,6 +66,12 @@ const turnoSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Última vez que el guardia abrió o volvió a este flujo. Un mismo día puede
+        // tener varios flujos activos (un puesto y luego otro): el actual es el más reciente.
+        usadoAt: {
+            type: Date,
+            default: Date.now,
+        },
     },
     { timestamps: true }
 );

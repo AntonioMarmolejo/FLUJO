@@ -48,8 +48,11 @@ export const iniciarTurno = async (req, res) => {
         if (turnoExistente) {
             // Registrar cambio de turno
             const nuevoTurno = turno === 'diurno' ? 'diurno' : 'nocturno';
-            // Mismo turno que el actual (p. ej. un reintento de la cola offline): nada que registrar
+            // Volver a este flujo lo convierte en el actual
+            turnoExistente.usadoAt = new Date();
+            // Mismo turno que el actual (p. ej. un reintento de la cola offline): nada más que registrar
             if (turnoExistente.turnoActual === nuevoTurno) {
+                await turnoExistente.save();
                 return res.status(200).json({ message: 'Turno ya activo', turno: turnoExistente, esCambio: true });
             }
             turnoExistente.cambios.push({
@@ -114,7 +117,10 @@ export const getUltimoTurno = async (req, res) => {
 export const getTurnoActivo = async (req, res) => {
     try {
         const fecha = getFechaActual();
-        let turno = await Turno.findOne({ usuario: req.user._id, fecha, activo: true });
+        // Si el guardia abrió más de un flujo hoy, el actual es el último que abrió
+        // (antes se devolvía cualquiera, y un puesto anterior reemplazaba al elegido)
+        const masReciente = { usadoAt: -1, updatedAt: -1 };
+        let turno = await Turno.findOne({ usuario: req.user._id, fecha, activo: true }).sort(masReciente);
 
         // Si es madrugada (00:00-05:59 ECU) y no hay turno de hoy, buscar nocturno de ayer
         if (!turno && getHoraECU() < 6) {
@@ -123,7 +129,7 @@ export const getTurnoActivo = async (req, res) => {
                 fecha: getFechaAyer(),
                 turnoActual: 'nocturno',
                 activo: true,
-            });
+            }).sort(masReciente);
         }
 
         res.status(200).json({ turno });
