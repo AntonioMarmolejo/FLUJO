@@ -1,13 +1,15 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../api/axios';
 import { buscarPersonaLocal, registrarPersona } from '../../lib/syncEngine.js';
-import { ModalField } from './comunes';
+import { ModalConfirm, ModalField } from './comunes';
 import { CFG_DEFAULTS, addMouseSwipe, getHoraLocal } from './helpers';
 import { IconCopy, IconMinus, IconPencil, IconShare } from './iconos';
 import { TransitoDetalle } from './TransitoDetalle';
 
 export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, onTransito, hasPrev, hasNext, onPrev, onNext, counter }) => {
     const isIngreso = mov.tipo === 'ingreso';
+    const [confirmarBorrado, setConfirmarBorrado] = useState(false);
     const SK = 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
 
     const campos = [
@@ -79,9 +81,22 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                         `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`)}
                     {onShare  && actBtn('Compartir', () => onShare(mov),
                         `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>`)}
-                    {onDelete && actBtn('Eliminar',  () => { onDelete(mov._id); onClose(); },
+                    {onDelete && actBtn('Eliminar',  () => setConfirmarBorrado(true),
                         `<svg width="13" height="13" viewBox="0 0 24 24" ${SK}><path d="M5 12h14"/></svg>`)}
                 </div>
+
+                {/* ── Confirmar antes de eliminar ──
+                    Va al final del documento, encima del detalle; los toques no llegan al
+                    fondo del detalle (que lo cerraría). */}
+                {confirmarBorrado && createPortal(
+                    <div onClick={e => e.stopPropagation()}>
+                        <ModalConfirm
+                            mensaje={`¿Eliminar ${isIngreso ? 'el INGRESO' : 'la SALIDA'} de ${mov.placa} de las ${mov.hora}? No se puede deshacer.`}
+                            onCancel={() => setConfirmarBorrado(false)}
+                            onConfirm={() => { setConfirmarBorrado(false); onDelete(mov._id); onClose(); }} />
+                    </div>,
+                    document.body,
+                )}
 
                 {/* ── Navegación anterior / siguiente ── */}
                 {(hasPrev || hasNext || counter) && (
