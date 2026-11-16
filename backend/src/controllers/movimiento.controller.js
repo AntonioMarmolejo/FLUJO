@@ -1,6 +1,7 @@
 import Movimiento from '../models/Movimiento.model.js';
 import Vehiculo from '../models/Vehiculo.model.js';
 import Turno from '../models/Turno.model.js';
+import Reporte from '../models/Reporte.model.js';
 import { tieneBloque, denegarBloque } from '../middleware/auth.middleware.js';
 
 const getHora = () => new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
@@ -36,7 +37,11 @@ const leerTransito = (t, ahora = Date.now()) => {
 };
 
 // Datos del vehículo que el INGRESO registrado desde EN CAMINO toma de la SALIDA
-const CAMPOS_INSTANCIA = ['marca', 'color', 'tipoVehiculo', 'empresa', 'conductor', 'cedula', 'guia', 'quienAutoriza', 'empresaAutoriza'];
+const CAMPOS_INSTANCIA = ['marca', 'color', 'tipoVehiculo', 'empresa', 'conductor', 'cedula', 'destino', 'actividad', 'guia', 'quienAutoriza', 'empresaAutoriza'];
+// Datos del vehículo que viajan con cada fila de EN CAMINO (para registrar la llegada completa, aun sin conexión)
+const CAMPOS_VEHICULO = ['marca', 'color', 'tipoVehiculo', 'empresa', 'conductor', 'cedula', 'destino', 'actividad', 'genero'];
+const esId = v => /^[0-9a-f]{24}$/i.test(String(v || ''));
+const vehiculoDe = d => Object.fromEntries(CAMPOS_VEHICULO.map(c => [c, d?.[c] || (c === 'genero' ? 'm' : '')]));
 
 // La garita registró la llegada: deja de verlo en EN CAMINO; si era el destino, el tránsito se cierra
 const marcarLlegada = async (salida, garita) => {
@@ -90,6 +95,13 @@ export const crearMovimiento = async (req, res) => {
             }
         }
 
+        // INGRESO de un vehículo que la garita se había reportado: el reporte se cierra.
+        // Si el reporte todavía no se subió, queda enlazado igual y nacerá cerrado (crearReporte).
+        if (tipo === 'ingreso' && esId(req.body.reporteDe)) {
+            datos.reporteDe = req.body.reporteDe;
+            await Reporte.updateOne({ _id: req.body.reporteDe, bloque, estado: 'en_camino' }, { estado: 'llegado', cerradoAt: new Date() });
+        }
+
         const movimiento = await Movimiento.create(datos);
         if (salida?.transito) await marcarLlegada(salida, req.body.garitaLlegada);
 
@@ -122,22 +134,100 @@ export const getEnCamino = async (req, res) => {
         const bloque = texto(req.query.bloque, 10), garita = texto(req.query.garita);
         if (!bloque || !garita) return res.status(400).json({ message: 'Bloque y garita son obligatorios' });
         if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
-        const salidas = await Movimiento.find({
-            bloque, tipo: 'salida',
-            'transito.estado': 'en_camino',
-            'transito.salidaAt': { $gte: new Date(Date.now() - EN_CAMINO_MIN * 60e3) },
-            'transito.tiempos.garita': garita,
-            'transito.origen': { $ne: garita },
-            'transito.vistos': { $ne: garita },
-        }).select('placa transito').sort({ 'transito.salidaAt': 1 }).limit(200).lean();
+        const desde = new Date(Date.now() - EN_CAMINO_MIN * 60e3);
+        const campos = `placa transito ${CAMPOS_VEHICULO.join(' ')}`;
+        const [salidas, enviadas, reportes] = await Promise.all([
+            // Vienen hacia esta garita o pasan por ella
+            Movimiento.find({
+                bloque, tipo: 'salida',
+                'transito.estado': 'en_camino',
+                'transito.salidaAt': { $gte: desde },
+                'transito.tiempos.garita': garita,
+                'transito.origen': { $ne: garita },
+                'transito.vistos': { $ne: garita },
+            }).select(campos).sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
+            // Salieron de esta garita hacia otra
+            Movimiento.find({
+                bloque, tipo: 'salida',
+                'transito.estado': 'en_camino',
+                'transito.salidaAt': { $gte: desde },
+                'transito.origen': garita,
+            }).select('placa transito').sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
+            // Los que la garita se reportó a sí misma
+            Reporte.find({ bloque, garita, estado: 'en_camino', reportadoAt: { $gte: desde } })
+                .sort({ reportadoAt: 1 }).limit(200).lean(),
+        ]);
+        const fila = s => ({
+            _id: s._id, placa: s.placa,
+            origen: s.transito.origen, destino: s.transito.destino,
+            salidaAt: s.transito.salidaAt, tiempos: s.transito.tiempos,
+        });
         res.json({
             ahora: Date.now(),   // para corregir la diferencia de reloj del dispositivo
-            enCamino: salidas.map(s => ({
-                _id: s._id, placa: s.placa,
-                origen: s.transito.origen, destino: s.transito.destino,
-                salidaAt: s.transito.salidaAt, tiempos: s.transito.tiempos,
-            })),
+            enCamino: [
+                ...salidas.map(s => ({ ...fila(s), vehiculo: vehiculoDe(s) })),
+                ...reportes.map(r => ({
+                    _id: r._id, placa: r.placa, reporte: true,
+                    origen: r.origen, destino: garita, salidaAt: r.reportadoAt,
+                    tiempos: [{ garita, min: r.esperadoMin }],
+                    vehiculo: vehiculoDe(r),
+                })),
+            ],
+            enviados: enviadas.map(fila),
         });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// POST /api/movimientos/reportes  — la garita se reporta un vehículo que viene hacia ella.
+// El _id lo genera el dispositivo: reenviar el mismo reporte (sin conexión) no lo duplica.
+export const crearReporte = async (req, res) => {
+    try {
+        const b = req.body;
+        const bloque = texto(b.bloque, 10), garita = texto(b.garita), placa = texto(b.placa, 20).toUpperCase();
+        if (!esId(b._id)) return res.status(400).json({ message: 'ID de reporte inválido' });
+        if (!bloque || !garita || !placa) return res.status(400).json({ message: 'Bloque, garita y placa son obligatorios' });
+        if (!tieneBloque(req.user, bloque)) return denegarBloque(res);
+        const existente = await Reporte.findById(b._id);
+        if (existente) return res.json({ message: 'Reporte ya registrado', reporte: existente });
+
+        let reportadoAt = new Date(b.reportadoAt).getTime();
+        const ahora = Date.now();
+        if (!Number.isFinite(reportadoAt) || reportadoAt > ahora + 10 * 60e3 || reportadoAt < ahora - 7 * 864e5) reportadoAt = ahora;
+        const min = b.esperadoMin == null || b.esperadoMin === '' ? null : Number(b.esperadoMin);
+        // Si la llegada ya se registró (sin conexión, antes de subir el reporte), nace cerrado
+        const yaLlego = await Movimiento.exists({ reporteDe: b._id });
+        const reporte = await Reporte.create({
+            _id: b._id, usuario: req.user._id, bloque, garita, placa,
+            origen: texto(b.origen), reportadoAt: new Date(reportadoAt),
+            esperadoMin: Number.isFinite(min) && min > 0 ? Math.round(min) : null,
+            ...Object.fromEntries(CAMPOS_VEHICULO.filter(c => c !== 'genero').map(c => [c, texto(b[c], c === 'actividad' ? 1000 : 120)])),
+            genero: b.genero === 'f' ? 'f' : 'm',
+            ...(yaLlego && { estado: 'llegado', cerradoAt: new Date() }),
+        });
+        res.status(201).json({ message: 'Reporte registrado', reporte });
+    } catch (error) {
+        if (error.code === 11000 && req.body._id) {
+            const mismo = await Reporte.findById(req.body._id).catch(() => null);
+            if (mismo) return res.json({ message: 'Reporte ya registrado', reporte: mismo });
+        }
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
+// POST /api/movimientos/reportes/quitar  { id } — se reportó por error
+export const quitarReporte = async (req, res) => {
+    try {
+        if (!esId(req.body.id)) return res.status(400).json({ message: 'ID de reporte inválido' });
+        const reporte = await Reporte.findById(req.body.id);
+        if (!reporte) return res.status(404).json({ message: 'Reporte no encontrado' });
+        if (!tieneBloque(req.user, reporte.bloque)) return denegarBloque(res);
+        if (reporte.estado !== 'en_camino') return res.status(409).json({ message: 'El vehículo ya llegó o el reporte ya se quitó' });
+        reporte.estado = 'quitado';
+        reporte.cerradoAt = new Date();
+        await reporte.save();
+        res.json({ message: 'Reporte quitado', reporte });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
     }

@@ -1,52 +1,72 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../../api/axios';
-import { encolarMovimiento, subirMovimientoPendiente } from '../../lib/syncEngine.js';
+import { encolarMovimiento, getOperacionesPendientes, subirMovimientoPendiente } from '../../lib/syncEngine.js';
 import { EN_CAMINO_MIN, cronometro, minutosHasta } from '../../lib/garitas.js';
+import { CAMPOS_REPORTE, quitarReporte } from '../../lib/reportesEnCamino.js';
 import { getHoraLocal } from './helpers';
 import '../../styles/EnCamino.css';
 
-// EN CAMINO: vehículos que salieron de otra garita del bloque y vienen hacia la
-// mía (o pasan por ella), con cronómetro en vivo. Barra en el borde izquierdo de
-// Inicio (a la altura del +) que se arrastra para abrir el cajón.
-// Las salidas las registra cualquier guardia del bloque; aquí se ven solo placa,
-// ruta y hora, durante EN_CAMINO_MIN minutos como máximo.
+// EN CAMINO: barra en el borde izquierdo de Inicio (a la altura del +) que se
+// arrastra para abrir el cajón. En el cajón:
+//   · Los que vienen hacia mi garita: salidas de otras garitas del bloque (o que
+//     pasan por aquí) y los vehículos que la garita se reportó a sí misma.
+//   · Botón para reportarse un vehículo que viene.
+//   · Los enviados desde mi garita hacia otra.
+// Cada vehículo se ve durante EN_CAMINO_MIN minutos como máximo.
 
 const MAX_FILAS = 3;
 const UMBRAL_ARRASTRE = 50;      // px para abrir o cerrar al soltar
 const CADA_CUANTO_MS = 30000;    // consulta al servidor
+const VACIO = { lista: [], enviados: [], desfase: 0 };
 
-// Progreso de cada vehículo: tiempo transcurrido ÷ minutos esperados hasta MI garita
-const estadoDe = (v, ahora, garita) => {
+// Progreso de un vehículo: tiempo transcurrido ÷ minutos esperados hasta `meta`
+const estadoDe = (v, ahora, meta) => {
     const transcurrido = (ahora - new Date(v.salidaAt).getTime()) / 1000;
-    const min = minutosHasta(v, garita);
-    const esperado = min > 0 ? min * 60 : null;     // sin ruta en Distancias no hay progreso
+    const min = minutosHasta(v, meta);
+    const esperado = min > 0 ? min * 60 : null;     // sin tiempo estimado no hay progreso
     return {
         ...v,
-        id: v._id,
+        id: String(v._id),
         transcurrido,
         retrasado: esperado != null && transcurrido > esperado,
         avance: esperado ? Math.min(1, transcurrido / esperado) : 0,
-        dePaso: v.destino !== garita,
+        dePaso: !v.reporte && v.destino !== meta,
     };
 };
 // Los retrasados primero (el que más lleva arriba); luego los que están por llegar
 const ordenar = (a, b) => (b.retrasado - a.retrasado)
     || (a.retrasado ? b.transcurrido - a.transcurrido : (b.avance - a.avance) || (b.transcurrido - a.transcurrido));
+const vigenteA = ahora => v => ahora - new Date(v.salidaAt).getTime() < EN_CAMINO_MIN * 60e3;
 
 // Última lista recibida, para verla sin conexión (cada vehículo igual vence a la hora)
 const leerCopia = clave => {
-    try { return JSON.parse(localStorage.getItem(clave)) || null; } catch { return null; }
+    try { return { ...VACIO, ...JSON.parse(localStorage.getItem(clave)) }; } catch { return VACIO; }
 };
 
-// Registrar la llegada: un INGRESO por la misma cola que los demás movimientos
-// (aparece al instante y se sube cuando haya conexión). El servidor completa
-// conductor, empresa y demás datos con los de la SALIDA.
-const registrarLlegada = async ({ salida, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento }) => {
+// Un reporte que todavía está en la cola, con la misma forma que los del servidor
+const reporteEnCola = (r, garita) => ({
+    _id: r._id, placa: r.placa, reporte: true, pendiente: true,
+    origen: r.origen, destino: garita, salidaAt: r.reportadoAt,
+    tiempos: [{ garita, min: r.esperadoMin }],
+    vehiculo: Object.fromEntries(CAMPOS_REPORTE.filter(c => c !== 'placa').map(c => [c, r[c]])),
+});
+
+// Registrar la llegada: un INGRESO con TODOS los datos del vehículo (como en el
+// formulario de nuevo movimiento) y la hora actual, por la misma cola que los
+// demás movimientos: aparece al instante y se sube cuando haya conexión.
+const registrarLlegada = async ({ v, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento }) => {
     const tempId = crypto.randomUUID();
     const hora = getHoraLocal();
-    const ingreso = { tipo: 'ingreso', placa, destino: ubiIngreso, actividad: '', instanciadoDe: salida._id };
+    const datos = v.vehiculo || {};
+    const ingreso = {
+        tipo: 'ingreso', placa,
+        marca: datos.marca || '', color: datos.color || '', tipoVehiculo: datos.tipoVehiculo || '',
+        empresa: datos.empresa || '', conductor: datos.conductor || '', cedula: datos.cedula || '',
+        destino: datos.destino || ubiIngreso, actividad: datos.actividad || '', genero: datos.genero || 'm',
+        ...(v.reporte ? { reporteDe: v._id } : { instanciadoDe: v._id }),
+    };
     agregarOptimista({ ...ingreso, _id: tempId, hora, fecha, _pending: true });
-    const payload = { ...ingreso, puesto, bloque, fecha, hora, clientUUID: tempId, garitaLlegada: garita };
+    const payload = { ...ingreso, puesto, bloque, fecha, hora, clientUUID: tempId, ...(!v.reporte && { garitaLlegada: garita }) };
     await encolarMovimiento({ uuid: tempId, payload, hora, fecha });
     try {
         const r = await subirMovimientoPendiente(tempId);
@@ -59,15 +79,23 @@ const registrarLlegada = async ({ salida, placa, garita, bloque, puesto, fecha, 
 const IconoAtras = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
 );
-const IconoMas = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+const IconoMas = ({ tam = 20 }) => (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
-// ── Fila de un vehículo ───────────────────────────────────
-const FilaCamino = ({ v, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar }) => {
+// ── Fila de un vehículo que viene ─────────────────────────
+const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar }) => {
     const clase = `camino__fila${v.retrasado ? ' camino__fila--retrasado' : ''}`;
-    const ruta = <span className="camino__ruta-texto">{v.origen} → {v.destino}</span>;
+    const ruta = (
+        <>
+            {/* Un reporte siempre viene hacia esta garita: basta con decir de dónde */}
+            <span className="camino__ruta-texto">{v.reporte ? (v.origen ? `Desde ${v.origen}` : `Hacia ${garita}`) : `${v.origen} → ${v.destino}`}</span>
+            {v.dePaso && <span className="camino__de-paso">de paso</span>}
+            {v.reporte && <span className="camino__de-paso camino__de-paso--reporte">reportado</span>}
+        </>
+    );
     if (confirmando) {
+        const datos = [v.vehiculo?.conductor, v.vehiculo?.empresa].filter(Boolean).join(' · ');
         return (
             <div className={`${clase} camino__fila--confirmar`}>
                 <div className="camino__confirmar-cab">
@@ -78,11 +106,13 @@ const FilaCamino = ({ v, confirmando, placa, onPlaca, onAbrir, onCancelar, onReg
                     aria-label="Placa del vehículo" autoCapitalize="characters" spellCheck={false}
                     onChange={e => onPlaca(e.target.value.toUpperCase())}
                     onKeyDown={e => { if (e.key === 'Enter' && placa.trim()) onRegistrar(); }} />
-                <div className="camino__ruta">{ruta}{v.dePaso && <span className="camino__de-paso">de paso</span>}</div>
+                <div className="camino__ruta">{ruta}</div>
+                {datos && <div className="camino__datos">{datos}</div>}
                 <div className="camino__confirmar-botones">
                     <button className="camino__btn" onClick={onCancelar}>Cancelar</button>
                     <button className="camino__btn camino__btn--primario" disabled={!placa.trim()} onClick={onRegistrar}>Registrar</button>
                 </div>
+                {v.reporte && <button className="camino__quitar" onClick={onQuitar}>Quitar este reporte</button>}
             </div>
         );
     }
@@ -96,17 +126,37 @@ const FilaCamino = ({ v, confirmando, placa, onPlaca, onAbrir, onCancelar, onReg
                     <span>{v.placa}</span>
                     {v.retrasado && <span className="camino__retraso">Retrasado</span>}
                 </div>
-                <div className="camino__ruta">{ruta}{v.dePaso && <span className="camino__de-paso">de paso</span>}</div>
+                <div className="camino__ruta">{ruta}</div>
             </div>
             <button className="camino__mas" aria-label={`Registrar la llegada de ${v.placa}`} onClick={onAbrir}><IconoMas /></button>
         </div>
     );
 };
 
+// ── Fila de un vehículo enviado desde mi garita ───────────
+const FilaEnviado = ({ v }) => (
+    <div className={`camino__fila camino__fila--enviado${v.retrasado ? ' camino__fila--retrasado' : ''}`}>
+        <div className="camino__relleno" style={{ width: `${v.avance * 100}%` }} />
+        <span className="camino__crono">{cronometro(v.transcurrido)}</span>
+        <div className="camino__info">
+            <div className="camino__placa">
+                <span>{v.placa}</span>
+                {v.retrasado && <span className="camino__retraso">Retrasado</span>}
+            </div>
+            <div className="camino__ruta"><span className="camino__ruta-texto">{v.origen} → {v.destino}</span></div>
+        </div>
+    </div>
+);
+
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento }) => {
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar }) => {
     const claveCopia = `flujo_encamino_${bloque}_${garita}`;
-    const [datos, setDatos] = useState(() => leerCopia(claveCopia) || { lista: [], desfase: 0 });
+    const [datos, setDatos] = useState(() => leerCopia(claveCopia));
+    const [enCola, setEnCola] = useState({ reportes: [], quitados: [] });   // reportes aún sin subir
+    // Reportes quitados en esta pantalla: no vuelven a aparecer aunque la lista del
+    // servidor tarde en actualizarse después de subir el cambio
+    const [quitadosAqui, setQuitadosAqui] = useState([]);
+    const [recarga, setRecarga] = useState(0);
     const [ahora, setAhora] = useState(() => Date.now());
     const [abierto, setAbierto] = useState(false);
     const [arrastre, setArrastre] = useState(null);     // px mientras el dedo arrastra el cajón
@@ -118,7 +168,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const gestoRef = useRef(null);
     const trasArrastreRef = useRef(false);
 
-    // Lo que viene hacia mi garita: al entrar, cada 30 s, al abrir el cajón y al volver la conexión
+    // Lista del servidor: al entrar, cada 30 s, al abrir el cajón, al volver la conexión
+    // y cuando se sube un reporte
     useEffect(() => {
         let vigente = true;
         const cargar = async () => {
@@ -126,7 +177,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                 const { data } = await api.get('/movimientos/en-camino', { params: { bloque, garita } });
                 if (!vigente) return;
                 // desfase: diferencia entre el reloj del servidor y el del dispositivo
-                const nuevo = { lista: data.enCamino || [], desfase: (data.ahora || Date.now()) - Date.now() };
+                const nuevo = { lista: data.enCamino || [], enviados: data.enviados || [], desfase: (data.ahora || Date.now()) - Date.now() };
                 setDatos(nuevo);
                 try { localStorage.setItem(claveCopia, JSON.stringify(nuevo)); } catch { /* sin espacio */ }
             } catch {
@@ -137,16 +188,38 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         const id = setInterval(cargar, CADA_CUANTO_MS);
         window.addEventListener('online', cargar);
         return () => { vigente = false; clearInterval(id); window.removeEventListener('online', cargar); };
-    }, [bloque, garita, claveCopia, abierto]);
+    }, [bloque, garita, claveCopia, abierto, recarga]);
+
+    // Reportes y "quitar reporte" que siguen en la cola (se ven al instante, también sin conexión)
+    useEffect(() => {
+        let vigente = true;
+        const leer = async () => {
+            const [reportes, quitados] = await Promise.all([
+                getOperacionesPendientes('reporte'), getOperacionesPendientes('reporteQuitar'),
+            ]).catch(() => [[], []]);
+            if (!vigente) return;
+            setEnCola({
+                reportes: reportes.map(op => op.payload).filter(r => r.bloque === bloque && r.garita === garita),
+                quitados: quitados.map(op => String(op.payload.id)),
+            });
+        };
+        leer();
+        const onOperacion = e => {
+            if (!['reporte', 'reporteQuitar'].includes(e.detail?.tipo)) return;
+            leer();
+            if (e.detail.data) setRecarga(n => n + 1);   // se subió: pedir la lista otra vez
+        };
+        window.addEventListener('flujo:operaciones', onOperacion);
+        return () => { vigente = false; window.removeEventListener('flujo:operaciones', onOperacion); };
+    }, [bloque, garita]);
 
     // Cronómetros: cada segundo con el cajón abierto; cerrado basta para el punto ámbar
     useEffect(() => {
-        if (!datos.lista.length) return undefined;
         const tic = () => setAhora(Date.now());
         const primero = setTimeout(tic, 0);   // al abrir, el tiempo se pone al día enseguida
         const id = setInterval(tic, abierto ? 1000 : 15000);
         return () => { clearTimeout(primero); clearInterval(id); };
-    }, [abierto, datos.lista.length]);
+    }, [abierto]);
 
     // Esc cierra; con el cajón abierto la página de atrás no se desplaza
     useEffect(() => {
@@ -164,19 +237,33 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         return () => clearTimeout(id);
     }, [aviso]);
 
-    // Fuera: las que ya registré (aunque sigan en la cola sin subir) y las de hace más de 1 hora
-    const registradas = new Set(movimientos.filter(m => m.instanciadoDe).map(m => String(m.instanciadoDe)));
     const ahoraServidor = ahora + datos.desfase;
-    const lista = datos.lista
-        .filter(v => !registradas.has(String(v._id)) && ahoraServidor - new Date(v.salidaAt).getTime() < EN_CAMINO_MIN * 60e3)
+    const vigente = vigenteA(ahoraServidor);
+
+    // Los que vienen: los del servidor y los reportes aún en la cola. Fuera: los que ya
+    // registré (aunque sigan en la cola), los reportes quitados y los de hace más de 1 hora.
+    const registradas = new Set(movimientos.flatMap(m => [m.instanciadoDe, m.reporteDe]).filter(Boolean).map(String));
+    const quitados = new Set([...enCola.quitados, ...quitadosAqui]);
+    const delServidor = new Set(datos.lista.map(v => String(v._id)));
+    const lista = [...datos.lista, ...enCola.reportes.filter(r => !delServidor.has(String(r._id))).map(r => reporteEnCola(r, garita))]
+        .filter(v => !registradas.has(String(v._id)) && !quitados.has(String(v._id)) && vigente(v))
         .map(v => estadoDe(v, ahoraServidor, garita))
         .sort(ordenar);
+
+    // Enviados desde mi garita: los del servidor y mis salidas (aunque no se hayan subido).
+    // Lo que hice aquí manda: si cancelé o cambié el destino, se ve enseguida.
+    const enviadosPorId = new Map(datos.enviados.map(v => [String(v._id), v]));
+    movimientos.forEach(m => {
+        if (m.tipo !== 'salida' || m.transito?.origen !== garita) return;
+        if (m.transito.estado === 'en_camino') enviadosPorId.set(String(m._id), { _id: m._id, placa: m.placa, ...m.transito });
+        else enviadosPorId.delete(String(m._id));
+    });
+    const enviados = [...enviadosPorId.values()].filter(vigente)
+        .map(v => estadoDe(v, ahoraServidor, v.destino)).sort(ordenar);
+
     const hayRetrasados = lista.some(v => v.retrasado);
     const visibles = verTodos ? lista : lista.slice(0, MAX_FILAS);
     const ocultos = lista.length - MAX_FILAS;
-
-    // Sin vehículos en camino no hay barra ni cajón
-    if (!lista.length) return null;
 
     // ── Arrastre (dedo o mouse) ──
     // Desde la barra con el cajón cerrado se arrastra a la derecha; con el cajón
@@ -249,13 +336,18 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const fraccion = desplazamiento == null ? (abierto ? 1 : 0) : 1 + desplazamiento / ancho;   // 0 cerrado … 1 abierto
 
     const registrar = () => {
-        const salida = lista.find(x => x.id === confirmando.id);
+        const v = lista.find(x => x.id === confirmando.id);
         const placa = confirmando.placa.trim().toUpperCase();
-        if (!salida || !placa) return;
+        if (!v || !placa) return;
         setConfirmando(null);
         setAviso(`${placa} registrado como INGRESO`);
-        if (lista.length === 1) setAbierto(false);
-        registrarLlegada({ salida, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento });
+        registrarLlegada({ v, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento });
+    };
+    const quitar = v => {
+        setConfirmando(null);
+        setQuitadosAqui(q => [...q, v.id]);   // se va de la lista enseguida
+        setAviso(`Reporte de ${v.placa} quitado`);
+        quitarReporte({ id: v.id, pendiente: !!v.pendiente });
     };
 
     return (
@@ -271,37 +363,53 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                 {...gestosCajon}>
                 {/* Cerrado, el contenido no recibe foco ni toques; la barra sí */}
                 <div className="camino__contenido" inert={!abierto && desplazamiento == null}>
-                <header className="camino__cab">
-                    <div>
-                        <div className="camino__titulo">En camino · <span className="camino__total">{lista.length}</span></div>
-                        <div className="camino__subtitulo">Hacia {garita} · tiempo en vivo</div>
-                    </div>
-                    <button className="camino__cerrar" aria-label="Cerrar" onClick={() => setAbierto(false)}><IconoAtras /></button>
-                </header>
+                    <header className="camino__cab">
+                        <div>
+                            <div className="camino__titulo">En camino · <span className="camino__total">{lista.length}</span></div>
+                            <div className="camino__subtitulo">Hacia {garita} · tiempo en vivo</div>
+                        </div>
+                        <button className="camino__cerrar" aria-label="Cerrar" onClick={() => setAbierto(false)}><IconoAtras /></button>
+                    </header>
 
-                <div className="camino__lista">
-                    {visibles.map(v => (
-                        <FilaCamino key={v.id} v={v}
-                            confirmando={confirmando?.id === v.id}
-                            placa={confirmando?.id === v.id ? confirmando.placa : ''}
-                            onPlaca={p => setConfirmando(c => ({ ...c, placa: p }))}
-                            onAbrir={() => setConfirmando({ id: v.id, placa: v.placa })}
-                            onCancelar={() => setConfirmando(null)}
-                            onRegistrar={registrar} />
-                    ))}
-                    {ocultos > 0 && (
-                        <button className="camino__ver-mas" onClick={() => setVerTodos(t => !t)}>
-                            {verTodos ? 'Ver menos' : `Ver ${ocultos} más`}
+                    <div className="camino__lista">
+                        {lista.length === 0 && (
+                            <div className="camino__vacio">Ningún vehículo viene hacia {garita} por ahora.</div>
+                        )}
+                        {visibles.map(v => (
+                            <FilaCamino key={v.id} v={v} garita={garita}
+                                confirmando={confirmando?.id === v.id}
+                                placa={confirmando?.id === v.id ? confirmando.placa : ''}
+                                onPlaca={p => setConfirmando(c => ({ ...c, placa: p }))}
+                                onAbrir={() => setConfirmando({ id: v.id, placa: v.placa })}
+                                onCancelar={() => setConfirmando(null)}
+                                onRegistrar={registrar}
+                                onQuitar={() => quitar(v)} />
+                        ))}
+                        {ocultos > 0 && (
+                            <button className="camino__ver-mas" onClick={() => setVerTodos(t => !t)}>
+                                {verTodos ? 'Ver menos' : `Ver ${ocultos} más`}
+                            </button>
+                        )}
+                        <button className="camino__reportar" onClick={onReportar}>
+                            <IconoMas tam={18} />Reportar un vehículo que viene
                         </button>
-                    )}
+
+                        {enviados.length > 0 && (
+                            <>
+                                <div className="camino__seccion">Enviados desde {garita} · <span className="camino__total">{enviados.length}</span></div>
+                                {enviados.map(v => <FilaEnviado key={v.id} v={v} />)}
+                            </>
+                        )}
+                    </div>
+
+                    <div className="camino__pie">Desliza a la izquierda para cerrar</div>
+                    <div className={`camino__aviso${aviso ? ' camino__aviso--visible' : ''}`} aria-live="polite">{aviso}</div>
                 </div>
 
-                <div className="camino__pie">Desliza a la izquierda para cerrar</div>
-                <div className={`camino__aviso${aviso ? ' camino__aviso--visible' : ''}`} aria-live="polite">{aviso}</div>
-                </div>
-
-                {/* La barra va pegada al borde del cajón: lo abre y lo cierra */}
-                <button className="camino__barra" aria-label={abierto ? 'Cerrar EN CAMINO' : `Abrir EN CAMINO: ${lista.length} vehículos`}
+                {/* La barra va pegada al borde del cajón: lo abre y lo cierra. Siempre está,
+                    aunque no venga nadie, para poder reportar o ver lo enviado. */}
+                <button className={`camino__barra${lista.length ? '' : ' camino__barra--vacia'}`}
+                    aria-label={abierto ? 'Cerrar EN CAMINO' : `Abrir EN CAMINO: ${lista.length} ${lista.length === 1 ? 'vehículo' : 'vehículos'}`}
                     aria-expanded={abierto} tabIndex={0} {...gestosBarra}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAbierto(a => !a); } }}>
                     <span className="camino__barra-linea" />

@@ -426,3 +426,74 @@
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ── Sin vehículos, reportar y enviados ── */
+/* Sin nadie en camino la barra sigue (para reportar o ver lo enviado), más tenue */
+.camino__barra.camino__barra--vacia .camino__barra-linea {
+    opacity: 0.45;
+    box-shadow: none;
+}
+.camino__vacio {
+    flex-shrink: 0;
+    padding: 16px 12px;
+    border-radius: 12px;
+    background: var(--camino-fila);
+    font-size: 14px;
+    color: var(--texto-tenue);
+    text-align: center;
+}
+.camino__reportar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+    border-radius: 12px;
+    border: 1.5px solid var(--camino-mas-borde);
+    background: var(--camino-mas-fondo);
+    color: var(--acento);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.camino__seccion {
+    flex-shrink: 0;
+    margin-top: 10px;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--texto-4);
+}
+/* Enviados: sin botón +, borde neutro */
+.camino__fila.camino__fila--enviado {
+    min-height: 58px;
+    border-left-color: var(--borde-7);
+}
+.camino__fila.camino__fila--enviado.camino__fila--retrasado {
+    border-left-color: var(--aviso);
+}
+.camino__de-paso.camino__de-paso--reporte {
+    border-color: var(--camino-mas-borde);
+    background: var(--camino-mas-fondo);
+    color: var(--acento);
+}
+.camino__datos {
+    margin-top: -4px;
+    font-size: 13px;
+    color: var(--texto-tenue);
+}
+.camino__quitar {
+    align-self: center;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--peligro);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}

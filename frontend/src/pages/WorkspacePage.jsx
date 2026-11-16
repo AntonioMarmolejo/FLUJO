@@ -22,6 +22,7 @@ import { PantallaUtilidades } from './workspace/Utilidades';
 import { AccesoRestringido, AvisoIniciarFlujo, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
 import { EnCamino } from './workspace/EnCamino';
 import { garitaDePuesto } from '../lib/garitas.js';
+import { reportarVehiculo } from '../lib/reportesEnCamino.js';
 import { encolarOperacion, syncPendingOperaciones } from '../lib/syncEngine.js';
 import {
     DASH_FILTROS,
@@ -82,6 +83,8 @@ const WorkspacePage = () => {
     };
     const garitaEnCamino = turnoActivo ? garitaDePuesto(turnoActivo.bloque, turnoActivo.puesto) : null;
     const puedeRegistrar = isAdmin || (!isPending && hasPermiso('movimientos') && (!turnoActivo || tieneBloque(turnoActivo.bloque)));
+    // Formulario para reportarse un vehículo que viene hacia mi garita
+    const [reportando, setReportando] = useState(false);
 
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
@@ -653,7 +656,20 @@ const WorkspacePage = () => {
                     ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
                     movimientos={movimientos}
                     agregarOptimista={handleGuardadoOptimista}
-                    confirmarMovimiento={handleMovimientoConfirmado} />
+                    confirmarMovimiento={handleMovimientoConfirmado}
+                    onReportar={() => setReportando(true)} />
+            )}
+            {reportando && turnoActivo && garitaEnCamino && (
+                <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
+                    fechaFlujo={turnoActivo.fecha}
+                    ubiIngreso={registroConfig.ubicacion || PUESTO_UBICACION[turnoActivo.puesto] || 'EPF'}
+                    movimientos={movimientos}
+                    onClose={() => setReportando(false)}
+                    reporte={{
+                        garita: garitaEnCamino,
+                        onReportar: ({ datos, origen, esperadoMin }) =>
+                            reportarVehiculo({ bloque: turnoActivo.bloque, garita: garitaEnCamino, datos, origen, esperadoMin }),
+                    }} />
             )}
 
             {/* Modales */}

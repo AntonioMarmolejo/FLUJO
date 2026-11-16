@@ -36,7 +36,7 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                             {isIngreso ? 'INGRESO' : 'SALIDA'}
                         </span>
                         <span className="movdet__placa">{mov.placa}</span>
-                        {mov.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
+                        {(mov.instanciadoDe || mov.reporteDe) && <span className="mov__instanciado">instanciado</span>}
                     </div>
                     <button className="movdet__cerrar" onClick={onClose}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -537,7 +537,7 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                                 <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                 {' · '}
                                 <span className="mov__placa-code">{m.placa}</span>
-                                {m.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
+                                {(m.instanciadoDe || m.reporteDe) && <span className="mov__instanciado">instanciado</span>}
                                 {(m.conductor || m.cedula) && (
                                     <>{' · '}<span className="mov__coll-conductor">{m.conductor || '—'}{m.cedula ? `/CI: ${m.cedula}` : ''}</span></>
                                 )}
@@ -548,7 +548,7 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                                     <span className="mov__tipo-tag">{m.tipo === 'ingreso' ? 'INGRESO' : 'SALIDA'}</span>
                                     {' · '}
                                     <span className="mov__placa-code">{m.placa}</span>
-                                    {m.instanciadoDe && <span className="mov__instanciado">instanciado</span>}
+                                    {(m.instanciadoDe || m.reporteDe) && <span className="mov__instanciado">instanciado</span>}
                                     {m.empresa && <>{' · '}<span className="mov__empresa-r1">{m.empresa}</span></>}
                                 </div>
                                 <div className="mov__info-r2">

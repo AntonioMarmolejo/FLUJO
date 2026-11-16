@@ -12,7 +12,7 @@ import {
     registrarPersona,
 } from '../../lib/syncEngine.js';
 import { leerTramosLocales } from '../../lib/tramosOffline.js';
-import { armarTransito, garitaDeLugar, garitaDePuesto, garitasDelBloque, momentoDeHora } from '../../lib/garitas.js';
+import { armarTransito, garitaDeLugar, garitaDePuesto, garitasDelBloque, minutosHasta, momentoDeHora } from '../../lib/garitas.js';
 import { SuggestionField, TextSugField } from './comunes';
 import { EMPTY_FORM, TIPO_VEHICULO_OPTS, formatMov, getHoraLocal, getTurnoFecha, parseQR } from './helpers';
 
@@ -154,11 +154,25 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
 };
 
 // ── Modal formulario (crear + editar) ────────────────────
-export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onEditadoOptimista, onMovimientoConfirmado, movimientos, editData }) => {
+// `reporte` ({ garita, onReportar }): en vez de registrar un movimiento, la garita se
+// reporta un vehículo que viene hacia ella (EN CAMINO), con los mismos datos.
+export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onEditadoOptimista, onMovimientoConfirmado, movimientos, editData, reporte }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
-        : EMPTY_FORM
+        : reporte ? { ...EMPTY_FORM, tipo: 'ingreso', destino: ubiIngreso } : EMPTY_FORM
     );
+    // Solo en modo reporte: de dónde viene y en cuántos minutos llega
+    const [origenReporte, setOrigenReporte] = useState('');
+    const [minutosReporte, setMinutosReporte] = useState('');
+    const [tramosVia, setTramosVia] = useState([]);
+    useEffect(() => {
+        if (reporte) leerTramosLocales().then(setTramosVia).catch(() => {});
+    }, [reporte]);
+    // Si viene de otra garita, los minutos salen de Distancias
+    const garitaOrigen = reporte ? garitaDeLugar(bloque, origenReporte) : null;
+    const minutosAuto = garitaOrigen && garitaOrigen !== reporte.garita
+        ? minutosHasta(armarTransito({ tramos: tramosVia, bloque, origen: garitaOrigen, destino: reporte.garita }), reporte.garita)
+        : null;
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [guardado, setGuardado] = useState(false);
@@ -480,6 +494,17 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         ].filter(Boolean).join(' · ');
         const formFinal = { ...form, actividad: actividadFinal };
 
+        // Reportar un vehículo que viene: no se registra el movimiento todavía
+        if (reporte) {
+            const min = minutosReporte.trim() ? Number(minutosReporte.replace(',', '.')) : minutosAuto;
+            if (personaNotFound && form.cedula) {
+                registrarPersona({ nombres: form.conductor || '', cedula: form.cedula, empresa: form.empresa || '' }).catch(() => {});
+            }
+            reporte.onReportar({ datos: formFinal, origen: origenReporte.trim(), esperadoMin: min > 0 ? Math.round(min) : null });
+            onClose();
+            return;
+        }
+
         // Edición optimista: cierra el formulario de inmediato y sincroniza en background
         if (editData?._id) {
             // 1. Actualizar la UI sin esperar la red
@@ -585,9 +610,38 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
             )}
             <div className="modal__card" onClick={e => e.stopPropagation()}>
                 <div className="modal__header">
-                    <h3>{editData ? 'Editar movimiento' : 'Nuevo movimiento'}</h3>
+                    <h3>{editData ? 'Editar movimiento' : reporte ? 'Reportar vehículo en camino' : 'Nuevo movimiento'}</h3>
                     <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
+                {reporte ? (
+                    <div className="reporte-camino">
+                        <p className="reporte-camino__ayuda">
+                            Aparecerá en <strong>EN CAMINO</strong> de {reporte.garita} durante 1 hora. Cuando llegue, solo tocas + y se registra el INGRESO con estos datos y la hora de ese momento.
+                        </p>
+                        <div className="modal__field">
+                            <label>VIENE DE</label>
+                            <div className="encamino-destino__chips reporte-camino__chips" role="group" aria-label="Garitas del bloque">
+                                {garitasDelBloque(bloque).filter(g => g !== reporte.garita).map(g => (
+                                    <button key={g} type="button"
+                                        className={`encamino-destino__chip${garitaOrigen === g ? ' encamino-destino__chip--sel' : ''}`}
+                                        aria-pressed={garitaOrigen === g} onClick={() => setOrigenReporte(g)}>{g}</button>
+                                ))}
+                            </div>
+                            <div className="placa__wrapper">
+                                <input type="text" name="origenReporte" placeholder="Ej.: Coca, PAD-C (opcional)" autoComplete="off"
+                                    value={origenReporte} onChange={e => setOrigenReporte(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="modal__field">
+                            <label>LLEGA EN APROX. (MINUTOS)</label>
+                            <div className="placa__wrapper">
+                                <input type="text" name="minutosReporte" inputMode="numeric" autoComplete="off"
+                                    placeholder={minutosAuto ? `${minutosAuto} min según Distancias` : 'Opcional'}
+                                    value={minutosReporte} onChange={e => setMinutosReporte(e.target.value.replace(/[^\d.,]/g, ''))} />
+                            </div>
+                        </div>
+                    </div>
+                ) : (
                 <div className="modal__tipo">
                     {[['ingreso', 'INGRESA'], ['salida', 'SALE']].map(([val, label]) => (
                         <button key={val} className={`modal__tipo-btn${form.tipo === val ? ' modal__tipo-btn--active-' + val : ''}`}
@@ -607,11 +661,12 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                         </button>
                     ))}
                 </div>
+                )}
                 <div className="modal__fields">
                     <div className={`modal__field ${autoFilled ? 'modal__field--autofilled' : ''}`}>
                         <label>
                             <span>PLACAS <span className="campo-obligatorio">*</span></span>
-                            <span className="label-acciones">
+                            {!reporte && <span className="label-acciones">
                                 {showHoraInput ? (
                                     <input
                                         ref={horaInputRef}
@@ -634,7 +689,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                                 {horaManual && (
                                     <button className="activ__add-tag-btn activ__add-tag-btn--quitar" onClick={() => { setHoraManual(''); setShowHoraInput(false); }}>✕</button>
                                 )}
-                            </span>
+                            </span>}
                             {!editData && (
                                 <button className="qr__field-btn" title="Escanear QR vehículo" onClick={() => setShowScanner(true)}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -833,7 +888,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                     </div>
                 )}
                 <button className={`modal__btn${form.placa ? ' modal__btn--active' : ''}`} onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : 'Registrar movimiento'}
+                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : reporte ? 'Reportar vehículo' : 'Registrar movimiento'}
                 </button>
             </div>
         </div>

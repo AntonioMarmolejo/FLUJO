@@ -56,6 +56,8 @@ const movimientoSchema = new mongoose.Schema(
         },
         // INGRESO registrado desde EN CAMINO: la SALIDA de la que viene
         instanciadoDe: { type: mongoose.Schema.Types.ObjectId, ref: 'Movimiento', default: null },
+        // INGRESO registrado desde un vehículo que la propia garita se reportó
+        reporteDe: { type: mongoose.Schema.Types.ObjectId, ref: 'Reporte', default: null },
     },
     { timestamps: true }
 );

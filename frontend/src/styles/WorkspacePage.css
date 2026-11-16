@@ -7087,3 +7087,28 @@
 .encamino-destino__ayuda strong {
     color: var(--acento);
 }
+/* Formulario en modo "Reportar vehículo en camino" */
+.reporte-camino {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.reporte-camino__ayuda {
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(129, 140, 248, 0.1);
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--texto-3);
+}
+.reporte-camino__ayuda strong {
+    color: var(--acento);
+}
+[data-theme="light"] .reporte-camino__ayuda {
+    background: rgba(79, 70, 229, 0.07);
+}
+.reporte-camino__chips {
+    margin-bottom: 8px;
+}
