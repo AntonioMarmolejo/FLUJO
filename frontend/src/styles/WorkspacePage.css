@@ -7027,24 +7027,7 @@
 }
 
 /* ── EN CAMINO ─────────────────────────────────────────────
-   INGRESO registrado desde EN CAMINO, y garitas como destino de una SALIDA */
-.mov__instanciado {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 1px 7px;
-    border-radius: 99px;
-    background: rgba(129, 140, 248, 0.16);
-    color: var(--acento-suave);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
-    vertical-align: middle;
-}
-[data-theme="light"] .mov__instanciado {
-    background: rgba(79, 70, 229, 0.1);
-    color: var(--acento);
-}
+   Garitas como destino de una SALIDA */
 .encamino-destino {
     display: flex;
     flex-direction: column;
