@@ -215,7 +215,9 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const [anchoCajon, setAnchoCajon] = useState(340);  // se mide al empezar cada arrastre
     const cajonRef = useRef(null);
     const gestoRef = useRef(null);
-    const trasArrastreRef = useRef(false);
+    // Momento en que terminó el último arrastre (0 = ninguno): el clic que el navegador
+    // dispara justo después no debe tocar un botón del cajón
+    const trasArrastreRef = useRef(0);
     const datosRef = useRef(datos);
     useEffect(() => { datosRef.current = datos; }, [datos]);
 
@@ -335,6 +337,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     // abierto, a la izquierda desde cualquier parte. Un toque en la barra lo abre o cierra.
     const empezar = (e, esBarra) => {
         if (e.pointerType === 'mouse' && e.button !== 0) return;
+        trasArrastreRef.current = 0;   // un toque nuevo: el arrastre anterior ya no cuenta
         setAnchoCajon(cajonRef.current?.offsetWidth || 340);
         gestoRef.current = { x0: e.clientX, y0: e.clientY, esBarra, desdeAbierto: abierto, activo: false, vertical: false, id: e.pointerId, el: e.currentTarget };
     };
@@ -359,7 +362,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
             if (g.esBarra && !g.vertical) setAbierto(a => !a);
             return;
         }
-        trasArrastreRef.current = true;
+        trasArrastreRef.current = Date.now();
         const dx = e.clientX - g.x0;
         setArrastre(null);
         if (g.desdeAbierto) { if (dx < -UMBRAL_ARRASTRE) setAbierto(false); }
@@ -387,8 +390,11 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     };
     // Un arrastre no debe terminar en un clic sobre un botón del cajón
     const filtrarClic = e => {
-        if (!trasArrastreRef.current) return;
-        trasArrastreRef.current = false;
+        // En el móvil, tras arrastrar con el dedo a veces no llega ningún clic: la marca
+        // vale solo un instante, para no tragarse el siguiente toque de verdad
+        const fin = trasArrastreRef.current;
+        trasArrastreRef.current = 0;
+        if (!fin || Date.now() - fin > 400) return;
         e.stopPropagation();
         e.preventDefault();
     };

@@ -507,3 +507,11 @@
     outline: 2px solid var(--acento, #818cf8);
     outline-offset: 2px;
 }
+
+/* La lista y las filas tienen su propio desplazamiento (overflow), y ahí no llega el
+   pan-y del cajón: sin esto, al deslizar a la izquierda sobre la lista el navegador
+   se queda con el gesto y el cajón no se cierra */
+.camino__contenido,
+.camino__contenido * {
+    touch-action: pan-y;
+}
