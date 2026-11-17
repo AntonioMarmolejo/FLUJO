@@ -53,7 +53,8 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
     const avance = min > 0 ? Math.min(1, transcurrido / (min * 60)) : 0;
     const editable = enCamino && onTransito && !mov._pending;
 
-    const titulo = transito.estado === 'llegado' ? `Llegó a ${transito.destino}`
+    const titulo = mov.reporte && transito.estado === 'en_camino' && !vencido ? `Viene hacia ${transito.destino}`
+        : transito.estado === 'llegado' ? `Llegó a ${transito.destino}`
         : transito.estado === 'cancelado' ? 'Tránsito cancelado'
             : vencido ? `Ya no aparece en EN CAMINO de ${transito.destino}`
                 : `En tránsito a ${transito.destino}`;
@@ -110,8 +111,8 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
 
                         <div className="transito__datos">
                             <div>
-                                <div className="transito__etiqueta">Salida</div>
-                                <div className="transito__valor">{mov.hora} · {transito.origen}</div>
+                                <div className="transito__etiqueta">{mov.reporte ? 'Reportado' : 'Salida'}</div>
+                                <div className="transito__valor">{[mov.hora, transito.origen && `desde ${transito.origen}`].filter(Boolean).join(' · ')}</div>
                             </div>
                             <div>
                                 <div className="transito__etiqueta">Destino</div>

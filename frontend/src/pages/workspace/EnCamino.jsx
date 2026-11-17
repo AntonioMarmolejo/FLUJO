@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../api/axios';
 import { encolarMovimiento, getOperacionesPendientes, subirMovimientoPendiente } from '../../lib/syncEngine.js';
 import { EN_CAMINO_MIN, cronometro, minutosHasta } from '../../lib/garitas.js';
 import { CAMPOS_REPORTE, quitarReporte } from '../../lib/reportesEnCamino.js';
 import { getHoraLocal } from './helpers';
+import { ModalDetalle } from './Movimientos';
 import '../../styles/EnCamino.css';
 
 // EN CAMINO: barra en el borde izquierdo de Inicio (a la altura del +) que se
@@ -91,6 +93,33 @@ const registrarLlegada = async ({ v, placa, garita, bloque, puesto, fecha, ubiIn
     }
 };
 
+// Lo que muestra la ventana de detalle (la misma de Movimientos). Si el vehículo lo
+// envié yo y tengo la SALIDA en este flujo, se usa ese movimiento tal cual (con sus
+// acciones de tránsito); si no, se arma con lo que trae EN CAMINO.
+const zona = { timeZone: 'America/Guayaquil' };
+const movimientoDe = (v, garita, bloque, propios) => {
+    const propio = propios.find(m => String(m._id) === v.id);
+    if (propio) return { mov: propio, propio: true };
+    const salida = new Date(v.salidaAt);
+    return {
+        propio: false,
+        mov: {
+            ...(v.vehiculo || {}),
+            _id: v.id, placa: v.placa, bloque,
+            tipo: v.reporte ? 'ingreso' : 'salida',
+            reporte: !!v.reporte,
+            hora: salida.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, ...zona }),
+            fecha: salida.toLocaleDateString('en-CA', zona),
+            transito: {
+                origen: v.origen || '', destino: v.destino || garita,
+                salidaAt: v.salidaAt, tiempos: v.tiempos || [], estado: 'en_camino',
+            },
+        },
+    };
+};
+// Los toques dentro de la ventana no deben llegar al cajón (que los tomaría como arrastre)
+const aislar = e => e.stopPropagation();
+
 const IconoAtras = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
 );
@@ -99,7 +128,7 @@ const IconoMas = ({ tam = 20 }) => (
 );
 
 // ── Fila de un vehículo que viene ─────────────────────────
-const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar }) => {
+const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar, onDetalle }) => {
     const clase = `camino__fila${v.retrasado ? ' camino__fila--retrasado' : ''}`;
     const ruta = (
         <>
@@ -132,7 +161,9 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
         );
     }
     return (
-        <div className={clase}>
+        <div className={`${clase} camino__fila--tocable`} role="button" tabIndex={0}
+            aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
+            onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDetalle(); } }}>
             {/* El fondo de la fila es la barra de progreso */}
             <div className="camino__relleno" style={{ width: `${v.avance * 100}%` }} />
             <span className="camino__crono">{cronometro(v.transcurrido)}</span>
@@ -143,14 +174,16 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
                 </div>
                 <div className="camino__ruta">{ruta}</div>
             </div>
-            <button className="camino__mas" aria-label={`Registrar la llegada de ${v.placa}`} onClick={onAbrir}><IconoMas /></button>
+            <button className="camino__mas" aria-label={`Registrar la llegada de ${v.placa}`} onClick={e => { e.stopPropagation(); onAbrir(); }}><IconoMas /></button>
         </div>
     );
 };
 
 // ── Fila de un vehículo enviado desde mi garita ───────────
-const FilaEnviado = ({ v }) => (
-    <div className={`camino__fila camino__fila--enviado${v.retrasado ? ' camino__fila--retrasado' : ''}`}>
+const FilaEnviado = ({ v, onDetalle }) => (
+    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}`}
+        role="button" tabIndex={0} aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetalle(); } }}>
         <div className="camino__relleno" style={{ width: `${v.avance * 100}%` }} />
         <span className="camino__crono">{cronometro(v.transcurrido)}</span>
         <div className="camino__info">
@@ -164,7 +197,7 @@ const FilaEnviado = ({ v }) => (
 );
 
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar }) => {
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare }) => {
     const claveCopia = `flujo_encamino_${bloque}_${garita}`;
     const [datos, setDatos] = useState(() => leerCopia(claveCopia));
     const [enCola, setEnCola] = useState({ reportes: [], quitados: [] });   // reportes aún sin subir
@@ -177,6 +210,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const [arrastre, setArrastre] = useState(null);     // px mientras el dedo arrastra el cajón
     const [verTodos, setVerTodos] = useState(false);
     const [confirmando, setConfirmando] = useState(null); // { id, placa }
+    const [detalleId, setDetalleId] = useState(null);     // vehículo con la ventana de detalle abierta
     const [aviso, setAviso] = useState('');
     const [anchoCajon, setAnchoCajon] = useState(340);  // se mide al empezar cada arrastre
     const cajonRef = useRef(null);
@@ -245,12 +279,16 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     // Esc cierra; con el cajón abierto la página de atrás no se desplaza
     useEffect(() => {
         if (!abierto) return undefined;
-        const onTecla = e => { if (e.key === 'Escape') setAbierto(false); };
+        const onTecla = e => {
+            if (e.key !== 'Escape') return;
+            if (detalleId) setDetalleId(null);   // primero la ventana de detalle
+            else setAbierto(false);
+        };
         window.addEventListener('keydown', onTecla);
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         return () => { window.removeEventListener('keydown', onTecla); document.body.style.overflow = overflow; };
-    }, [abierto]);
+    }, [abierto, detalleId]);
 
     useEffect(() => {
         if (!aviso) return undefined;
@@ -285,6 +323,12 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const hayRetrasados = lista.some(v => v.retrasado);
     const visibles = verTodos ? lista : lista.slice(0, MAX_FILAS);
     const ocultos = lista.length - MAX_FILAS;
+
+    // Ventana de detalle: si el vehículo se fue de la lista (registrado, quitado o
+    // vencido) la ventana se cierra sola
+    const enOrden = [...visibles, ...enviados];
+    const idxDetalle = abierto ? enOrden.findIndex(v => v.id === detalleId) : -1;
+    const detalle = idxDetalle >= 0 ? movimientoDe(enOrden[idxDetalle], garita, bloque, movimientos) : null;
 
     // ── Arrastre (dedo o mouse) ──
     // Desde la barra con el cajón cerrado se arrastra a la derecha; con el cajón
@@ -404,7 +448,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                                 onAbrir={() => setConfirmando({ id: v.id, placa: v.placa })}
                                 onCancelar={() => setConfirmando(null)}
                                 onRegistrar={registrar}
-                                onQuitar={() => quitar(v)} />
+                                onQuitar={() => quitar(v)}
+                                onDetalle={() => setDetalleId(v.id)} />
                         ))}
                         {ocultos > 0 && (
                             <button className="camino__ver-mas" onClick={() => setVerTodos(t => !t)}>
@@ -418,7 +463,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                         {enviados.length > 0 && (
                             <>
                                 <div className="camino__seccion">Enviados desde {garita} · <span className="camino__total">{enviados.length}</span></div>
-                                {enviados.map(v => <FilaEnviado key={v.id} v={v} />)}
+                                {enviados.map(v => <FilaEnviado key={v.id} v={v} onDetalle={() => setDetalleId(v.id)} />)}
                             </>
                         )}
                     </div>
@@ -437,6 +482,21 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                     {hayRetrasados && <span className="camino__barra-punto" />}
                 </button>
             </aside>
+
+            {detalle && createPortal(
+                <div onPointerDown={aislar} onPointerMove={aislar} onPointerUp={aislar} onPointerCancel={aislar} onClick={aislar}>
+                    <ModalDetalle mov={detalle.mov}
+                        onClose={() => setDetalleId(null)}
+                        onCopy={onCopy} onShare={onShare}
+                        // Cambiar destino o cancelar: solo en mis propias salidas
+                        onTransito={detalle.propio ? onTransito : undefined}
+                        hasPrev={idxDetalle > 0} hasNext={idxDetalle < enOrden.length - 1}
+                        onPrev={() => setDetalleId(enOrden[idxDetalle - 1].id)}
+                        onNext={() => setDetalleId(enOrden[idxDetalle + 1].id)}
+                        counter={`${idxDetalle + 1} / ${enOrden.length}`} />
+                </div>,
+                document.body,
+            )}
         </div>
     );
 };

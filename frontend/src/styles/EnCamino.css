@@ -497,3 +497,13 @@
     font-weight: 600;
     cursor: pointer;
 }
+
+/* Las filas se tocan para ver el detalle del vehículo */
+.camino__fila--tocable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.camino__fila--tocable:focus-visible {
+    outline: 2px solid var(--acento, #818cf8);
+    outline-offset: 2px;
+}

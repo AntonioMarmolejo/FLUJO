@@ -51,8 +51,8 @@ export const ModalDetalle = ({ mov, onClose, onEdit, onDelete, onCopy, onShare, 
                     <span className="movdet__fecha">{mov.fecha}</span>
                 </div>
 
-                {/* ── EN CAMINO: tránsito de una SALIDA hacia otra garita ── */}
-                {!isIngreso && mov.transito && <TransitoDetalle key={mov._id} mov={mov} onTransito={onTransito} />}
+                {/* ── EN CAMINO: tránsito de una SALIDA hacia otra garita, o vehículo reportado ── */}
+                {(!isIngreso || mov.reporte) && mov.transito && <TransitoDetalle key={mov._id} mov={mov} onTransito={onTransito} />}
 
                 {/* ── Grid de campos ── */}
                 {campos.length > 0 && (

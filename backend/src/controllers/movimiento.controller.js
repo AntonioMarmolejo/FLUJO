@@ -128,7 +128,7 @@ export const crearMovimiento = async (req, res) => {
 
 // GET /api/movimientos/en-camino?bloque=12&garita=PAD-E
 // Salidas de CUALQUIER guardia del bloque que vienen hacia esta garita o pasan
-// por ella, sin cerrar y de la última hora. Solo placa, ruta y hora.
+// por ella, sin cerrar y de la última hora: placa, ruta, hora y datos del vehículo.
 export const getEnCamino = async (req, res) => {
     try {
         const bloque = texto(req.query.bloque, 10), garita = texto(req.query.garita);
@@ -152,7 +152,7 @@ export const getEnCamino = async (req, res) => {
                 'transito.estado': 'en_camino',
                 'transito.salidaAt': { $gte: desde },
                 'transito.origen': garita,
-            }).select('placa transito').sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
+            }).select(campos).sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
             // Los que la garita se reportó a sí misma
             Reporte.find({ bloque, garita, estado: 'en_camino', reportadoAt: { $gte: desde } })
                 .sort({ reportadoAt: 1 }).limit(200).lean(),
@@ -173,7 +173,7 @@ export const getEnCamino = async (req, res) => {
                     vehiculo: vehiculoDe(r),
                 })),
             ],
-            enviados: enviadas.map(fila),
+            enviados: enviadas.map(s => ({ ...fila(s), vehiculo: vehiculoDe(s) })),
         });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
