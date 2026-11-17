@@ -19,6 +19,19 @@ const UMBRAL_ARRASTRE = 50;      // px para abrir o cerrar al soltar
 const CADA_CUANTO_MS = 30000;    // consulta al servidor
 const VACIO = { lista: [], enviados: [], desfase: 0 };
 
+// Diferencia entre el reloj del servidor y el del dispositivo. La hora del servidor se
+// compara con el punto medio del pedido; si la respuesta tardó mucho (señal mala) la
+// medida no es confiable y se conserva la anterior. Diferencias de menos de 2 min se
+// toman como 0: el móvil ya está en hora y así coincide con el detalle del movimiento.
+const RTT_MAX_MS = 4000;
+const DESFASE_MIN_MS = 2 * 60e3;
+const calcularDesfase = (ahoraServidor, pedido, llegada, anterior = 0) => {
+    const servidor = new Date(ahoraServidor).getTime();
+    if (!Number.isFinite(servidor) || llegada - pedido > RTT_MAX_MS) return anterior || 0;
+    const desfase = servidor - (pedido + llegada) / 2;
+    return Math.abs(desfase) < DESFASE_MIN_MS ? 0 : desfase;
+};
+
 // Progreso de un vehículo: tiempo transcurrido ÷ minutos esperados hasta `meta`
 const estadoDe = (v, ahora, meta) => {
     const transcurrido = (ahora - new Date(v.salidaAt).getTime()) / 1000;
@@ -40,7 +53,9 @@ const vigenteA = ahora => v => ahora - new Date(v.salidaAt).getTime() < EN_CAMIN
 
 // Última lista recibida, para verla sin conexión (cada vehículo igual vence a la hora)
 const leerCopia = clave => {
-    try { return { ...VACIO, ...JSON.parse(localStorage.getItem(clave)) }; } catch { return VACIO; }
+    // El desfase guardado no se reutiliza: copias anteriores pudieron guardar uno falso
+    // (medido con una respuesta vieja de la caché) y congelar los cronómetros
+    try { return { ...VACIO, ...JSON.parse(localStorage.getItem(clave)), desfase: 0 }; } catch { return VACIO; }
 };
 
 // Un reporte que todavía está en la cola, con la misma forma que los del servidor
@@ -167,6 +182,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const cajonRef = useRef(null);
     const gestoRef = useRef(null);
     const trasArrastreRef = useRef(false);
+    const datosRef = useRef(datos);
+    useEffect(() => { datosRef.current = datos; }, [datos]);
 
     // Lista del servidor: al entrar, cada 30 s, al abrir el cajón, al volver la conexión
     // y cuando se sube un reporte
@@ -174,10 +191,14 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         let vigente = true;
         const cargar = async () => {
             try {
+                const pedido = Date.now();
                 const { data } = await api.get('/movimientos/en-camino', { params: { bloque, garita } });
                 if (!vigente) return;
-                // desfase: diferencia entre el reloj del servidor y el del dispositivo
-                const nuevo = { lista: data.enCamino || [], enviados: data.enviados || [], desfase: (data.ahora || Date.now()) - Date.now() };
+                const llegada = Date.now();
+                const nuevo = {
+                    lista: data.enCamino || [], enviados: data.enviados || [],
+                    desfase: calcularDesfase(data.ahora, pedido, llegada, datosRef.current.desfase),
+                };
                 setDatos(nuevo);
                 try { localStorage.setItem(claveCopia, JSON.stringify(nuevo)); } catch { /* sin espacio */ }
             } catch {

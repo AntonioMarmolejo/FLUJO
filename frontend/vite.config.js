@@ -49,6 +49,9 @@ export default defineConfig({
                             && url.pathname !== '/api/personas'
                             && url.pathname !== '/api/extensiones'
                             && url.pathname !== '/api/tramos'
+                            // EN CAMINO trae la hora del servidor para los cronómetros: una
+                            // respuesta vieja de la caché los congelaba en el minuto en que se guardó
+                            && url.pathname !== '/api/movimientos/en-camino'
                             && request.method === 'GET',
                         handler: 'NetworkFirst',
                         options: {
