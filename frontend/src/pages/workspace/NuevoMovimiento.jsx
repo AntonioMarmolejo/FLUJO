@@ -12,7 +12,8 @@ import {
     registrarPersona,
 } from '../../lib/syncEngine.js';
 import { leerTramosLocales } from '../../lib/tramosOffline.js';
-import { armarTransito, garitaDeLugar, garitaDePuesto, garitasDelBloque, minutosHasta, momentoDeHora } from '../../lib/garitas.js';
+import { armarTransito, armarTransitoParadas, claveLugar, garitaDeLugar, garitaDePuesto, garitasDelBloque, minutosHasta, momentoDeHora, recorrido, separarDestinos, unirDestinos } from '../../lib/garitas.js';
+import { agregarEtiqueta, borrarEtiqueta, leerEtiquetas } from '../../lib/etiquetasDestino.js';
 import { SuggestionField, TextSugField } from './comunes';
 import { EMPTY_FORM, TIPO_VEHICULO_OPTS, formatMov, getHoraLocal, getTurnoFecha, parseQR } from './helpers';
 
@@ -153,6 +154,132 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
     );
 };
 
+// ── Etiquetas de DESTINO ─────────────────────────────────
+// Entre la etiqueta y el campo DESTINO (la lista de destinos recientes se abre debajo
+// del campo y nunca las tapa):
+//   · SALIDA desde una garita: las garitas del bloque (EN CAMINO).
+//   · Siempre: las etiquetas que el guardia creó en este teléfono ("+ Etiqueta");
+//     manteniendo presionada una etiqueta se borra.
+// Se pueden elegir varias: quedan en orden, separadas por coma, y se suma el tiempo
+// de recorrerlas según Distancias. Las del último movimiento del vehículo se resaltan.
+const DestinoEtiquetas = ({ bloque, garitaPropia, mostrarGaritas, esSalida, destino, onCambiar, destinoPrevio, tramos, porDefecto }) => {
+    const [etiquetas, setEtiquetas] = useState(leerEtiquetas);
+    const [creando, setCreando] = useState(null);     // texto de la etiqueta nueva
+    const [borrando, setBorrando] = useState(null);   // etiqueta a confirmar
+    const presionRef = useRef(null);
+
+    const paradas = separarDestinos(destino);
+    const claves = paradas.map(claveLugar);
+    const previas = separarDestinos(destinoPrevio).map(claveLugar);
+    const garitas = mostrarGaritas ? garitasDelBloque(bloque) : [];
+    const esGarita = e => garitas.some(g => claveLugar(g) === claveLugar(e));
+    const propias = etiquetas.filter(e => !esGarita(e));
+
+    // Tocar: la agrega al final o la quita. Si el destino era el que se pone solo
+    // (la ubicación por defecto), la etiqueta lo reemplaza.
+    const alternar = nombre => {
+        const k = claveLugar(nombre);
+        const reemplazar = porDefecto.includes(destino.trim()) && !claves.includes(k);
+        const nuevas = claves.includes(k) ? paradas.filter(p => claveLugar(p) !== k)
+            : reemplazar ? [nombre] : [...paradas, nombre];
+        onCambiar(unirDestinos(nuevas));
+    };
+    // Mantener presionada una etiqueta propia: pide borrarla
+    const gestos = (nombre, borrable) => ({
+        onMouseDown: e => e.preventDefault(),   // el campo no pierde el foco
+        onPointerDown: () => {
+            clearTimeout(presionRef.current?.t);
+            presionRef.current = { larga: false };
+            if (borrable) presionRef.current.t = setTimeout(() => { presionRef.current.larga = true; setBorrando(nombre); navigator.vibrate?.(30); }, 600);
+        },
+        onPointerUp: () => clearTimeout(presionRef.current?.t),
+        onPointerLeave: () => clearTimeout(presionRef.current?.t),
+        onPointerCancel: () => clearTimeout(presionRef.current?.t),
+        onContextMenu: e => e.preventDefault(),
+        onClick: () => {
+            if (presionRef.current?.larga) { presionRef.current = null; return; }
+            alternar(nombre);
+        },
+    });
+    const chip = (nombre, borrable, extra = null) => {
+        const sel = claves.includes(claveLugar(nombre));
+        const sugerida = !sel && previas.includes(claveLugar(nombre));
+        return (
+            <button key={nombre} type="button" aria-pressed={sel}
+                className={`encamino-destino__chip${sel ? ' encamino-destino__chip--sel' : ''}${sugerida ? ' encamino-destino__chip--sugerida' : ''}`}
+                title={sugerida ? 'Destino de su último movimiento' : borrable ? 'Mantén presionada para borrarla' : undefined}
+                {...gestos(nombre, borrable)}>
+                {sel && paradas.length > 1 && <span className="encamino-destino__orden">{claves.indexOf(claveLugar(nombre)) + 1}</span>}
+                {nombre}{extra}
+            </button>
+        );
+    };
+    // "+ Etiqueta" propone lo último que se escribió y todavía no es etiqueta
+    const nuevaPropuesta = () => [...paradas].reverse().find(p => !esGarita(p) && !etiquetas.some(e => claveLugar(e) === claveLugar(p))) || '';
+    const guardarNueva = () => {
+        if (creando?.trim()) setEtiquetas(agregarEtiqueta(creando));
+        setCreando(null);
+    };
+
+    // Recorrido y EN CAMINO
+    const r = garitaPropia && paradas.length ? recorrido({ tramos, bloque, origen: garitaPropia, paradas }) : null;
+    const conTiempo = r && r.legs.some(l => l.min != null && l.min > 0);
+    const sinRuta = r?.legs.find(l => l.min == null)?.parada;
+    const enCamino = esSalida && mostrarGaritas ? [...new Set(paradas.map(p => garitaDeLugar(bloque, p)).filter(g => g && g !== garitaPropia))] : [];
+    const haySugeridas = [...garitas, ...propias].some(e => !claves.includes(claveLugar(e)) && previas.includes(claveLugar(e)));
+
+    return (
+        <div className="encamino-destino">
+            {garitas.length > 0 && (
+                <div className="encamino-destino__chips" role="group" aria-label="Garitas del bloque">
+                    {garitas.map(g => chip(g, false, g === garitaPropia && <span className="encamino-destino__aqui"> · aquí</span>))}
+                </div>
+            )}
+            <div className="encamino-destino__chips" role="group" aria-label="Mis etiquetas de destino">
+                {propias.map(e => chip(e, true))}
+                <button type="button" className="encamino-destino__chip encamino-destino__chip--nueva"
+                    onMouseDown={e => e.preventDefault()} onClick={() => { setBorrando(null); setCreando(nuevaPropuesta()); }}>+ Etiqueta</button>
+            </div>
+
+            {creando !== null && (
+                <div className="encamino-destino__crear">
+                    <input autoFocus value={creando} placeholder="Nombre de la etiqueta" aria-label="Nombre de la etiqueta nueva" maxLength={40}
+                        onChange={e => setCreando(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); guardarNueva(); } if (e.key === 'Escape') setCreando(null); }} />
+                    <button type="button" className="encamino-destino__btn encamino-destino__btn--si" disabled={!creando.trim()} onClick={guardarNueva}>Guardar</button>
+                    <button type="button" className="encamino-destino__btn" onClick={() => setCreando(null)}>Cancelar</button>
+                </div>
+            )}
+            {borrando && (
+                <div className="encamino-destino__crear">
+                    <span className="encamino-destino__pregunta">¿Borrar la etiqueta «{borrando}»?</span>
+                    <button type="button" className="encamino-destino__btn encamino-destino__btn--borrar"
+                        onClick={() => { setEtiquetas(borrarEtiqueta(borrando)); setBorrando(null); }}>Borrar</button>
+                    <button type="button" className="encamino-destino__btn" onClick={() => setBorrando(null)}>No</button>
+                </div>
+            )}
+
+            {conTiempo && (
+                <div className="encamino-destino__ruta">
+                    {garitaPropia}{r.legs.map((l, i) => <span key={i}> → {l.parada} <strong>{l.min != null ? `${l.min} min` : '?'}</strong></span>)}
+                    {r.legs.length > 1 && r.total != null && <> · total <strong>{r.total} min</strong></>}
+                    {sinRuta && <> · sin ruta en Distancias hasta {sinRuta}</>}
+                </div>
+            )}
+            {haySugeridas && <div className="encamino-destino__ayuda">Las resaltadas son el destino de su último movimiento: tócalas para ponerlas.</div>}
+            {esSalida && mostrarGaritas && (
+                <div className="encamino-destino__ayuda">
+                    {enCamino.length
+                        ? <>Aparecerá en <strong>EN CAMINO</strong> de {enCamino.join(' y ')} durante 1 hora.</>
+                        : paradas.some(p => garitaDeLugar(bloque, p) === garitaPropia)
+                            ? `${garitaPropia} es esta misma garita: no aparece en EN CAMINO.`
+                            : 'Elige una o varias garitas para que la vean llegar. Un destino escrito a mano no aparece en EN CAMINO.'}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ── Modal formulario (crear + editar) ────────────────────
 // `reporte` ({ garita, onReportar, inicial? }): en vez de registrar un movimiento, la garita
 // se reporta un vehículo que viene hacia ella (EN CAMINO), con los mismos datos. Con
@@ -168,8 +295,8 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
     const [minutosReporte, setMinutosReporte] = useState(reporte?.inicial?.esperadoMin ? String(reporte.inicial.esperadoMin) : '');
     const [tramosVia, setTramosVia] = useState([]);
     useEffect(() => {
-        if (reporte) leerTramosLocales().then(setTramosVia).catch(() => {});
-    }, [reporte]);
+        leerTramosLocales().then(setTramosVia).catch(() => {});
+    }, []);
     // Si viene de otra garita, los minutos salen de Distancias
     const garitaOrigen = reporte ? garitaDeLugar(bloque, origenReporte) : null;
     const minutosAuto = garitaOrigen && garitaOrigen !== reporte.garita
@@ -178,6 +305,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
     const horaReporte = reporte?.inicial?.reportadoAt
         ? new Date(reporte.inicial.reportadoAt).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' })
         : '';
+    const [destinoPrevio, setDestinoPrevio] = useState('');   // destino del último movimiento de la placa
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [guardado, setGuardado] = useState(false);
@@ -227,6 +355,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         setError('');
         setPlacaNotFound(false);
         setHistorialInfo(null);
+        setDestinoPrevio('');
         if (val.length < 3) { setSuggestions([]); return; }
 
         const seen = new Set();
@@ -279,6 +408,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
 
         const f = formRef.current;
         if (f.placa !== placa || f.tipo !== tipo) return; // cambió mientras se consultaba
+        setDestinoPrevio(ultimo?.destino || '');
         const prev = historialRef.current;
         const reemplazable = campo => !f[campo] || f[campo] === prev?.[campo]
             || (campo === 'destino' && [ubiIngreso, ubiSalida].includes(f.destino));
@@ -533,9 +663,10 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         const fecha = fechaFlujo || getTurnoFecha(turnoActual);
         // SALIDA hacia otra garita del bloque: aparece en EN CAMINO de las garitas de su ruta
         let transito = null;
-        if (formFinal.tipo === 'salida' && garitaDeLugar(bloque, formFinal.destino)) {
+        const destinos = separarDestinos(formFinal.destino);
+        if (formFinal.tipo === 'salida' && destinos.some(d => garitaDeLugar(bloque, d))) {
             const tramos = await leerTramosLocales().catch(() => []);
-            const datos = armarTransito({ tramos, bloque, puesto, destino: formFinal.destino, salidaAt: horaManual ? momentoDeHora(horaManual) : Date.now() });
+            const datos = armarTransitoParadas({ tramos, bloque, puesto, destinos, salidaAt: horaManual ? momentoDeHora(horaManual) : Date.now() });
             if (datos) transito = { ...datos, estado: 'en_camino', vistos: [] };
         }
         const tempMov = { ...formFinal, _id: tempId, hora, fecha, _pending: true, ...(transito && { transito }) };
@@ -569,33 +700,16 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
         }
     };
 
-    // SALIDA desde una garita: todas las garitas del bloque como destino (EN CAMINO).
-    // Van entre la etiqueta y el campo DESTINO, para que la lista de destinos
-    // recientes (que se abre debajo del campo) nunca las tape.
+    // Etiquetas de destino (garitas en una SALIDA desde una garita, y las mías)
     const garitaPropia = garitaDePuesto(bloque, puesto);
-    const garitaElegida = garitaDeLugar(bloque, form.destino);
-    const garitasDestino = form.tipo === 'salida' && !editData && garitaPropia ? (
-        <div className="encamino-destino">
-            <div className="encamino-destino__chips" role="group" aria-label="Garitas del bloque">
-                {garitasDelBloque(bloque).map(g => (
-                    <button key={g} type="button"
-                        className={`encamino-destino__chip${garitaElegida === g ? ' encamino-destino__chip--sel' : ''}`}
-                        aria-pressed={garitaElegida === g}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => { setForm(f => ({ ...f, destino: g })); setDestinoSugs([]); }}>
-                        {g}{g === garitaPropia && <span className="encamino-destino__aqui"> · aquí</span>}
-                    </button>
-                ))}
-            </div>
-            <div className="encamino-destino__ayuda">
-                {!garitaElegida
-                    ? 'Elige una garita para que la vean llegar. Un destino escrito a mano no aparece en EN CAMINO.'
-                    : garitaElegida === garitaPropia
-                        ? `${garitaPropia} es esta misma garita: no aparece en EN CAMINO.`
-                        : <>Aparecerá en <strong>EN CAMINO</strong> de {garitaElegida} durante 1 hora.</>}
-            </div>
-        </div>
-    ) : null;
+    const garitasDestino = (
+        <DestinoEtiquetas bloque={bloque} garitaPropia={garitaPropia}
+            mostrarGaritas={form.tipo === 'salida' && !editData && !reporte && !!garitaPropia}
+            esSalida={form.tipo === 'salida' && !reporte}
+            destino={form.destino} destinoPrevio={destinoPrevio} tramos={tramosVia}
+            porDefecto={[ubiIngreso, ubiSalida].filter(Boolean)}
+            onCambiar={d => { setForm(f => ({ ...f, destino: d })); setDestinoSugs([]); }} />
+    );
 
     const fp = { onChange: handleChange, autoFilled };
 

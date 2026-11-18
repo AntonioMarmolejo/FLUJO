@@ -66,6 +66,68 @@ export const armarTransito = ({ tramos = [], bloque, puesto, origen, destino, sa
     return { origen: desde, destino: hasta, salidaAt, tiempos };
 };
 
+// ── Varios destinos ──────────────────────────────────────
+// En el campo DESTINO van separados por coma: "PAD-C, Pozo 3, PAD-L"
+export const separarDestinos = texto => String(texto || '').split(/\s*[,;]\s*/).map(s => s.trim()).filter(Boolean);
+export const unirDestinos = lista => lista.join(', ');
+
+// Recorrido desde `origen` pasando por cada parada en orden, con Distancias.
+// Devuelve los minutos de cada tramo (null si Distancias no tiene esa ruta), el
+// total (null si falta algún tramo) y las garitas por las que pasa con los minutos
+// acumulados desde la salida (la primera vez que llega a cada una).
+export const recorrido = ({ tramos = [], bloque, origen, paradas = [] }) => {
+    const garitas = garitasDelBloque(bloque);
+    const plataformas = listarPlataformas(tramos);
+    const nodo = g => plataformas.find(n => claveLugar(n) === claveLugar(g));
+    const garitaDe = n => garitas.find(x => claveLugar(x) === claveLugar(n));
+    let actual = nodo(origen), acumulado = 0, conocido = !!actual;
+    const legs = [], tiempos = [];
+    const anotar = (g, min) => { if (g && g !== origen && !tiempos.some(t => t.garita === g)) tiempos.push({ garita: g, min }); };
+    for (const parada of paradas) {
+        const destino = nodo(parada);
+        let min = null;
+        if (conocido && destino && destino === actual) min = 0;
+        else if (conocido && destino) {
+            const ruta = calcularRuta(tramos, actual, destino);
+            if (ruta?.valida && !ruta.sinConexion) {
+                let a = actual, parcial = 0;
+                for (const t of ruta.tramos) {
+                    a = t.from === a ? t.to : t.from;
+                    // Un tramo cerrado no tiene tiempo estimado: se cuenta el peor caso
+                    parcial += minutos(t) ?? (t.km / t.vmin) * 60;
+                    anotar(garitaDe(a), Math.round(acumulado + parcial));
+                }
+                acumulado += parcial;
+                min = Math.round(parcial);
+                actual = destino;
+            }
+        }
+        if (min == null) conocido = false;
+        anotar(garitaDeLugar(bloque, parada), conocido ? Math.round(acumulado) : null);
+        legs.push({ parada, min });
+    }
+    return { legs, total: conocido && legs.length ? Math.round(acumulado) : null, tiempos };
+};
+
+// Tránsito de una SALIDA con uno o varios destinos. Aparece en EN CAMINO de cada
+// garita de la ruta; las garitas elegidas como destino son paradas (no "de paso").
+// El destino del tránsito es la última garita elegida. Null si ninguna es otra garita.
+export const armarTransitoParadas = ({ tramos = [], bloque, puesto, origen, destinos = [], salidaAt = Date.now() }) => {
+    const desde = origen || garitaDePuesto(bloque, puesto);
+    if (!desde) return null;
+    const paradas = [...new Set(destinos.map(d => garitaDeLugar(bloque, d)).filter(g => g && g !== desde))];
+    if (!paradas.length) return null;
+    const hasta = paradas[paradas.length - 1];
+    // La ruta llega hasta la última parada que es garita (lo que sigue no tiene EN CAMINO)
+    let ultima = -1;
+    destinos.forEach((d, i) => { if (garitaDeLugar(bloque, d) === hasta) ultima = i; });
+    const { tiempos, total } = recorrido({ tramos, bloque, origen: desde, paradas: destinos.slice(0, ultima + 1) });
+    // El destino va al final, con el tiempo de cuando llega como destino (si pasó
+    // antes por ahí camino a otra parada, cuenta la llegada final)
+    const resto = tiempos.filter(t => t.garita !== hasta);
+    return { origen: desde, destino: hasta, salidaAt, tiempos: [...resto, { garita: hasta, min: total }], paradas };
+};
+
 // Minutos esperados hasta una garita de la ruta (null si no se conocen)
 export const minutosHasta = (transito, garita) =>
     transito?.tiempos?.find(t => t.garita === garita)?.min ?? null;

@@ -48,9 +48,12 @@ const estadoDe = (v, ahora, meta) => {
         transcurrido,
         retrasado: esperado != null && transcurrido > esperado,
         avance: esperado ? Math.min(1, transcurrido / esperado) : 0,
-        dePaso: !v.reporte && v.destino !== meta,
+        // Con varios destinos, las garitas elegidas son paradas, no "de paso"
+        dePaso: !v.reporte && v.destino !== meta && !(v.paradas || []).includes(meta),
     };
 };
+// "PAD-E → PAD-C → PAD-L" (con varios destinos, todas las paradas)
+const rutaTexto = v => [v.origen, ...(v.paradas?.length ? v.paradas : [v.destino])].join(' → ');
 // Los retrasados primero (el que más lleva arriba); luego los que están por llegar
 const ordenar = (a, b) => (b.retrasado - a.retrasado)
     || (a.retrasado ? b.transcurrido - a.transcurrido : (b.avance - a.avance) || (b.transcurrido - a.transcurrido));
@@ -141,7 +144,7 @@ const movimientoDe = (v, garita, bloque, propios) => {
             fecha: salida.toLocaleDateString('en-CA', zona),
             transito: {
                 origen: v.origen || '', destino: v.destino || garita,
-                salidaAt: v.salidaAt, tiempos: v.tiempos || [], estado: 'en_camino',
+                salidaAt: v.salidaAt, tiempos: v.tiempos || [], paradas: v.paradas || [], estado: 'en_camino',
             },
         },
     };
@@ -294,7 +297,7 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
     const ruta = (
         <>
             {/* Un reporte siempre viene hacia esta garita: basta con decir de dónde */}
-            <span className="camino__ruta-texto">{v.reporte ? (v.origen ? `Desde ${v.origen}` : `Hacia ${garita}`) : `${v.origen} → ${v.destino}`}</span>
+            <span className="camino__ruta-texto">{v.reporte ? (v.origen ? `Desde ${v.origen}` : `Hacia ${garita}`) : rutaTexto(v)}</span>
             {v.dePaso && <span className="camino__de-paso">de paso</span>}
             {v.reporte && <span className="camino__de-paso camino__de-paso--reporte">reportado</span>}
         </>
@@ -354,7 +357,7 @@ const FilaEnviado = ({ v, onDetalle, dx = 0, vivo = false }) => (
                 <span>{v.placa}</span>
                 {v.retrasado && <span className="camino__retraso">Retrasado</span>}
             </div>
-            <div className="camino__ruta"><span className="camino__ruta-texto">{v.origen} → {v.destino}</span></div>
+            <div className="camino__ruta"><span className="camino__ruta-texto">{rutaTexto(v)}</span></div>
         </div>
     </div>
 );
@@ -680,7 +683,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     };
     const guardarTiempo = async (v, acc, total) => {
         setHoja(null);
-        await onTransito(acc.mov, 'destino', { destino: acc.mov.transito.destino, tiempos: tiemposConTotal(acc.mov.transito, total) });
+        // Se mantienen las paradas (varios destinos)
+        await onTransito(acc.mov, 'destino', { destino: acc.mov.transito.destino, tiempos: tiemposConTotal(acc.mov.transito, total), paradas: acc.mov.transito.paradas });
         setAviso(`${v.placa}: ${total} min estimados hasta ${acc.mov.transito.destino}`);
     };
     // Corrimiento de una fila: el del dedo mientras arrastra; si no, abierta o cerrada

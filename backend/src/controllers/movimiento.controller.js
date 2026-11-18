@@ -30,10 +30,15 @@ const leerTransito = (t, ahora = Date.now()) => {
         return { garita: texto(x?.garita), min: Number.isFinite(min) ? Math.max(0, Math.round(min)) : null };
     }).filter(x => x.garita && x.garita !== origen);
     if (tiempos[tiempos.length - 1]?.garita !== destino) tiempos.push({ garita: destino, min: null });
+    // Varios destinos: solo garitas de la ruta, sin repetir; el destino siempre es la última
+    const enRuta = new Set(tiempos.map(x => x.garita));
+    const paradas = [...new Set((Array.isArray(t.paradas) ? t.paradas : []).slice(0, 10).map(p => texto(p)))]
+        .filter(p => p && p !== destino && enRuta.has(p));
+    paradas.push(destino);
     // La hora de salida la pone el dispositivo (puede subirse más tarde, sin conexión)
     let salidaAt = new Date(t.salidaAt).getTime();
     if (!Number.isFinite(salidaAt) || salidaAt > ahora + 10 * 60e3 || salidaAt < ahora - 7 * 864e5) salidaAt = ahora;
-    return { origen, destino, salidaAt: new Date(salidaAt), tiempos, estado: 'en_camino', vistos: [], cerradoAt: null };
+    return { origen, destino, salidaAt: new Date(salidaAt), tiempos, paradas, estado: 'en_camino', vistos: [], cerradoAt: null };
 };
 
 // Datos del vehículo que el INGRESO registrado desde EN CAMINO toma de la SALIDA
@@ -160,7 +165,7 @@ export const getEnCamino = async (req, res) => {
         const fila = s => ({
             _id: s._id, placa: s.placa,
             origen: s.transito.origen, destino: s.transito.destino,
-            salidaAt: s.transito.salidaAt, tiempos: s.transito.tiempos,
+            salidaAt: s.transito.salidaAt, tiempos: s.transito.tiempos, paradas: s.transito.paradas || [],
         });
         res.json({
             ahora: Date.now(),   // para corregir la diferencia de reloj del dispositivo

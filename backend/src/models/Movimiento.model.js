@@ -48,6 +48,9 @@ const movimientoSchema = new mongoose.Schema(
                 // Garitas de la ruta en orden, con los minutos esperados desde la salida
                 // (min null si Distancias no tiene la ruta). La última es el destino.
                 tiempos: [{ _id: false, garita: { type: String, trim: true }, min: { type: Number, default: null } }],
+                // Garitas elegidas como destino, en orden (varios destinos). La última es `destino`;
+                // las demás son paradas: ahí no figura "de paso"
+                paradas: [{ type: String, trim: true }],
                 estado: { type: String, enum: ['en_camino', 'llegado', 'cancelado'], default: 'en_camino' },
                 vistos: [{ type: String, trim: true }],          // garitas que ya registraron su llegada
                 cerradoAt: { type: Date, default: null },
