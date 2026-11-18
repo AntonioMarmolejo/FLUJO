@@ -27,7 +27,10 @@ const IconoAviso = () => (
 );
 
 export const TransitoDetalle = ({ mov, onTransito }) => {
-    const [transito, setTransito] = useState(mov.transito);
+    // Lo que cambio aquí (cancelar / destino) manda; si no, el tránsito del movimiento
+    // (que se actualiza cuando llega o pasa por otra garita)
+    const [cambio, setTransito] = useState(null);
+    const transito = cambio || mov.transito;
     const [ahora, setAhora] = useState(() => Date.now());
     const [eligiendo, setEligiendo] = useState(false);
     const [confirmarCancelar, setConfirmarCancelar] = useState(false);
@@ -48,6 +51,9 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
     if (!transito) return null;
 
     const transcurrido = (ahora - salidaAt) / 1000;
+    // Llegó: cuánto tardó (el contador ya no corre)
+    const tardo = transito.estado === 'llegado' && transito.cerradoAt ? (new Date(transito.cerradoAt).getTime() - salidaAt) / 1000 : null;
+    const pasos = transito.pasos || [];
     const min = minutosHasta(transito, transito.destino);
     const retrasado = min > 0 && transcurrido > min * 60;
     const avance = min > 0 ? Math.min(1, transcurrido / (min * 60)) : 0;
@@ -57,7 +63,7 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
         : transito.estado === 'llegado' ? `Llegó a ${transito.destino}`
         : transito.estado === 'cancelado' ? 'Tránsito cancelado'
             : vencido ? `Ya no aparece en EN CAMINO de ${transito.destino}`
-                : `En tránsito a ${transito.destino}`;
+                : `En tránsito a ${transito.destino}${pasos.length ? ` · ✓ ${pasos[pasos.length - 1].garita}` : ''}`;
 
     const cambiarDestino = async destino => {
         setEligiendo(false);
@@ -75,10 +81,12 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
     const otras = garitasDelBloque(mov.bloque).filter(g => g !== transito.origen && g !== transito.destino);
 
     const estado = `${enCamino ? '' : ' transito--cerrado'}${retrasado && enCamino ? ' transito--retrasado' : ''}`;
-    const contador = enCamino && (
+    const contador = enCamino ? (
         <span className="transito__crono">
             <strong>{cronometro(transcurrido)}</strong>{min > 0 ? ` / ${min} min` : ''}
         </span>
+    ) : tardo != null && (
+        <span className="transito__crono"><strong>{cronometro(tardo)}</strong>{min > 0 ? ` / ${min} min` : ''}</span>
     );
 
     return (
@@ -104,6 +112,13 @@ export const TransitoDetalle = ({ mov, onTransito }) => {
                         </div>
                         {enCamino && min > 0 && (
                             <div className="transito__barra"><div className="transito__barra-relleno" style={{ width: `${avance * 100}%` }} /></div>
+                        )}
+                        {pasos.length > 0 && (
+                            <div className="transito__pasos">
+                                {pasos.map(p => (
+                                    <span key={p.garita} className="transito__paso">✓ {p.garita} {horaDe(new Date(p.at).getTime())}</span>
+                                ))}
+                            </div>
                         )}
                         {vencido && transito.estado === 'en_camino' && (
                             <div className="transito__nota">Pasó 1 hora desde la salida.</div>

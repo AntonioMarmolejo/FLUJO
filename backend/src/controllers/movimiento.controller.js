@@ -52,9 +52,11 @@ const vehiculoDe = d => Object.fromEntries(CAMPOS_VEHICULO.map(c => [c, d?.[c] |
 const marcarLlegada = async (salida, garita) => {
     const g = texto(garita);
     if (!g) return;
-    const update = { $addToSet: { 'transito.vistos': g } };
-    if (g === salida.transito.destino) update.$set = { 'transito.estado': 'llegado', 'transito.cerradoAt': new Date() };
-    await Movimiento.updateOne({ _id: salida._id, 'transito.estado': 'en_camino' }, update);
+    const ahora = new Date();
+    const update = { $addToSet: { 'transito.vistos': g }, $push: { 'transito.pasos': { garita: g, at: ahora } } };
+    if (g === salida.transito.destino) update.$set = { 'transito.estado': 'llegado', 'transito.cerradoAt': ahora };
+    // Solo la primera vez que esa garita lo registra
+    await Movimiento.updateOne({ _id: salida._id, 'transito.estado': 'en_camino', 'transito.vistos': { $ne: g } }, update);
 };
 
 // POST /api/movimientos
@@ -151,10 +153,11 @@ export const getEnCamino = async (req, res) => {
                 'transito.origen': { $ne: garita },
                 'transito.vistos': { $ne: garita },
             }).select(campos).sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
-            // Salieron de esta garita hacia otra
+            // Salieron de esta garita hacia otra: también los que ya llegaron (en la última
+            // hora), para que quien los envió vea el contador detenido y por dónde pasaron
             Movimiento.find({
                 bloque, tipo: 'salida',
-                'transito.estado': 'en_camino',
+                'transito.estado': { $in: ['en_camino', 'llegado'] },
                 'transito.salidaAt': { $gte: desde },
                 'transito.origen': garita,
             }).select(campos).sort({ 'transito.salidaAt': 1 }).limit(200).lean(),
@@ -178,7 +181,11 @@ export const getEnCamino = async (req, res) => {
                     vehiculo: vehiculoDe(r),
                 })),
             ],
-            enviados: enviadas.map(s => ({ ...fila(s), vehiculo: vehiculoDe(s) })),
+            enviados: enviadas.map(s => ({
+                ...fila(s), vehiculo: vehiculoDe(s),
+                estado: s.transito.estado, vistos: s.transito.vistos || [], pasos: s.transito.pasos || [],
+                cerradoAt: s.transito.cerradoAt || null,
+            })),
         });
     } catch (error) {
         res.status(500).json({ message: 'Error en el servidor', error: error.message });

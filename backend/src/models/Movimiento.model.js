@@ -53,6 +53,8 @@ const movimientoSchema = new mongoose.Schema(
                 paradas: [{ type: String, trim: true }],
                 estado: { type: String, enum: ['en_camino', 'llegado', 'cancelado'], default: 'en_camino' },
                 vistos: [{ type: String, trim: true }],          // garitas que ya registraron su llegada
+                // Cuándo lo registró cada garita (para marcar por dónde pasó y detener el contador)
+                pasos: [{ _id: false, garita: { type: String, trim: true }, at: { type: Date } }],
                 cerradoAt: { type: Date, default: null },
             }, { _id: false }),
             default: undefined,

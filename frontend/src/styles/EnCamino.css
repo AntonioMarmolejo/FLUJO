@@ -665,3 +665,26 @@
     opacity: 0.45;
     cursor: default;
 }
+
+/* Enviado que ya llegó a su destino: contador detenido, verde y al final */
+.camino__llego {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--exito, #34d399);
+    background: rgba(52, 211, 153, 0.14);
+    border-radius: 6px;
+    padding: 2px 7px;
+}
+.camino__fila.camino__fila--llegado {
+    border-left-color: var(--exito, #34d399);
+    opacity: 0.8;
+}
+.camino__fila--llegado .camino__relleno {
+    background: rgba(52, 211, 153, 0.12);
+}
+.camino__fila--llegado .camino__crono {
+    color: var(--exito, #34d399);
+    background: rgba(52, 211, 153, 0.12);
+}

@@ -39,23 +39,35 @@ const calcularDesfase = (ahoraServidor, pedido, llegada, anterior = 0) => {
 
 // Progreso de un vehículo: tiempo transcurrido ÷ minutos esperados hasta `meta`
 const estadoDe = (v, ahora, meta) => {
-    const transcurrido = (ahora - new Date(v.salidaAt).getTime()) / 1000;
+    // Ya llegó a su destino: el contador queda detenido en el momento de la llegada
+    const llegado = v.estado === 'llegado';
+    const fin = llegado && v.cerradoAt ? new Date(v.cerradoAt).getTime() : ahora;
+    const transcurrido = (fin - new Date(v.salidaAt).getTime()) / 1000;
     const min = minutosHasta(v, meta);
     const esperado = min > 0 ? min * 60 : null;     // sin tiempo estimado no hay progreso
     return {
         ...v,
         id: String(v._id),
+        llegado,
         transcurrido,
-        retrasado: esperado != null && transcurrido > esperado,
-        avance: esperado ? Math.min(1, transcurrido / esperado) : 0,
+        retrasado: !llegado && esperado != null && transcurrido > esperado,
+        avance: llegado ? 1 : esperado ? Math.min(1, transcurrido / esperado) : 0,
         // Con varios destinos, las garitas elegidas son paradas, no "de paso"
         dePaso: !v.reporte && v.destino !== meta && !(v.paradas || []).includes(meta),
     };
 };
 // "PAD-E → PAD-C → PAD-L" (con varios destinos, todas las paradas)
-const rutaTexto = v => [v.origen, ...(v.paradas?.length ? v.paradas : [v.destino])].join(' → ');
+// Las garitas que ya lo registraron llevan ✓ (las de paso se nombran al final)
+const rutaTexto = v => {
+    const paradas = v.paradas?.length ? v.paradas : [v.destino];
+    const vistos = v.vistos || [];
+    const dePaso = vistos.filter(g => !paradas.includes(g));
+    return [v.origen, ...paradas.map(p => vistos.includes(p) ? `${p} ✓` : p)].join(' → ')
+        + (dePaso.length ? ` · pasó por ${dePaso.join(', ')} ✓` : '');
+};
+const horaDe = ms => new Date(ms).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' });
 // Los retrasados primero (el que más lleva arriba); luego los que están por llegar
-const ordenar = (a, b) => (b.retrasado - a.retrasado)
+const ordenar = (a, b) => (a.llegado - b.llegado) || (b.retrasado - a.retrasado)
     || (a.retrasado ? b.transcurrido - a.transcurrido : (b.avance - a.avance) || (b.transcurrido - a.transcurrido));
 const vigenteA = ahora => v => ahora - new Date(v.salidaAt).getTime() < EN_CAMINO_MIN * 60e3;
 
@@ -144,7 +156,8 @@ const movimientoDe = (v, garita, bloque, propios) => {
             fecha: salida.toLocaleDateString('en-CA', zona),
             transito: {
                 origen: v.origen || '', destino: v.destino || garita,
-                salidaAt: v.salidaAt, tiempos: v.tiempos || [], paradas: v.paradas || [], estado: 'en_camino',
+                salidaAt: v.salidaAt, tiempos: v.tiempos || [], paradas: v.paradas || [],
+                estado: v.estado || 'en_camino', vistos: v.vistos || [], pasos: v.pasos || [], cerradoAt: v.cerradoAt || null,
             },
         },
     };
@@ -184,7 +197,10 @@ const textoSinRegistro = (v, garita) => {
     };
 };
 // Al deslizar a la derecha un vehículo que no puedo cambiar
-const textoSinAcciones = (v, garita) => v.origen !== garita ? {
+const textoSinAcciones = (v, garita) => v.llegado ? {
+    titulo: 'Ya llegó',
+    detalle: `${v.placa} llegó a ${v.destino}${v.cerradoAt ? ` a las ${horaDe(v.cerradoAt)}` : ''}: el tránsito ya terminó.`,
+} : v.origen !== garita ? {
     titulo: 'Solo lo cambia quien lo envió',
     detalle: `${v.placa} salió de ${v.origen}. Cancelar el tránsito, cambiar su destino o editarlo solo se puede desde ${v.origen}.`,
 } : {
@@ -346,7 +362,7 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
 
 // ── Fila de un vehículo enviado desde mi garita ───────────
 const FilaEnviado = ({ v, onDetalle, dx = 0, vivo = false }) => (
-    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}${vivo ? ' camino__fila--deslizando' : ''}`}
+    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}${v.llegado ? ' camino__fila--llegado' : ''}${vivo ? ' camino__fila--deslizando' : ''}`}
         data-camino-id={v.id} style={dx ? { transform: `translateX(${dx}px)` } : undefined}
         role="button" tabIndex={0} aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetalle(); } }}>
@@ -356,6 +372,7 @@ const FilaEnviado = ({ v, onDetalle, dx = 0, vivo = false }) => (
             <div className="camino__placa">
                 <span>{v.placa}</span>
                 {v.retrasado && <span className="camino__retraso">Retrasado</span>}
+                {v.llegado && <span className="camino__llego">Llegó{v.cerradoAt ? ` ${horaDe(v.cerradoAt)}` : ''}</span>}
             </div>
             <div className="camino__ruta"><span className="camino__ruta-texto">{rutaTexto(v)}</span></div>
         </div>
@@ -363,7 +380,7 @@ const FilaEnviado = ({ v, onDetalle, dx = 0, vivo = false }) => (
 );
 
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare, onIrAMovimiento, onEditarReporte, onEditarMovimiento }) => {
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare, onIrAMovimiento, onEditarReporte, onEditarMovimiento, onTransitoServidor }) => {
     const claveCopia = `flujo_encamino_${bloque}_${garita}`;
     const [datos, setDatos] = useState(() => leerCopia(claveCopia));
     const [enCola, setEnCola] = useState({ reportes: [], quitados: [], ediciones: {} });   // aún sin subir
@@ -390,6 +407,10 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const trasArrastreRef = useRef(0);
     const datosRef = useRef(datos);
     useEffect(() => { datosRef.current = datos; }, [datos]);
+    const movimientosRef = useRef(movimientos);
+    useEffect(() => { movimientosRef.current = movimientos; }, [movimientos]);
+    const alServidorRef = useRef(onTransitoServidor);
+    useEffect(() => { alServidorRef.current = onTransitoServidor; }, [onTransitoServidor]);
 
     // Lista del servidor: al entrar, cada 30 s, al abrir el cajón, al volver la conexión
     // y cuando se sube un reporte
@@ -407,6 +428,15 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                 };
                 setDatos(nuevo);
                 try { localStorage.setItem(claveCopia, JSON.stringify(nuevo)); } catch { /* sin espacio */ }
+                // Mis SALIDAS que ya llegaron o pasaron por otra garita: se actualiza mi copia
+                // del movimiento, así el detalle también detiene su contador
+                nuevo.enviados.forEach(s => {
+                    const m = movimientosRef.current.find(x => String(x._id) === String(s._id));
+                    if (!m?.transito || m.transito.estado === 'cancelado') return;
+                    const cambia = (s.estado === 'llegado' && m.transito.estado !== 'llegado')
+                        || (s.vistos || []).length !== (m.transito.vistos || []).length;
+                    if (cambia) alServidorRef.current?.(m._id, { ...m.transito, estado: s.estado, vistos: s.vistos || [], pasos: s.pasos || [], cerradoAt: s.cerradoAt });
+                });
             } catch {
                 // Sin conexión: se sigue mostrando la última lista
             }
@@ -501,11 +531,17 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
 
     // Enviados desde mi garita: los del servidor y mis salidas (aunque no se hayan subido).
     // Lo que hice aquí manda: si cancelé o cambié el destino, se ve enseguida.
+    // Lo que pasó en las otras garitas (llegó, pasó por ahí) lo sabe el servidor.
     const enviadosPorId = new Map(datos.enviados.map(v => [String(v._id), v]));
     movimientos.forEach(m => {
         if (m.tipo !== 'salida' || m.transito?.origen !== garita) return;
-        if (m.transito.estado === 'en_camino') enviadosPorId.set(String(m._id), { _id: m._id, placa: m.placa, ...m.transito });
-        else enviadosPorId.delete(String(m._id));
+        const id = String(m._id), srv = enviadosPorId.get(id);
+        if (m.transito.estado === 'cancelado') { enviadosPorId.delete(id); return; }
+        enviadosPorId.set(id, {
+            _id: m._id, placa: m.placa, ...m.transito,
+            ...(srv && { vistos: srv.vistos, pasos: srv.pasos }),
+            ...(srv?.estado === 'llegado' && { estado: 'llegado', cerradoAt: srv.cerradoAt }),
+        });
     });
     const enviados = [...enviadosPorId.values()].filter(vigente)
         .map(v => estadoDe(v, ahoraServidor, v.destino)).sort(ordenar);
@@ -635,6 +671,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     // Qué se puede hacer con un vehículo: mis reportes y mis salidas de este flujo
     const accionesDe = v => {
         if (v.reporte) return { tipo: 'reporte' };
+        if (v.llegado) return null;
         const mov = movimientos.find(m => String(m._id) === v.id && m.tipo === 'salida' && m.transito?.origen === garita);
         return mov ? { tipo: 'enviado', mov } : null;
     };

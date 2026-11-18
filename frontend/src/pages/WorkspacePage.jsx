@@ -681,7 +681,8 @@ const WorkspacePage = () => {
                     onEditarReporte={v => setReportando({ v })}
                     onEditarMovimiento={handleEdit}
                     onTransito={accionTransito} onCopy={handleCopy} onShare={handleShare}
-                    onIrAMovimiento={goToMov} />
+                    onIrAMovimiento={goToMov}
+                    onTransitoServidor={(id, transito) => editarLocal({ _id: id, transito })} />
             )}
             {reportando && turnoActivo && garitaEnCamino && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}

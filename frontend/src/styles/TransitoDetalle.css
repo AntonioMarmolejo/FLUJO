@@ -308,3 +308,18 @@
     color: var(--texto-3);
     cursor: pointer;
 }
+
+/* Garitas que ya lo registraron, con su hora */
+.transito__pasos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.transito__paso {
+    padding: 3px 9px;
+    border-radius: 99px;
+    background: rgba(52, 211, 153, 0.14);
+    color: var(--exito, #34d399);
+    font-size: 12.5px;
+    font-weight: 700;
+}
