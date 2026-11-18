@@ -4,7 +4,7 @@ import {
     deleteMovimiento, batchDeleteMovimientos, updateMovimiento,
     getFlujoAnios, getFlujoMeses, getFlujoDias, deleteMovimientosPorFecha, buscarMovimientos, getUltimoMovimientoPlaca,
     getBloquePuestos, getBloqueAnios, getBloqueMeses, getBloqueDias, getBloqueDia,
-    getEnCamino, actualizarTransito, crearReporte, quitarReporte,
+    getEnCamino, actualizarTransito, crearReporte, quitarReporte, editarReporte,
 } from '../controllers/movimiento.controller.js';
 import { protect, requirePanel, requirePuestosBloque } from '../middleware/auth.middleware.js';
 
@@ -16,6 +16,7 @@ router.get('/en-camino', protect, requirePanel('movimientos'), getEnCamino);
 router.post('/transito', protect, requirePanel('movimientos'), actualizarTransito);
 router.post('/reportes', protect, requirePanel('movimientos'), crearReporte);
 router.post('/reportes/quitar', protect, requirePanel('movimientos'), quitarReporte);
+router.post('/reportes/editar', protect, requirePanel('movimientos'), editarReporte);
 router.get('/', protect, getMovimientos);
 router.get('/stats', protect, getStats);
 router.get('/todos', protect, getMovimientosTodos);

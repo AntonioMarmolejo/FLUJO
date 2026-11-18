@@ -254,7 +254,7 @@ export const isCatalogStale = async (catalogo) => {
 // Abrir turno, registrar firmas y personas nuevas sin conexión: se guardan en
 // Dexie y se suben en orden cuando vuelve internet (ver SyncOperaciones).
 const ENDPOINT_OPERACION = { turno: '/turnos/iniciar', firma: '/firmas', persona: '/personas', comentario: '/comentarios',
-    transito: '/movimientos/transito', reporte: '/movimientos/reportes', reporteQuitar: '/movimientos/reportes/quitar' };
+    transito: '/movimientos/transito', reporte: '/movimientos/reportes', reporteQuitar: '/movimientos/reportes/quitar', reporteEditar: '/movimientos/reportes/editar' };
 
 // Rechazos que pueden cambiar si el admin devuelve el acceso: la operación
 // sigue en cola en vez de marcarse como fallida.
@@ -314,7 +314,7 @@ export const syncPendingOperaciones = async () => {
                     continue;
                 }
                 // El tránsito o el reporte ya se había cerrado (llegó, se canceló o se quitó): no queda nada por hacer
-                if ((op.tipo === 'transito' || op.tipo === 'reporteQuitar') && (status === 404 || status === 409)) {
+                if (['transito', 'reporteQuitar', 'reporteEditar'].includes(op.tipo) && (status === 404 || status === 409)) {
                     await db.operacionesPending.delete(op.uuid);
                     notificarOperaciones({ tipo: op.tipo, uuid: op.uuid, data: err.response.data });
                     continue;

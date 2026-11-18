@@ -154,16 +154,18 @@ const ModalEscanerQR = ({ onScanned, onClose }) => {
 };
 
 // ── Modal formulario (crear + editar) ────────────────────
-// `reporte` ({ garita, onReportar }): en vez de registrar un movimiento, la garita se
-// reporta un vehículo que viene hacia ella (EN CAMINO), con los mismos datos.
+// `reporte` ({ garita, onReportar, inicial? }): en vez de registrar un movimiento, la garita
+// se reporta un vehículo que viene hacia ella (EN CAMINO), con los mismos datos. Con
+// `inicial` ({ datos, origen, esperadoMin, reportadoAt }) se edita un reporte ya hecho.
 export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngreso = 'EPF', ubiSalida = '', onClose, onGuardado, onGuardadoOptimista, onEditadoOptimista, onMovimientoConfirmado, movimientos, editData, reporte }) => {
     const [form, setForm] = useState(editData
         ? { tipo: editData.tipo, placa: editData.placa, marca: editData.marca || '', color: editData.color || '', tipoVehiculo: editData.tipoVehiculo || '', empresa: editData.empresa || '', conductor: editData.conductor || '', cedula: editData.cedula || '', destino: editData.destino || '', actividad: editData.actividad || '', genero: editData.genero || 'm' }
+        : reporte?.inicial ? { ...EMPTY_FORM, ...Object.fromEntries(Object.entries(reporte.inicial.datos || {}).filter(([, v]) => v != null)), tipo: 'ingreso' }
         : reporte ? { ...EMPTY_FORM, tipo: 'ingreso', destino: ubiIngreso } : EMPTY_FORM
     );
     // Solo en modo reporte: de dónde viene y en cuántos minutos llega
-    const [origenReporte, setOrigenReporte] = useState('');
-    const [minutosReporte, setMinutosReporte] = useState('');
+    const [origenReporte, setOrigenReporte] = useState(reporte?.inicial?.origen || '');
+    const [minutosReporte, setMinutosReporte] = useState(reporte?.inicial?.esperadoMin ? String(reporte.inicial.esperadoMin) : '');
     const [tramosVia, setTramosVia] = useState([]);
     useEffect(() => {
         if (reporte) leerTramosLocales().then(setTramosVia).catch(() => {});
@@ -173,6 +175,9 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
     const minutosAuto = garitaOrigen && garitaOrigen !== reporte.garita
         ? minutosHasta(armarTransito({ tramos: tramosVia, bloque, origen: garitaOrigen, destino: reporte.garita }), reporte.garita)
         : null;
+    const horaReporte = reporte?.inicial?.reportadoAt
+        ? new Date(reporte.inicial.reportadoAt).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Guayaquil' })
+        : '';
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [guardado, setGuardado] = useState(false);
@@ -610,14 +615,20 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
             )}
             <div className="modal__card" onClick={e => e.stopPropagation()}>
                 <div className="modal__header">
-                    <h3>{editData ? 'Editar movimiento' : reporte ? 'Reportar vehículo en camino' : 'Nuevo movimiento'}</h3>
+                    <h3>{editData ? 'Editar movimiento' : reporte?.inicial ? 'Editar reporte' : reporte ? 'Reportar vehículo en camino' : 'Nuevo movimiento'}</h3>
                     <button className="modal__close" onClick={onClose}>✕</button>
                 </div>
                 {reporte ? (
                     <div className="reporte-camino">
-                        <p className="reporte-camino__ayuda">
-                            Aparecerá en <strong>EN CAMINO</strong> de {reporte.garita} durante 1 hora. Cuando llegue, solo tocas + y se registra el INGRESO con estos datos y la hora de ese momento.
-                        </p>
+                        {reporte.inicial ? (
+                            <p className="reporte-camino__ayuda">
+                                Reportado a las <strong>{horaReporte}</strong>. Los minutos se cuentan desde esa hora: súbelos para extender el tiempo estimado. Sigue en <strong>EN CAMINO</strong> hasta 1 hora después del reporte.
+                            </p>
+                        ) : (
+                            <p className="reporte-camino__ayuda">
+                                Aparecerá en <strong>EN CAMINO</strong> de {reporte.garita} durante 1 hora. Cuando llegue, solo tocas + y se registra el INGRESO con estos datos y la hora de ese momento.
+                            </p>
+                        )}
                         <div className="modal__field">
                             <label>VIENE DE</label>
                             <div className="encamino-destino__chips reporte-camino__chips" role="group" aria-label="Garitas del bloque">
@@ -888,7 +899,7 @@ export const ModalAgregar = ({ puesto, bloque, turnoActual, fechaFlujo, ubiIngre
                     </div>
                 )}
                 <button className={`modal__btn${form.placa ? ' modal__btn--active' : ''}`} onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : editData ? 'Guardar cambios' : reporte ? 'Reportar vehículo' : 'Registrar movimiento'}
+                    {loading ? 'Guardando...' : editData || reporte?.inicial ? 'Guardar cambios' : reporte ? 'Reportar vehículo' : 'Registrar movimiento'}
                 </button>
             </div>
         </div>

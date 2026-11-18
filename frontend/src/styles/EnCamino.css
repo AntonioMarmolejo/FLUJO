@@ -526,3 +526,142 @@
 .camino__entendido {
     grid-column: 1 / -1;
 }
+
+/* ── Deslizar una fila a la derecha: botones diminutos detrás ── */
+.camino__caja {
+    position: relative;
+    flex-shrink: 0;
+}
+.camino__fila--tocable {
+    transition: transform 0.2s ease;
+}
+.camino__acciones {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 118px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 4px;
+}
+.camino__act {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid var(--camino-mas-borde);
+    background: var(--camino-mas-fondo);
+    color: var(--acento);
+    cursor: pointer;
+}
+.camino__act--peligro {
+    border-color: rgba(248, 113, 113, 0.55);
+    background: rgba(248, 113, 113, 0.08);
+    color: var(--peligro);
+}
+
+/* ── Ventanas de las acciones (fuera del cajón: usan el tema global) ── */
+.camino-hoja {
+    width: 100%;
+    max-width: min(92vw, 400px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 18px;
+    background: var(--fondo-3);
+    color: var(--texto);
+}
+.camino-hoja__cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.camino-hoja__titulo {
+    font-size: 16px;
+    font-weight: 800;
+}
+.camino-hoja__cerrar {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 99px;
+    border: none;
+    background: var(--fondo-hover);
+    color: var(--texto-3);
+    cursor: pointer;
+}
+.camino-hoja__texto {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--texto-3);
+}
+.camino-hoja__etiqueta {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-apagado);
+}
+.camino-hoja__chips,
+.camino-hoja__fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.camino-hoja__chip {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 99px;
+    border: 1px solid var(--borde-4);
+    background: var(--fondo-2);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.camino-hoja__input {
+    width: 90px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--borde-4);
+    background: var(--fondo-input);
+    color: var(--texto);
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: center;
+}
+.camino-hoja__btn {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--borde-4);
+    background: transparent;
+    color: var(--texto-2);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.camino-hoja__btn--primario {
+    border-color: var(--acento);
+    background: var(--acento);
+    color: #ffffff;
+}
+.camino-hoja__btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}

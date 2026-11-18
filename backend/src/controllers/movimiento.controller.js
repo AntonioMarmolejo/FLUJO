@@ -233,6 +233,43 @@ export const quitarReporte = async (req, res) => {
     }
 };
 
+// POST /api/movimientos/reportes/editar  { id, ...cambios } — antes de que llegue: corregir
+// o completar los datos, extender el tiempo estimado o mandarlo a otra garita del bloque.
+// Solo se cambia lo que viene en el pedido.
+export const editarReporte = async (req, res) => {
+    try {
+        const b = req.body;
+        if (!esId(b.id)) return res.status(400).json({ message: 'ID de reporte inválido' });
+        const reporte = await Reporte.findById(b.id);
+        if (!reporte) return res.status(404).json({ message: 'Reporte no encontrado' });
+        if (!tieneBloque(req.user, reporte.bloque)) return denegarBloque(res);
+        if (reporte.estado !== 'en_camino') return res.status(409).json({ message: 'El vehículo ya llegó o el reporte ya se quitó', reporte });
+
+        if (b.placa !== undefined) {
+            const placa = texto(b.placa, 20).toUpperCase();
+            if (!placa) return res.status(400).json({ message: 'La placa es obligatoria' });
+            reporte.placa = placa;
+        }
+        if (b.garita !== undefined) {
+            const garita = texto(b.garita);
+            if (!garita) return res.status(400).json({ message: 'Garita no válida' });
+            reporte.garita = garita;
+        }
+        if (b.origen !== undefined) reporte.origen = texto(b.origen);
+        if (b.esperadoMin !== undefined) {
+            const min = b.esperadoMin == null || b.esperadoMin === '' ? null : Number(b.esperadoMin);
+            reporte.esperadoMin = Number.isFinite(min) && min > 0 ? Math.round(min) : null;
+        }
+        CAMPOS_VEHICULO.filter(c => c !== 'genero' && b[c] !== undefined)
+            .forEach(c => { reporte[c] = texto(b[c], c === 'actividad' ? 1000 : 120); });
+        if (b.genero !== undefined) reporte.genero = b.genero === 'f' ? 'f' : 'm';
+        await reporte.save();
+        res.json({ message: 'Reporte actualizado', reporte });
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    }
+};
+
 // POST /api/movimientos/transito  { id, accion: 'cancelar' | 'destino', transito? }
 // Desde la garita de origen: cancelar el tránsito o cambiar su destino.
 // Cancelar no borra la SALIDA: sigue en el historial.

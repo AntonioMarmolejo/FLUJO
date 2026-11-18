@@ -1,5 +1,5 @@
 import { nuevoIdCatalogo } from './catalogoOffline.js';
-import { descartarOperacion, encolarOperacion, syncPendingOperaciones } from './syncEngine.js';
+import { actualizarOperacion, descartarOperacion, encolarOperacion, syncPendingOperaciones } from './syncEngine.js';
 
 // EN CAMINO: vehículos que una garita se reporta a sí misma ("viene hacia aquí")
 // con todos los datos del formulario. Van por la cola de operaciones: se ven al
@@ -17,6 +17,15 @@ export const reportarVehiculo = async ({ bloque, garita, datos, origen = '', esp
     await encolarOperacion('reporte', payload, _id);
     syncPendingOperaciones().catch(() => {});
     return payload;
+};
+
+// Antes de que llegue: corregir los datos, extender el tiempo o mandarlo a otra garita.
+// Si el reporte todavía no se subió, se cambian sus datos en la cola; si no, el cambio
+// va por la cola como una operación más (también sin conexión).
+export const editarReporte = async ({ id, pendiente, cambios }) => {
+    if (pendiente) await actualizarOperacion(id, cambios);
+    else await encolarOperacion('reporteEditar', { id, ...cambios });
+    syncPendingOperaciones().catch(() => {});
 };
 
 // Se reportó por error. Si todavía no se había subido, basta con sacarlo de la cola.

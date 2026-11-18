@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../../api/axios';
 import { encolarMovimiento, getOperacionesPendientes, subirMovimientoPendiente } from '../../lib/syncEngine.js';
-import { EN_CAMINO_MIN, cronometro, minutosHasta } from '../../lib/garitas.js';
-import { CAMPOS_REPORTE, quitarReporte } from '../../lib/reportesEnCamino.js';
+import { EN_CAMINO_MIN, armarTransito, cronometro, garitaDeLugar, garitasDelBloque, minutosHasta } from '../../lib/garitas.js';
+import { CAMPOS_REPORTE, editarReporte, quitarReporte } from '../../lib/reportesEnCamino.js';
+import { leerTramosLocales } from '../../lib/tramosOffline.js';
 import { getHoraLocal } from './helpers';
 import { ModalDetalle } from './Movimientos';
 import '../../styles/EnCamino.css';
@@ -18,7 +19,8 @@ import '../../styles/EnCamino.css';
 
 const MAX_FILAS = 3;
 const UMBRAL_ARRASTRE = 50;      // px para abrir o cerrar al soltar
-const UMBRAL_IR = 55;            // px a la izquierda sobre una fila: ir a su movimiento
+const UMBRAL_IR = 55;            // px sobre una fila: a la izquierda va a su movimiento; a la derecha, sus botones
+const ANCHO_ACCIONES = 118;      // px que se corre la fila para mostrar sus botones
 const CADA_CUANTO_MS = 30000;    // consulta al servidor
 const VACIO = { lista: [], enviados: [], desfase: 0 };
 
@@ -68,6 +70,32 @@ const reporteEnCola = (r, garita) => ({
     tiempos: [{ garita, min: r.esperadoMin }],
     vehiculo: Object.fromEntries(CAMPOS_REPORTE.filter(c => c !== 'placa').map(c => [c, r[c]])),
 });
+
+// Un reporte con los cambios que todavía están en la cola (o recién hechos)
+const conEdicion = (v, c) => !c ? v : {
+    ...v,
+    placa: c.placa ?? v.placa,
+    origen: c.origen ?? v.origen,
+    destino: c.garita ?? v.destino,
+    tiempos: c.esperadoMin !== undefined ? [{ garita: c.garita ?? v.destino, min: c.esperadoMin }] : v.tiempos,
+    vehiculo: { ...v.vehiculo, ...Object.fromEntries(CAMPOS_REPORTE.filter(k => k !== 'placa' && c[k] !== undefined).map(k => [k, c[k]])) },
+};
+// Un reporte tal como lo devuelve el servidor, con la forma de la lista
+const reporteDelServidor = r => ({
+    _id: r._id, placa: r.placa, reporte: true,
+    origen: r.origen, destino: r.garita, salidaAt: r.reportadoAt,
+    tiempos: [{ garita: r.garita, min: r.esperadoMin }],
+    vehiculo: Object.fromEntries(CAMPOS_REPORTE.filter(c => c !== 'placa').map(c => [c, r[c]])),
+});
+
+// Tiempos de un tránsito con otro total hasta el destino: las garitas de paso se
+// ajustan en la misma proporción
+const tiemposConTotal = (transito, total) => {
+    const anterior = minutosHasta(transito, transito.destino);
+    const tiempos = (transito.tiempos || []).map(t => t.garita === transito.destino ? { ...t, min: total }
+        : { ...t, min: anterior > 0 && t.min != null ? Math.max(1, Math.round(t.min * total / anterior)) : t.min });
+    return tiempos.some(t => t.garita === transito.destino) ? tiempos : [...tiempos, { garita: transito.destino, min: total }];
+};
 
 // Registrar la llegada: un INGRESO con TODOS los datos del vehículo (como en el
 // formulario de nuevo movimiento) y la hora actual, por la misma cola que los
@@ -124,6 +152,15 @@ const aislar = e => e.stopPropagation();
 const IconoAtras = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
 );
+const IconoX = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+);
+const IconoDestino = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h14l-4-4M20 16H6l4 4" /></svg>
+);
+const IconoLapiz = () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+);
 const IconoMas = ({ tam = 20 }) => (
     <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
@@ -143,8 +180,15 @@ const textoSinRegistro = (v, garita) => {
         detalle: `La SALIDA de ${v.placa} hacia ${v.destino} se registró en otro turno de ${garita}, así que no está en tus movimientos de este flujo.`,
     };
 };
-const AvisoSinRegistro = ({ v, garita, onCerrar }) => {
-    const { titulo, detalle } = textoSinRegistro(v, garita);
+// Al deslizar a la derecha un vehículo que no puedo cambiar
+const textoSinAcciones = (v, garita) => v.origen !== garita ? {
+    titulo: 'Solo lo cambia quien lo envió',
+    detalle: `${v.placa} salió de ${v.origen}. Cancelar el tránsito, cambiar su destino o editarlo solo se puede desde ${v.origen}.`,
+} : {
+    titulo: 'No está en tu flujo actual',
+    detalle: `La SALIDA de ${v.placa} se registró en otro turno de ${garita}: solo quien la registró puede cancelarla, cambiar su destino o editarla.`,
+};
+const AvisoVentana = ({ titulo, detalle, onCerrar }) => {
     return (
         <div className="modal__overlay" onClick={onCerrar}>
             <div className="modal__card modal__card--confirmar" role="alertdialog" aria-label={titulo} onClick={e => e.stopPropagation()}>
@@ -162,8 +206,90 @@ const AvisoSinRegistro = ({ v, garita, onCerrar }) => {
     );
 };
 
+// ── Botones que aparecen al deslizar una fila a la derecha ──
+const AccionesFila = ({ esReporte, onCancelar, onDestino, onEditar }) => (
+    <div className="camino__acciones">
+        <button className="camino__act camino__act--peligro" title={esReporte ? 'Quitar reporte' : 'Cancelar tránsito'}
+            aria-label={esReporte ? 'Quitar reporte' : 'Cancelar tránsito'} onClick={onCancelar}><IconoX /></button>
+        <button className="camino__act" title="Cambiar destino" aria-label="Cambiar destino" onClick={onDestino}><IconoDestino /></button>
+        <button className="camino__act" title={esReporte ? 'Editar reporte' : 'Editar tránsito'}
+            aria-label={esReporte ? 'Editar reporte' : 'Editar tránsito'} onClick={onEditar}><IconoLapiz /></button>
+    </div>
+);
+
+const Hoja = ({ titulo, onCerrar, children }) => (
+    <div className="modal__overlay" onClick={onCerrar}>
+        <div className="camino-hoja" role="dialog" aria-label={titulo} onClick={e => e.stopPropagation()}>
+            <div className="camino-hoja__cab">
+                <span className="camino-hoja__titulo">{titulo}</span>
+                <button className="camino-hoja__cerrar" aria-label="Cerrar" onClick={onCerrar}><IconoX /></button>
+            </div>
+            {children}
+        </div>
+    </div>
+);
+
+// Elegir otra garita del bloque
+const HojaDestino = ({ v, opciones, onElegir, onCerrar }) => (
+    <Hoja titulo={`Cambiar destino · ${v.placa}`} onCerrar={onCerrar}>
+        <p className="camino-hoja__texto">
+            {v.reporte ? `Ahora viene hacia ${v.destino}. Si va a otra garita, el reporte pasa a EN CAMINO de esa garita.`
+                : `Ahora va hacia ${v.destino}. El tiempo estimado se recalcula con Distancias.`}
+        </p>
+        <div className="camino-hoja__chips">
+            {opciones.map(g => <button key={g} className="camino-hoja__chip" onClick={() => onElegir(g)}>{g}</button>)}
+        </div>
+    </Hoja>
+);
+
+// Confirmar antes de cancelar el tránsito o quitar el reporte
+const HojaCancelar = ({ v, onConfirmar, onCerrar }) => (
+    <div className="modal__overlay" onClick={onCerrar}>
+        <div className="modal__card modal__card--confirmar" role="alertdialog" onClick={e => e.stopPropagation()}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar__icono">
+                <circle cx="12" cy="12" r="10" stroke="#f87171" strokeWidth="2" />
+                <path d="M12 8v4M12 16h.01" stroke="#f87171" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <p className="confirmar__mensaje">{v.reporte ? '¿Quitar este reporte?' : '¿Cancelar tránsito?'}</p>
+            <p className="confirmar__detalle">
+                {v.reporte ? `${v.placa} dejará de aparecer en EN CAMINO.`
+                    : `${v.placa} dejará de aparecer en EN CAMINO de ${v.destino}. La SALIDA se mantiene en tus movimientos.`}
+            </p>
+            <div className="confirmar__botones">
+                <button className="confirmar__cancelar" onClick={onCerrar}>Volver</button>
+                <button className="confirmar__eliminar" onClick={onConfirmar}>{v.reporte ? 'Quitar' : 'Cancelar tránsito'}</button>
+            </div>
+        </div>
+    </div>
+);
+
+// Editar un tránsito que envié: extender el tiempo estimado o ir a sus datos
+const HojaTiempo = ({ v, mov, onGuardar, onEditarDatos, onCerrar }) => {
+    const actual = minutosHasta(mov.transito, mov.transito.destino);
+    const [min, setMin] = useState(actual ? String(actual) : '');
+    const valor = Number(min);
+    const valido = Number.isFinite(valor) && valor > 0 && valor <= 600;
+    const sumar = n => setMin(m => String(Math.max(0, Number(m) || actual || 0) + n));
+    return (
+        <Hoja titulo={`Editar tránsito · ${v.placa}`} onCerrar={onCerrar}>
+            <p className="camino-hoja__texto">
+                Hacia <strong>{mov.transito.destino}</strong> · salió a las {mov.hora} · lleva {cronometro(v.transcurrido)}
+            </p>
+            <label className="camino-hoja__etiqueta" htmlFor="camino-minutos">Tiempo estimado (minutos desde la salida)</label>
+            <div className="camino-hoja__fila">
+                <input id="camino-minutos" className="camino-hoja__input" inputMode="numeric" autoComplete="off"
+                    value={min} placeholder="Sin estimado" onChange={e => setMin(e.target.value.replace(/\D/g, '').slice(0, 3))} />
+                {[5, 10, 15].map(n => <button key={n} className="camino-hoja__chip" onClick={() => sumar(n)}>+{n}</button>)}
+            </div>
+            <button className="camino-hoja__btn camino-hoja__btn--primario" disabled={!valido || valor === actual}
+                onClick={() => onGuardar(Math.round(valor))}>Guardar tiempo</button>
+            <button className="camino-hoja__btn" onClick={onEditarDatos}><IconoLapiz />Editar datos del vehículo</button>
+        </Hoja>
+    );
+};
+
 // ── Fila de un vehículo que viene ─────────────────────────
-const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar, onDetalle, dx = 0 }) => {
+const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar, onDetalle, dx = 0, vivo = false }) => {
     const clase = `camino__fila${v.retrasado ? ' camino__fila--retrasado' : ''}`;
     const ruta = (
         <>
@@ -196,7 +322,7 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
         );
     }
     return (
-        <div className={`${clase} camino__fila--tocable${dx ? ' camino__fila--deslizando' : ''}`} role="button" tabIndex={0}
+        <div className={`${clase} camino__fila--tocable${vivo ? ' camino__fila--deslizando' : ''}`} role="button" tabIndex={0}
             data-camino-id={v.id} style={dx ? { transform: `translateX(${dx}px)` } : undefined}
             aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
             onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDetalle(); } }}>
@@ -216,8 +342,8 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
 };
 
 // ── Fila de un vehículo enviado desde mi garita ───────────
-const FilaEnviado = ({ v, onDetalle, dx = 0 }) => (
-    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}${dx ? ' camino__fila--deslizando' : ''}`}
+const FilaEnviado = ({ v, onDetalle, dx = 0, vivo = false }) => (
+    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}${vivo ? ' camino__fila--deslizando' : ''}`}
         data-camino-id={v.id} style={dx ? { transform: `translateX(${dx}px)` } : undefined}
         role="button" tabIndex={0} aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetalle(); } }}>
@@ -234,10 +360,10 @@ const FilaEnviado = ({ v, onDetalle, dx = 0 }) => (
 );
 
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare, onIrAMovimiento }) => {
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare, onIrAMovimiento, onEditarReporte, onEditarMovimiento }) => {
     const claveCopia = `flujo_encamino_${bloque}_${garita}`;
     const [datos, setDatos] = useState(() => leerCopia(claveCopia));
-    const [enCola, setEnCola] = useState({ reportes: [], quitados: [] });   // reportes aún sin subir
+    const [enCola, setEnCola] = useState({ reportes: [], quitados: [], ediciones: {} });   // aún sin subir
     // Reportes quitados en esta pantalla: no vuelven a aparecer aunque la lista del
     // servidor tarde en actualizarse después de subir el cambio
     const [quitadosAqui, setQuitadosAqui] = useState([]);
@@ -248,8 +374,10 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const [verTodos, setVerTodos] = useState(false);
     const [confirmando, setConfirmando] = useState(null); // { id, placa }
     const [detalleId, setDetalleId] = useState(null);     // vehículo con la ventana de detalle abierta
-    const [filaArrastre, setFilaArrastre] = useState(null); // { id, dx } fila que se desliza a la izquierda
-    const [sinRegistro, setSinRegistro] = useState(null);   // aviso: ese vehículo no está en mis movimientos
+    const [filaArrastre, setFilaArrastre] = useState(null); // { id, dx } fila que sigue al dedo
+    const [deslizadaId, setDeslizadaId] = useState(null);   // fila corrida a la derecha con sus botones
+    const [hoja, setHoja] = useState(null);                 // { modo: 'destino' | 'cancelar' | 'tiempo', id }
+    const [ventana, setVentana] = useState(null);           // aviso { titulo, detalle }
     const [aviso, setAviso] = useState('');
     const [anchoCajon, setAnchoCajon] = useState(340);  // se mide al empezar cada arrastre
     const cajonRef = useRef(null);
@@ -290,19 +418,34 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     useEffect(() => {
         let vigente = true;
         const leer = async () => {
-            const [reportes, quitados] = await Promise.all([
-                getOperacionesPendientes('reporte'), getOperacionesPendientes('reporteQuitar'),
-            ]).catch(() => [[], []]);
+            const [reportes, quitados, editados] = await Promise.all([
+                getOperacionesPendientes('reporte'), getOperacionesPendientes('reporteQuitar'), getOperacionesPendientes('reporteEditar'),
+            ]).catch(() => [[], [], []]);
             if (!vigente) return;
+            // Varias ediciones del mismo reporte: se aplican en orden
+            const ediciones = {};
+            editados.forEach(op => { const id = String(op.payload.id); ediciones[id] = { ...ediciones[id], ...op.payload }; });
             setEnCola({
                 reportes: reportes.map(op => op.payload).filter(r => r.bloque === bloque && r.garita === garita),
                 quitados: quitados.map(op => String(op.payload.id)),
+                ediciones,
             });
         };
         leer();
         const onOperacion = e => {
-            if (!['reporte', 'reporteQuitar'].includes(e.detail?.tipo)) return;
+            if (!['reporte', 'reporteQuitar', 'reporteEditar'].includes(e.detail?.tipo)) return;
             leer();
+            // Edición subida: la lista toma el reporte del servidor enseguida (sin esperar
+            // a pedirla de nuevo, así no se ve un instante con los datos de antes)
+            const r = e.detail.tipo === 'reporteEditar' ? e.detail.data?.reporte : null;
+            if (r) {
+                setDatos(d => ({
+                    ...d,
+                    lista: r.garita !== garita || r.estado !== 'en_camino'
+                        ? d.lista.filter(x => String(x._id) !== String(r._id))
+                        : d.lista.map(x => String(x._id) === String(r._id) ? reporteDelServidor(r) : x),
+                }));
+            }
             if (e.detail.data) setRecarga(n => n + 1);   // se subió: pedir la lista otra vez
         };
         window.addEventListener('flujo:operaciones', onOperacion);
@@ -322,7 +465,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         if (!abierto) return undefined;
         const onTecla = e => {
             if (e.key !== 'Escape') return;
-            if (sinRegistro) setSinRegistro(null);
+            if (ventana) setVentana(null);
+            else if (hoja) setHoja(null);
             else if (detalleId) setDetalleId(null);   // primero la ventana de detalle
             else setAbierto(false);
         };
@@ -330,7 +474,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         return () => { window.removeEventListener('keydown', onTecla); document.body.style.overflow = overflow; };
-    }, [abierto, detalleId, sinRegistro]);
+    }, [abierto, detalleId, ventana, hoja]);
 
     useEffect(() => {
         if (!aviso) return undefined;
@@ -347,7 +491,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const quitados = new Set([...enCola.quitados, ...quitadosAqui]);
     const delServidor = new Set(datos.lista.map(v => String(v._id)));
     const lista = [...datos.lista, ...enCola.reportes.filter(r => !delServidor.has(String(r._id))).map(r => reporteEnCola(r, garita))]
-        .filter(v => !registradas.has(String(v._id)) && !quitados.has(String(v._id)) && vigente(v))
+        .map(v => v.reporte ? conEdicion(v, enCola.ediciones[String(v._id)]) : v)
+        .filter(v => !registradas.has(String(v._id)) && !quitados.has(String(v._id)) && vigente(v) && (!v.reporte || v.destino === garita))
         .map(v => estadoDe(v, ahoraServidor, garita))
         .sort(ordenar);
 
@@ -396,7 +541,11 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
             try { g.el.setPointerCapture(g.id); } catch { /* el puntero ya se soltó */ }
         }
         if (!g.activo) return;
-        if (g.fila) setFilaArrastre({ id: g.fila, dx: Math.max(-90, Math.min(0, dx)) });
+        if (g.fila) {
+            // Con los botones a la vista solo se puede volver a cerrar
+            const abiertaYa = deslizadaId === g.fila;
+            setFilaArrastre({ id: g.fila, dx: abiertaYa ? Math.max(0, Math.min(ANCHO_ACCIONES, ANCHO_ACCIONES + dx)) : Math.max(-90, Math.min(ANCHO_ACCIONES, dx)) });
+        }
         else setArrastre(g.desdeAbierto ? Math.min(0, dx) : Math.max(0, dx));
     };
     const soltar = e => {
@@ -412,7 +561,9 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         setArrastre(null);
         if (g.fila) {
             setFilaArrastre(null);
+            if (deslizadaId === g.fila) { if (dx < -30) setDeslizadaId(null); return; }
             if (dx < -UMBRAL_IR) irAlMovimiento(g.fila);
+            else if (dx > UMBRAL_IR) mostrarAcciones(g.fila);
             return;
         }
         if (g.desdeAbierto) { if (dx < -UMBRAL_ARRASTRE) setAbierto(false); }
@@ -467,6 +618,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     // Deslizar a la izquierda una fila: si el movimiento está en mis movimientos (una
     // SALIDA que envié), se cierra el cajón y se va a él resaltado; si no, se avisa
     const irAlMovimiento = id => {
+        setDeslizadaId(null);
         const propio = movimientos.find(m => String(m._id) === id);
         if (propio) {
             setAbierto(false);
@@ -474,8 +626,67 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
             return;
         }
         const v = [...lista, ...enviados].find(x => x.id === id);
-        if (v) setSinRegistro(v);
+        if (v) setVentana(textoSinRegistro(v, garita));
     };
+
+    // Qué se puede hacer con un vehículo: mis reportes y mis salidas de este flujo
+    const accionesDe = v => {
+        if (v.reporte) return { tipo: 'reporte' };
+        const mov = movimientos.find(m => String(m._id) === v.id && m.tipo === 'salida' && m.transito?.origen === garita);
+        return mov ? { tipo: 'enviado', mov } : null;
+    };
+    // Deslizar a la derecha: muestra los botones, o avisa si ese vehículo no es mío
+    const mostrarAcciones = id => {
+        const v = [...lista, ...enviados].find(x => x.id === id);
+        if (!v) return;
+        if (accionesDe(v)) setDeslizadaId(id);
+        else setVentana(textoSinAcciones(v, garita));
+    };
+    const usarAccion = (v, modo) => {
+        setDeslizadaId(null);
+        const acc = accionesDe(v);
+        if (!acc) return;
+        if (acc.tipo === 'enviado' && acc.mov._pending) {
+            setAviso('Podrás cambiarlo cuando la SALIDA se suba al servidor');
+            return;
+        }
+        if (modo === 'editar' && acc.tipo === 'reporte') { onEditarReporte?.(v); return; }
+        setHoja({ modo: modo === 'editar' ? 'tiempo' : modo, id: v.id });
+    };
+    const hojaV = hoja ? [...lista, ...enviados].find(x => x.id === hoja.id) : null;
+    const hojaAcc = hojaV ? accionesDe(hojaV) : null;
+    const opcionesDestino = v => garitasDelBloque(bloque).filter(g => g !== v.destino && (v.reporte ? g !== garitaDeLugar(bloque, v.origen) : g !== garita));
+
+    const cambiarDestino = async (v, acc, destino) => {
+        setHoja(null);
+        const tramos = await leerTramosLocales().catch(() => []);
+        if (acc.tipo === 'enviado') {
+            const nuevo = armarTransito({ tramos, bloque, origen: garita, destino, salidaAt: acc.mov.transito.salidaAt });
+            if (!nuevo) { setAviso('No se pudo calcular la ruta a ese destino'); return; }
+            await onTransito(acc.mov, 'destino', { destino: nuevo.destino, tiempos: nuevo.tiempos });
+        } else {
+            // El tiempo se recalcula si viene de una garita y hay ruta en Distancias
+            const desde = garitaDeLugar(bloque, v.origen);
+            const min = desde && desde !== destino ? minutosHasta(armarTransito({ tramos, bloque, origen: desde, destino }), destino) : null;
+            await editarReporte({ id: v.id, pendiente: !!v.pendiente, cambios: { garita: destino, ...(min > 0 && { esperadoMin: min }) } });
+        }
+        setAviso(`${v.placa} ahora va hacia ${destino}`);
+    };
+    const cancelarVehiculo = async (v, acc) => {
+        setHoja(null);
+        if (acc.tipo === 'reporte') { quitar(v); return; }
+        await onTransito(acc.mov, 'cancelar');
+        setAviso(`Tránsito de ${v.placa} cancelado`);
+    };
+    const guardarTiempo = async (v, acc, total) => {
+        setHoja(null);
+        await onTransito(acc.mov, 'destino', { destino: acc.mov.transito.destino, tiempos: tiemposConTotal(acc.mov.transito, total) });
+        setAviso(`${v.placa}: ${total} min estimados hasta ${acc.mov.transito.destino}`);
+    };
+    // Corrimiento de una fila: el del dedo mientras arrastra; si no, abierta o cerrada
+    const corrimiento = id => filaArrastre?.id === id ? filaArrastre.dx : deslizadaId === id ? ANCHO_ACCIONES : 0;
+    // Un toque en una fila corrida la cierra; si no, abre el detalle
+    const tocarFila = id => { if (deslizadaId) setDeslizadaId(null); else setDetalleId(id); };
     const quitar = v => {
         setConfirmando(null);
         setQuitadosAqui(q => [...q, v.id]);   // se va de la lista enseguida
@@ -509,16 +720,24 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                             <div className="camino__vacio">Ningún vehículo viene hacia {garita} por ahora.</div>
                         )}
                         {visibles.map(v => (
-                            <FilaCamino key={v.id} v={v} garita={garita}
-                                confirmando={confirmando?.id === v.id}
-                                placa={confirmando?.id === v.id ? confirmando.placa : ''}
-                                onPlaca={p => setConfirmando(c => ({ ...c, placa: p }))}
-                                onAbrir={() => setConfirmando({ id: v.id, placa: v.placa })}
-                                onCancelar={() => setConfirmando(null)}
-                                onRegistrar={registrar}
-                                onQuitar={() => quitar(v)}
-                                onDetalle={() => setDetalleId(v.id)}
-                                dx={filaArrastre?.id === v.id ? filaArrastre.dx : 0} />
+                            <div key={v.id} className="camino__caja">
+                                {corrimiento(v.id) > 0 && (
+                                    <AccionesFila esReporte={!!v.reporte}
+                                        onCancelar={() => usarAccion(v, 'cancelar')}
+                                        onDestino={() => usarAccion(v, 'destino')}
+                                        onEditar={() => usarAccion(v, 'editar')} />
+                                )}
+                                <FilaCamino v={v} garita={garita}
+                                    confirmando={confirmando?.id === v.id}
+                                    placa={confirmando?.id === v.id ? confirmando.placa : ''}
+                                    onPlaca={p => setConfirmando(c => ({ ...c, placa: p }))}
+                                    onAbrir={() => { setDeslizadaId(null); setConfirmando({ id: v.id, placa: v.placa }); }}
+                                    onCancelar={() => setConfirmando(null)}
+                                    onRegistrar={registrar}
+                                    onQuitar={() => quitar(v)}
+                                    onDetalle={() => tocarFila(v.id)}
+                                    dx={corrimiento(v.id)} vivo={filaArrastre?.id === v.id} />
+                            </div>
                         ))}
                         {ocultos > 0 && (
                             <button className="camino__ver-mas" onClick={() => setVerTodos(t => !t)}>
@@ -532,8 +751,18 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                         {enviados.length > 0 && (
                             <>
                                 <div className="camino__seccion">Enviados desde {garita} · <span className="camino__total">{enviados.length}</span></div>
-                                {enviados.map(v => <FilaEnviado key={v.id} v={v} onDetalle={() => setDetalleId(v.id)}
-                                    dx={filaArrastre?.id === v.id ? filaArrastre.dx : 0} />)}
+                                {enviados.map(v => (
+                                    <div key={v.id} className="camino__caja">
+                                        {corrimiento(v.id) > 0 && (
+                                            <AccionesFila esReporte={false}
+                                                onCancelar={() => usarAccion(v, 'cancelar')}
+                                                onDestino={() => usarAccion(v, 'destino')}
+                                                onEditar={() => usarAccion(v, 'editar')} />
+                                        )}
+                                        <FilaEnviado v={v} onDetalle={() => tocarFila(v.id)}
+                                            dx={corrimiento(v.id)} vivo={filaArrastre?.id === v.id} />
+                                    </div>
+                                ))}
                             </>
                         )}
                     </div>
@@ -553,9 +782,28 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                 </button>
             </aside>
 
-            {sinRegistro && createPortal(
+            {ventana && createPortal(
                 <div onPointerDown={aislar} onPointerMove={aislar} onPointerUp={aislar} onPointerCancel={aislar} onClick={aislar}>
-                    <AvisoSinRegistro v={sinRegistro} garita={garita} onCerrar={() => setSinRegistro(null)} />
+                    <AvisoVentana {...ventana} onCerrar={() => setVentana(null)} />
+                </div>,
+                document.body,
+            )}
+
+            {hojaV && hojaAcc && createPortal(
+                <div onPointerDown={aislar} onPointerMove={aislar} onPointerUp={aislar} onPointerCancel={aislar} onClick={aislar}>
+                    {hoja.modo === 'destino' && (
+                        <HojaDestino v={hojaV} opciones={opcionesDestino(hojaV)}
+                            onElegir={g => cambiarDestino(hojaV, hojaAcc, g)} onCerrar={() => setHoja(null)} />
+                    )}
+                    {hoja.modo === 'cancelar' && (
+                        <HojaCancelar v={hojaV} onConfirmar={() => cancelarVehiculo(hojaV, hojaAcc)} onCerrar={() => setHoja(null)} />
+                    )}
+                    {hoja.modo === 'tiempo' && hojaAcc.tipo === 'enviado' && (
+                        <HojaTiempo v={hojaV} mov={hojaAcc.mov}
+                            onGuardar={min => guardarTiempo(hojaV, hojaAcc, min)}
+                            onEditarDatos={() => { setHoja(null); onEditarMovimiento?.(hojaAcc.mov); }}
+                            onCerrar={() => setHoja(null)} />
+                    )}
                 </div>,
                 document.body,
             )}

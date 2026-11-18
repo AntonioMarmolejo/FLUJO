@@ -22,7 +22,7 @@ import { PantallaUtilidades } from './workspace/Utilidades';
 import { AccesoRestringido, AvisoIniciarFlujo, PanelActivacion, PantallaStub, ScrollTopButton } from './workspace/comunes';
 import { EnCamino } from './workspace/EnCamino';
 import { garitaDePuesto } from '../lib/garitas.js';
-import { reportarVehiculo } from '../lib/reportesEnCamino.js';
+import { CAMPOS_REPORTE, editarReporte, reportarVehiculo } from '../lib/reportesEnCamino.js';
 import { encolarOperacion, syncPendingOperaciones } from '../lib/syncEngine.js';
 import {
     DASH_FILTROS,
@@ -84,7 +84,9 @@ const WorkspacePage = () => {
     const garitaEnCamino = turnoActivo ? garitaDePuesto(turnoActivo.bloque, turnoActivo.puesto) : null;
     const puedeRegistrar = isAdmin || (!isPending && hasPermiso('movimientos') && (!turnoActivo || tieneBloque(turnoActivo.bloque)));
     // Formulario para reportarse un vehículo que viene hacia mi garita
+    // (true = nuevo; { v } = editar ese reporte desde EN CAMINO)
     const [reportando, setReportando] = useState(false);
+    const reporteEditando = reportando?.v || null;
 
     const [showModal, setShowModal] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
@@ -676,6 +678,8 @@ const WorkspacePage = () => {
                     agregarOptimista={handleGuardadoOptimista}
                     confirmarMovimiento={handleMovimientoConfirmado}
                     onReportar={() => setReportando(true)}
+                    onEditarReporte={v => setReportando({ v })}
+                    onEditarMovimiento={handleEdit}
                     onTransito={accionTransito} onCopy={handleCopy} onShare={handleShare}
                     onIrAMovimiento={goToMov} />
             )}
@@ -687,8 +691,20 @@ const WorkspacePage = () => {
                     onClose={() => setReportando(false)}
                     reporte={{
                         garita: garitaEnCamino,
-                        onReportar: ({ datos, origen, esperadoMin }) =>
-                            reportarVehiculo({ bloque: turnoActivo.bloque, garita: garitaEnCamino, datos, origen, esperadoMin }),
+                        ...(reporteEditando && {
+                            inicial: {
+                                datos: { placa: reporteEditando.placa, ...reporteEditando.vehiculo },
+                                origen: reporteEditando.origen || '',
+                                esperadoMin: reporteEditando.tiempos?.[0]?.min ?? null,
+                                reportadoAt: reporteEditando.salidaAt,
+                            },
+                        }),
+                        onReportar: ({ datos, origen, esperadoMin }) => reporteEditando
+                            ? editarReporte({
+                                id: reporteEditando.id, pendiente: !!reporteEditando.pendiente,
+                                cambios: { ...Object.fromEntries(CAMPOS_REPORTE.map(c => [c, datos[c] || (c === 'genero' ? 'm' : '')])), origen, esperadoMin },
+                            })
+                            : reportarVehiculo({ bloque: turnoActivo.bloque, garita: garitaEnCamino, datos, origen, esperadoMin }),
                     }} />
             )}
 
