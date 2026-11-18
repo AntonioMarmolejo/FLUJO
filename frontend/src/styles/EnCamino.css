@@ -515,3 +515,14 @@
 .camino__contenido * {
     touch-action: pan-y;
 }
+
+/* Fila que se desliza a la izquierda para ir a su movimiento */
+.camino__fila--deslizando {
+    transition: none;
+    opacity: 0.85;
+}
+
+/* Aviso de un solo botón: ocupa todo el ancho */
+.camino__entendido {
+    grid-column: 1 / -1;
+}

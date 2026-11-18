@@ -18,6 +18,7 @@ import '../../styles/EnCamino.css';
 
 const MAX_FILAS = 3;
 const UMBRAL_ARRASTRE = 50;      // px para abrir o cerrar al soltar
+const UMBRAL_IR = 55;            // px a la izquierda sobre una fila: ir a su movimiento
 const CADA_CUANTO_MS = 30000;    // consulta al servidor
 const VACIO = { lista: [], enviados: [], desfase: 0 };
 
@@ -127,8 +128,42 @@ const IconoMas = ({ tam = 20 }) => (
     <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
 );
 
+// ── Aviso: el vehículo deslizado no está en mis movimientos ──
+const textoSinRegistro = (v, garita) => {
+    if (v.reporte) return {
+        titulo: 'Aún no está instanciado',
+        detalle: `${v.placa} es un vehículo reportado hacia ${garita}${v.origen ? ` desde ${v.origen}` : ''}. Todavía no está en tus movimientos: cuando llegue, toca + en su fila para registrarlo.`,
+    };
+    if (v.origen !== garita) return {
+        titulo: 'Aún no está registrado',
+        detalle: `${v.placa} viene desde ${v.origen} y todavía no está en tus movimientos. Cuando llegue, toca + en su fila para instanciarlo.`,
+    };
+    return {
+        titulo: 'No está en tu flujo actual',
+        detalle: `La SALIDA de ${v.placa} hacia ${v.destino} se registró en otro turno de ${garita}, así que no está en tus movimientos de este flujo.`,
+    };
+};
+const AvisoSinRegistro = ({ v, garita, onCerrar }) => {
+    const { titulo, detalle } = textoSinRegistro(v, garita);
+    return (
+        <div className="modal__overlay" onClick={onCerrar}>
+            <div className="modal__card modal__card--confirmar" role="alertdialog" aria-label={titulo} onClick={e => e.stopPropagation()}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="confirmar__icono">
+                    <circle cx="12" cy="12" r="10" stroke="#ef9f27" strokeWidth="2" />
+                    <path d="M12 8v4M12 16h.01" stroke="#ef9f27" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <p className="confirmar__mensaje">{titulo}</p>
+                <p className="confirmar__detalle">{detalle}</p>
+                <div className="confirmar__botones">
+                    <button className="confirmar__cancelar camino__entendido" autoFocus onClick={onCerrar}>Entendido</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Fila de un vehículo que viene ─────────────────────────
-const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar, onDetalle }) => {
+const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancelar, onRegistrar, onQuitar, onDetalle, dx = 0 }) => {
     const clase = `camino__fila${v.retrasado ? ' camino__fila--retrasado' : ''}`;
     const ruta = (
         <>
@@ -161,7 +196,8 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
         );
     }
     return (
-        <div className={`${clase} camino__fila--tocable`} role="button" tabIndex={0}
+        <div className={`${clase} camino__fila--tocable${dx ? ' camino__fila--deslizando' : ''}`} role="button" tabIndex={0}
+            data-camino-id={v.id} style={dx ? { transform: `translateX(${dx}px)` } : undefined}
             aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
             onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDetalle(); } }}>
             {/* El fondo de la fila es la barra de progreso */}
@@ -180,8 +216,9 @@ const FilaCamino = ({ v, garita, confirmando, placa, onPlaca, onAbrir, onCancela
 };
 
 // ── Fila de un vehículo enviado desde mi garita ───────────
-const FilaEnviado = ({ v, onDetalle }) => (
-    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}`}
+const FilaEnviado = ({ v, onDetalle, dx = 0 }) => (
+    <div className={`camino__fila camino__fila--enviado camino__fila--tocable${v.retrasado ? ' camino__fila--retrasado' : ''}${dx ? ' camino__fila--deslizando' : ''}`}
+        data-camino-id={v.id} style={dx ? { transform: `translateX(${dx}px)` } : undefined}
         role="button" tabIndex={0} aria-label={`Ver el detalle de ${v.placa}`} onClick={onDetalle}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onDetalle(); } }}>
         <div className="camino__relleno" style={{ width: `${v.avance * 100}%` }} />
@@ -197,7 +234,7 @@ const FilaEnviado = ({ v, onDetalle }) => (
 );
 
 // ── Barra lateral y cajón ─────────────────────────────────
-export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare }) => {
+export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimientos, agregarOptimista, confirmarMovimiento, onReportar, onTransito, onCopy, onShare, onIrAMovimiento }) => {
     const claveCopia = `flujo_encamino_${bloque}_${garita}`;
     const [datos, setDatos] = useState(() => leerCopia(claveCopia));
     const [enCola, setEnCola] = useState({ reportes: [], quitados: [] });   // reportes aún sin subir
@@ -211,6 +248,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
     const [verTodos, setVerTodos] = useState(false);
     const [confirmando, setConfirmando] = useState(null); // { id, placa }
     const [detalleId, setDetalleId] = useState(null);     // vehículo con la ventana de detalle abierta
+    const [filaArrastre, setFilaArrastre] = useState(null); // { id, dx } fila que se desliza a la izquierda
+    const [sinRegistro, setSinRegistro] = useState(null);   // aviso: ese vehículo no está en mis movimientos
     const [aviso, setAviso] = useState('');
     const [anchoCajon, setAnchoCajon] = useState(340);  // se mide al empezar cada arrastre
     const cajonRef = useRef(null);
@@ -283,14 +322,15 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         if (!abierto) return undefined;
         const onTecla = e => {
             if (e.key !== 'Escape') return;
-            if (detalleId) setDetalleId(null);   // primero la ventana de detalle
+            if (sinRegistro) setSinRegistro(null);
+            else if (detalleId) setDetalleId(null);   // primero la ventana de detalle
             else setAbierto(false);
         };
         window.addEventListener('keydown', onTecla);
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         return () => { window.removeEventListener('keydown', onTecla); document.body.style.overflow = overflow; };
-    }, [abierto, detalleId]);
+    }, [abierto, detalleId, sinRegistro]);
 
     useEffect(() => {
         if (!aviso) return undefined;
@@ -339,7 +379,10 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         trasArrastreRef.current = 0;   // un toque nuevo: el arrastre anterior ya no cuenta
         setAnchoCajon(cajonRef.current?.offsetWidth || 340);
-        gestoRef.current = { x0: e.clientX, y0: e.clientY, esBarra, desdeAbierto: abierto, activo: false, vertical: false, id: e.pointerId, el: e.currentTarget };
+        // Sobre una fila (no en sus botones ni con la placa a medio confirmar), deslizar a la
+        // izquierda lleva a su movimiento en vez de cerrar el cajón
+        const fila = !esBarra && abierto && !e.target.closest('button, input') ? e.target.closest('[data-camino-id]')?.dataset.caminoId : null;
+        gestoRef.current = { x0: e.clientX, y0: e.clientY, esBarra, desdeAbierto: abierto, activo: false, vertical: false, id: e.pointerId, el: e.currentTarget, fila };
     };
     const mover = e => {
         const g = gestoRef.current;
@@ -352,7 +395,9 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
             g.activo = true;
             try { g.el.setPointerCapture(g.id); } catch { /* el puntero ya se soltó */ }
         }
-        if (g.activo) setArrastre(g.desdeAbierto ? Math.min(0, dx) : Math.max(0, dx));
+        if (!g.activo) return;
+        if (g.fila) setFilaArrastre({ id: g.fila, dx: Math.max(-90, Math.min(0, dx)) });
+        else setArrastre(g.desdeAbierto ? Math.min(0, dx) : Math.max(0, dx));
     };
     const soltar = e => {
         const g = gestoRef.current;
@@ -362,13 +407,18 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
             if (g.esBarra && !g.vertical) setAbierto(a => !a);
             return;
         }
-        trasArrastreRef.current = Date.now();
+        trasArrastreRef.current = e.timeStamp || 1;
         const dx = e.clientX - g.x0;
         setArrastre(null);
+        if (g.fila) {
+            setFilaArrastre(null);
+            if (dx < -UMBRAL_IR) irAlMovimiento(g.fila);
+            return;
+        }
         if (g.desdeAbierto) { if (dx < -UMBRAL_ARRASTRE) setAbierto(false); }
         else if (dx > UMBRAL_ARRASTRE) setAbierto(true);
     };
-    const cancelarGesto = () => { gestoRef.current = null; setArrastre(null); };
+    const cancelarGesto = () => { gestoRef.current = null; setArrastre(null); setFilaArrastre(null); };
     // Cajón y fondo: solo con el cajón abierto (para cerrarlo)
     const gestosCajon = abierto ? {
         onPointerDown: e => empezar(e, false),
@@ -394,7 +444,7 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         // vale solo un instante, para no tragarse el siguiente toque de verdad
         const fin = trasArrastreRef.current;
         trasArrastreRef.current = 0;
-        if (!fin || Date.now() - fin > 400) return;
+        if (!fin || e.timeStamp - fin > 400) return;
         e.stopPropagation();
         e.preventDefault();
     };
@@ -413,6 +463,18 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
         setConfirmando(null);
         setAviso(`${placa} registrado como INGRESO`);
         registrarLlegada({ v, placa, garita, bloque, puesto, fecha, ubiIngreso, agregarOptimista, confirmarMovimiento });
+    };
+    // Deslizar a la izquierda una fila: si el movimiento está en mis movimientos (una
+    // SALIDA que envié), se cierra el cajón y se va a él resaltado; si no, se avisa
+    const irAlMovimiento = id => {
+        const propio = movimientos.find(m => String(m._id) === id);
+        if (propio) {
+            setAbierto(false);
+            onIrAMovimiento?.(propio._id);
+            return;
+        }
+        const v = [...lista, ...enviados].find(x => x.id === id);
+        if (v) setSinRegistro(v);
     };
     const quitar = v => {
         setConfirmando(null);
@@ -455,7 +517,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                                 onCancelar={() => setConfirmando(null)}
                                 onRegistrar={registrar}
                                 onQuitar={() => quitar(v)}
-                                onDetalle={() => setDetalleId(v.id)} />
+                                onDetalle={() => setDetalleId(v.id)}
+                                dx={filaArrastre?.id === v.id ? filaArrastre.dx : 0} />
                         ))}
                         {ocultos > 0 && (
                             <button className="camino__ver-mas" onClick={() => setVerTodos(t => !t)}>
@@ -469,7 +532,8 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                         {enviados.length > 0 && (
                             <>
                                 <div className="camino__seccion">Enviados desde {garita} · <span className="camino__total">{enviados.length}</span></div>
-                                {enviados.map(v => <FilaEnviado key={v.id} v={v} onDetalle={() => setDetalleId(v.id)} />)}
+                                {enviados.map(v => <FilaEnviado key={v.id} v={v} onDetalle={() => setDetalleId(v.id)}
+                                    dx={filaArrastre?.id === v.id ? filaArrastre.dx : 0} />)}
                             </>
                         )}
                     </div>
@@ -488,6 +552,13 @@ export const EnCamino = ({ bloque, puesto, garita, fecha, ubiIngreso, movimiento
                     {hayRetrasados && <span className="camino__barra-punto" />}
                 </button>
             </aside>
+
+            {sinRegistro && createPortal(
+                <div onPointerDown={aislar} onPointerMove={aislar} onPointerUp={aislar} onPointerCancel={aislar} onClick={aislar}>
+                    <AvisoSinRegistro v={sinRegistro} garita={garita} onCerrar={() => setSinRegistro(null)} />
+                </div>,
+                document.body,
+            )}
 
             {detalle && createPortal(
                 <div onPointerDown={aislar} onPointerMove={aislar} onPointerUp={aislar} onPointerCancel={aislar} onClick={aislar}>

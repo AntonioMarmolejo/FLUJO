@@ -676,7 +676,8 @@ const WorkspacePage = () => {
                     agregarOptimista={handleGuardadoOptimista}
                     confirmarMovimiento={handleMovimientoConfirmado}
                     onReportar={() => setReportando(true)}
-                    onTransito={accionTransito} onCopy={handleCopy} onShare={handleShare} />
+                    onTransito={accionTransito} onCopy={handleCopy} onShare={handleShare}
+                    onIrAMovimiento={goToMov} />
             )}
             {reportando && turnoActivo && garitaEnCamino && (
                 <ModalAgregar puesto={turnoActivo.puesto} bloque={turnoActivo.bloque} turnoActual={turnoActivo.turnoActual}
