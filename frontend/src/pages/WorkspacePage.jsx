@@ -133,8 +133,16 @@ const WorkspacePage = () => {
     // Config de narrativa por puesto (se carga cuando llega turnoActivo)
     const [registroConfig, setRegistroConfig] = useState({});
     const [bitDetailIdx, setBitDetailIdx] = useState(null);
+    // Tarjetas abiertas (descolapsadas). Se recuerdan por movimiento, no por su posición:
+    // al buscar o filtrar la lista cambia y sigue abierta la misma tarjeta.
+    const alternarEn = setter => clave => setter(prev => { const n = new Set(prev); n.has(clave) ? n.delete(clave) : n.add(clave); return n; });
+    const abrirEn = setter => (claves, abrir) => setter(prev => { const n = new Set(prev); claves.forEach(c => (abrir ? n.add(c) : n.delete(c))); return n; });
     const [expandedBitSet, setExpandedBitSet] = useState(new Set());
-    const toggleBitCollapse = i => setExpandedBitSet(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
+    const toggleBitCollapse = alternarEn(setExpandedBitSet);
+    const expandirBit = abrirEn(setExpandedBitSet);
+    const [expandedMovIds, setExpandedMovIds] = useState(new Set());
+    const toggleMovCollapse = alternarEn(setExpandedMovIds);
+    const expandirMovs = abrirEn(setExpandedMovIds);
     const [movSort, setMovSort] = useState('desc');
     const [regSort, setRegSort] = useState('asc');
     const [detailMovIdx, setDetailMovIdx] = useState(null);
@@ -330,7 +338,7 @@ const WorkspacePage = () => {
 
     const goToReg = id => { setVistaInicio('registro'); setHighlightRegId(id); };
     const goToMov = id => { setVistaInicio('movimientos'); setHighlightMovId(id); };
-    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)), onGoToReg: goToReg };
+    const cardProps = { selectMode, onToggleSelect: toggleSelect, onOpenDetail: openDetailMov, onDelete: handleDelete, onEdit: handleEdit, onCopy: handleCopy, onShare: handleShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora: id => setEditHoraMov(sortedMovs.find(m => m._id === id)), onGoToReg: goToReg, expandedIds: expandedMovIds, onToggleCollapse: toggleMovCollapse };
 
     const isDrawerTab = DRAWER_TABS.has(tabActiva);
 
@@ -516,6 +524,7 @@ const WorkspacePage = () => {
                             bitacoraFiltrada={bitacoraFiltrada}
                             cargandoMovimientos={cargandoMovimientos}
                             expandedBitSet={expandedBitSet}
+                            expandirBit={expandirBit}
                             exportBitacora={exportBitacora}
                             handleDeleteBitPair={handleDeleteBitPair}
                             searchQuery={searchQuery}
@@ -560,6 +569,8 @@ const WorkspacePage = () => {
                             selectAll={selectAll}
                             selectMode={selectMode}
                             selectedIds={selectedIds}
+                            expandedMovIds={expandedMovIds}
+                            expandirMovs={expandirMovs}
                             setChartCollapsed={setChartCollapsed}
                             setDashCollapsed={setDashCollapsed}
                             setDashFiltro={setDashFiltro}

@@ -474,9 +474,11 @@ export const ModalRegistroConfig = ({ config, onSave, onClose }) => {
 };
 
 // ── Tarjeta de movimiento ─────────────────────────────────
-export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora, onGoToReg }) => {
+export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, onOpenDetail, onDelete, onEdit, onCopy, onShare, swipedMovId, setSwipedMovId, movSwipeRef, onEditHora, onGoToReg, expandedIds, onToggleCollapse }) => {
     const isSwiped = swipedMovId === m._id;
-    const [collapsed, setCollapsed] = useState(true);
+    const [colapsadaLocal, setColapsadaLocal] = useState(true);
+    const collapsed = expandedIds ? !expandedIds.has(m._id) : colapsadaLocal;
+    const alternarColapso = () => (onToggleCollapse ? onToggleCollapse(m._id) : setColapsadaLocal(c => !c));
     return (
         <div className={`mov__item${selected ? ' mov__item--selected' : ''}${m._pending ? ' mov__item--pending' : ''}`} data-movid={m._id}>
             {!selectMode && !m._pending && (
@@ -571,7 +573,7 @@ export const MovCard = ({ m, count = 1, selectMode, selected, onToggleSelect, on
                         )}
                     </div>
                     {/* Chevron */}
-                    <button className="mov__chevron-btn" onClick={e => { e.stopPropagation(); setCollapsed(c => !c); }}>
+                    <button className="mov__chevron-btn" onClick={e => { e.stopPropagation(); alternarColapso(); }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                              className={`chevron-giro${collapsed ? '' : ' chevron-giro--abierto'}`}>
                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>

@@ -7193,3 +7193,14 @@
 .ws__speed-dial.ws__speed-dial--encima {
     z-index: 55;
 }
+
+/* Expandir / colapsar todas las tarjetas (Movimientos y Bitácora) */
+.mov__expandir-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bit__export-btn.bit__expandir-btn {
+    margin-left: auto;
+    margin-right: 8px;
+}

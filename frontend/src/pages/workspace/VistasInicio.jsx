@@ -14,11 +14,15 @@ import {
 const StatsChart = lazy(() => import('../../components/StatsChart.jsx'));
 
 // Bitácora: salidas e ingresos de la misma placa, en pares
+// Clave de un par de la bitácora (no cambia al buscar o filtrar)
+const claveBit = b => `${b.salida?._id || ''}|${b.ingreso?._id || ''}`;
+
 export const VistaBitacora = ({
     bitacora,
     bitacoraFiltrada,
     cargandoMovimientos,
     expandedBitSet,
+    expandirBit,
     exportBitacora,
     handleDeleteBitPair,
     searchQuery,
@@ -28,6 +32,9 @@ export const VistaBitacora = ({
 }) => {
     const [swipedBitMainIdx, setSwipedBitMainIdx] = useState(null);
     const bitMainSwipeRef = useRef({ startX: 0, startY: 0, moved: false, vertScroll: false });
+    // Abrir o colapsar todas las tarjetas que se ven (con búsqueda, solo los resultados)
+    const clavesVisibles = bitacoraFiltrada.map(claveBit);
+    const abrir = !clavesVisibles.length || !clavesVisibles.every(k => expandedBitSet.has(k));
 
     return (
         <div className="ws__bitacora">
@@ -38,6 +45,15 @@ export const VistaBitacora = ({
                         : <>{bitacora.length} registro{bitacora.length !== 1 ? 's' : ''}</>
                     }
                 </span>
+                {bitacoraFiltrada.length > 0 && (
+                    <button className="bit__export-btn bit__expandir-btn" onClick={() => expandirBit(clavesVisibles, abrir)}
+                        title={abrir ? 'Descolapsar todas las tarjetas' : 'Colapsar todas las tarjetas'}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            {abrir ? <path d="M7 9l5-5 5 5M7 15l5 5 5-5" /> : <path d="M7 4l5 5 5-5M7 20l5-5 5 5" />}
+                                        </svg>
+                        {abrir ? 'Expandir' : 'Colapsar'}
+                    </button>
+                )}
                 <button className="bit__export-btn" onClick={exportBitacora} disabled={bitacora.length === 0}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
@@ -60,7 +76,7 @@ export const VistaBitacora = ({
                             `Salida: ${b.horaS}  →  Ingreso: ${b.horaI}`,
                         ].filter(Boolean).join('\n');
                         const isSwiped = swipedBitMainIdx === i;
-                        const isCollapsed = !expandedBitSet.has(i);
+                        const isCollapsed = !expandedBitSet.has(claveBit(b));
                         return (
                         <div key={i} className="bit__item">
                             <div className="bit__actions" onClick={e => e.stopPropagation()}>
@@ -119,7 +135,7 @@ export const VistaBitacora = ({
                                     </div>
                                     <div className="bit__card-r1-right">
                                         {b.tipoVehiculo && <span className="bit__card-tipo">{b.tipoVehiculo.toUpperCase()}</span>}
-                                        <button className="bit__chevron-btn" onClick={e => { e.stopPropagation(); toggleBitCollapse(i); }}>
+                                        <button className="bit__chevron-btn" onClick={e => { e.stopPropagation(); toggleBitCollapse(claveBit(b)); }}>
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={`chevron-giro${isCollapsed ? '' : ' chevron-giro--abierto'}`}>
                                                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                                             </svg>
@@ -298,6 +314,8 @@ export const VistaMovimientos = ({
     selectAll,
     selectMode,
     selectedIds,
+    expandedMovIds,
+    expandirMovs,
     setChartCollapsed,
     setDashCollapsed,
     setDashFiltro,
@@ -386,6 +404,21 @@ export const VistaMovimientos = ({
                     <div className="ws__section-acciones">
                         {!movCollapsed && movimientos.length > 0 && (
                             <>
+                                {sortedMovs.length > 0 && (() => {
+                                    // Todas las que se ven (con búsqueda o filtro, solo los resultados)
+                                    const ids = sortedMovs.map(m => m._id);
+                                    const abrir = !ids.every(id => expandedMovIds.has(id));
+                                    return (
+                                        <span className="sort-toggle-btn mov__expandir-btn" role="button"
+                                            title={abrir ? 'Descolapsar todos los movimientos' : 'Colapsar todos los movimientos'}
+                                            onClick={e => { e.stopPropagation(); expandirMovs(ids, abrir); }}>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                {abrir ? <path d="M7 9l5-5 5 5M7 15l5 5 5-5" /> : <path d="M7 4l5 5 5-5M7 20l5-5 5 5" />}
+                                        </svg>
+                                            {abrir ? 'Expandir' : 'Colapsar'}
+                                        </span>
+                                    );
+                                })()}
                                 <span
                                     className="sort-toggle-btn"
                                     title={movSort === 'desc' ? 'Más reciente primero' : 'Más antiguo primero'}
@@ -414,6 +447,15 @@ export const VistaMovimientos = ({
                                 </label>
                                 {selectedIds.size > 0 && (
                                     <div className="select__bar-acciones">
+                                        {(() => {
+                                            const abrir = ![...selectedIds].every(id => expandedMovIds.has(id));
+                                            return (
+                                                <button className="share__selected-btn" onClick={() => expandirMovs([...selectedIds], abrir)}
+                                                    title={abrir ? 'Descolapsar los seleccionados' : 'Colapsar los seleccionados'}>
+                                                    {abrir ? 'Expandir' : 'Colapsar'} {selectedIds.size}
+                                                </button>
+                                            );
+                                        })()}
                                         <button className="share__selected-btn"
                                             onClick={() => handleShareMovs(movimientos.filter(m => selectedIds.has(m._id)))}>
                                             Compartir {selectedIds.size}
